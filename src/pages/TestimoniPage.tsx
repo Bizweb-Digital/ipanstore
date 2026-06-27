@@ -4,6 +4,7 @@ import Footer from "@/components/Footer";
 import FloatingWhatsApp from "@/components/FloatingWhatsApp";
 import PageTransition from "@/components/PageTransition";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
+import AnimatedCounter from "@/components/AnimatedCounter";
 
 const testimonials = [
   { name: "Raxzy", text: "Gacor banget optimize-nya, FPS naik drastis pas main FF. Recommended!", paket: "Elite Optimizer" },
@@ -18,7 +19,7 @@ const testimonials = [
 ];
 
 const stats = [
-  { icon: Users, value: "500+", label: "Klien Puas" },
+  { icon: Users, value: <AnimatedCounter end={500} duration={2000} suffix="+" />, label: "Klien Puas" },
   { icon: Star, value: "4.9", label: "Rating" },
   { icon: Award, value: "24/7", label: "Online Support" },
   { icon: ShieldCheck, value: "100%", label: "Garansi Gacor" },

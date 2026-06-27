@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import heroBg from "@/assets/hero-bg.jpg";
 import { WA_LINK } from "./FloatingWhatsApp";
+import AnimatedCounter from "./AnimatedCounter";
 
 const Hero = () => {
   return (
@@ -67,7 +68,7 @@ const Hero = () => {
 
         <div className="mt-12 sm:mt-16 grid grid-cols-3 gap-2 sm:gap-4 max-w-2xl mx-auto animate-fade-up delay-500 w-full">
           {[
-            { v: "500+", l: "Klien Puas" },
+            { v: <AnimatedCounter end={500} duration={2000} suffix="+" />, l: "Klien Puas" },
             { v: "24/7", l: "Online Support" },
             { v: "100%", l: "Garansi Gacor" },
           ].map((s) => (
