@@ -62,7 +62,7 @@ const TestimoniPage = () => {
               {stats.map((s) => {
                 const Icon = s.icon;
                 return (
-                  <div key={s.label} className="glass rounded-2xl p-6 text-center">
+                  <div key={s.label} className="glass-panel border-glow rounded-2xl p-6 text-center">
                     <Icon className="h-6 w-6 text-primary mx-auto mb-2" strokeWidth={2.2} />
                     <div className="font-display text-3xl md:text-4xl font-black text-gradient">
                       {s.value}
@@ -85,7 +85,7 @@ const TestimoniPage = () => {
               {testimonials.map((t) => (
                 <div
                   key={t.name}
-                  className="glass rounded-2xl p-7 hover:border-primary/40 hover:shadow-elevated transition-all duration-300 hover:-translate-y-1"
+                  className="glass-panel border-glow rounded-2xl p-7 hover:border-primary/40 hover:shadow-elevated transition-all duration-300 hover:-translate-y-1"
                 >
                   <div className="flex gap-1 mb-4">
                     {Array.from({ length: 5 }).map((_, i) => (

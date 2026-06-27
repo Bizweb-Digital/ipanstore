@@ -40,7 +40,7 @@ const About = () => {
           {features.map((f, i) => (
             <div
               key={f.title}
-              className="glass rounded-2xl p-8 hover:border-primary/40 hover:shadow-elevated transition-[var(--transition-smooth)] group"
+              className="glass-panel border-glow rounded-2xl p-8 hover:border-primary/40 hover:shadow-elevated transition-[var(--transition-smooth)] group"
             >
               <div className="inline-flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-primary shadow-glow mb-5 group-hover:scale-110 transition-transform">
                 <f.icon className="h-7 w-7 text-primary-foreground" strokeWidth={2.2} />

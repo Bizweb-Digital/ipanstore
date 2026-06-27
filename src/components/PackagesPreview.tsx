@@ -78,10 +78,10 @@ const PackagesPreview = () => {
             return (
               <div
                 key={p.name}
-                className={`relative rounded-2xl p-7 flex flex-col transition-all duration-400 hover:-translate-y-2 ${
+                className={`relative rounded-2xl p-7 flex flex-col transition-all duration-400 hover:-translate-y-2 border-glow ${
                   p.popular
-                    ? "glass-strong shadow-elevated border-primary/40"
-                    : "glass hover:border-primary/40 hover:shadow-elevated"
+                    ? "glass-panel border-primary/40 shadow-elevated"
+                    : "glass-panel border-primary/10 hover:border-primary/40 hover:shadow-elevated"
                 }`}
               >
                 {p.highlight && (

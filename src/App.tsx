@@ -5,6 +5,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import LoadingScreen from "./components/LoadingScreen";
+import CustomCursor from "./components/CustomCursor";
 import Index from "./pages/Index.tsx";
 import Layanan from "./pages/Layanan.tsx";
 import TestimoniPage from "./pages/TestimoniPage.tsx";
@@ -23,6 +24,7 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
+        <CustomCursor />
         <Toaster />
         <Sonner />
         {loading && <LoadingScreen onComplete={handleLoadingComplete} />}

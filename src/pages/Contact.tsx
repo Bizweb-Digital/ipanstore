@@ -1,12 +1,11 @@
 import { useState } from "react";
 import {
-  MessageCircle,
   Clock,
   Send,
   ChevronDown,
-  Music2,
   MapPin,
 } from "lucide-react";
+import { FaWhatsapp, FaDiscord, FaTiktok } from "react-icons/fa";
 import { Button } from "@/components/ui/button";
 import { WA_NUMBER } from "@/components/FloatingWhatsApp";
 import Navbar from "@/components/Navbar";
@@ -68,24 +67,25 @@ const deviceOptions = [
 const FaqItem = ({ q, a }: { q: string; a: string }) => {
   const [open, setOpen] = useState(false);
   return (
-    <div className="glass rounded-xl overflow-hidden transition-all duration-300 hover:border-primary/30">
+    <div className="group relative bg-gradient-to-b from-[#111827]/80 to-[#030712]/80 border border-slate-800/60 rounded-2xl overflow-hidden backdrop-blur-xl transition-all duration-300 hover:border-blue-500/40 hover:shadow-[0_0_30px_rgba(59,130,246,0.1)]">
+      <div className="absolute left-0 top-1/2 -translate-y-1/2 h-0 w-1 bg-gradient-to-b from-blue-400 to-cyan-400 opacity-0 group-hover:opacity-100 group-hover:h-3/4 transition-all duration-300 rounded-r-full" />
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between p-5 text-left"
+        className="w-full flex items-center justify-between p-5 md:p-6 text-left outline-none"
       >
-        <span className="font-semibold text-foreground pr-4">{q}</span>
+        <span className="font-semibold text-slate-200 pr-4 group-hover:text-white transition-colors">{q}</span>
         <ChevronDown
-          className={`h-5 w-5 text-primary shrink-0 transition-transform duration-300 ${
+          className={`h-5 w-5 text-blue-500/70 shrink-0 transition-transform duration-300 group-hover:text-blue-400 ${
             open ? "rotate-180" : ""
           }`}
         />
       </button>
       <div
         className={`overflow-hidden transition-all duration-300 ${
-          open ? "max-h-60 pb-5" : "max-h-0"
+          open ? "max-h-60 pb-5 md:pb-6" : "max-h-0"
         }`}
       >
-        <p className="px-5 text-sm text-muted-foreground leading-relaxed">{a}</p>
+        <p className="px-5 md:px-6 text-sm text-slate-400/90 leading-relaxed">{a}</p>
       </div>
     </div>
   );
@@ -146,10 +146,10 @@ const Contact = () => {
             >
               {/* Form */}
               <div className="lg:col-span-3">
-                <div className="glass-strong rounded-2xl p-8 md:p-10">
+                <div className="glass-panel border-glow rounded-2xl p-8 md:p-10">
                   <div className="flex items-center gap-3 mb-8">
                     <div className="h-12 w-12 rounded-xl bg-[hsl(142_70%_45%)] flex items-center justify-center text-white">
-                      <MessageCircle className="h-6 w-6" />
+                      <FaWhatsapp className="h-6 w-6" />
                     </div>
                     <div>
                       <h2 className="font-display text-xl font-bold">Chat via WhatsApp</h2>
@@ -241,10 +241,10 @@ const Contact = () => {
                   href={`https://wa.me/${WA_NUMBER}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="glass rounded-2xl p-6 flex items-start gap-4 hover:border-primary/40 hover:shadow-elevated transition-all duration-300 group block"
+                  className="glass-panel border-glow rounded-2xl p-6 flex items-start gap-4 hover:border-primary/40 hover:shadow-elevated transition-all duration-300 group block"
                 >
                   <div className="h-12 w-12 rounded-xl bg-[hsl(142_70%_45%)] flex items-center justify-center text-white shrink-0 group-hover:scale-110 transition-transform">
-                    <MessageCircle className="h-6 w-6" />
+                    <FaWhatsapp className="h-6 w-6" />
                   </div>
                   <div>
                     <h3 className="font-display font-bold text-base mb-1">WhatsApp</h3>
@@ -254,7 +254,7 @@ const Contact = () => {
                 </a>
 
                 {/* Jam Operasional */}
-                <div className="glass rounded-2xl p-6 flex items-start gap-4">
+                <div className="glass-panel border-glow rounded-2xl p-6 flex items-start gap-4">
                   <div className="h-12 w-12 rounded-xl bg-gradient-primary flex items-center justify-center text-primary-foreground shrink-0">
                     <Clock className="h-6 w-6" />
                   </div>
@@ -266,7 +266,7 @@ const Contact = () => {
                 </div>
 
                 {/* Lokasi */}
-                <div className="glass rounded-2xl p-6 flex items-start gap-4">
+                <div className="glass-panel border-glow rounded-2xl p-6 flex items-start gap-4">
                   <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white shrink-0">
                     <MapPin className="h-6 w-6" />
                   </div>
@@ -279,7 +279,7 @@ const Contact = () => {
                 </div>
 
                 {/* Social */}
-                <div className="glass rounded-2xl p-6">
+                <div className="glass-panel border-glow rounded-2xl p-6">
                   <h3 className="font-display font-bold text-base mb-4">Ikuti Kami</h3>
                   <div className="space-y-3">
                     <a
@@ -289,9 +289,7 @@ const Contact = () => {
                       className="flex items-center gap-3 text-sm text-muted-foreground hover:text-primary transition-colors"
                     >
                       <span className="h-9 w-9 rounded-lg glass flex items-center justify-center">
-                        <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
-                          <path d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.873-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.331c-1.182 0-2.157-1.085-2.157-2.418 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.332-.956 2.417-2.157 2.417zm7.974 0c-1.183 0-2.157-1.085-2.157-2.418 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.332-.946 2.417-2.157 2.417z" />
-                        </svg>
+                        <FaDiscord className="h-4 w-4" />
                       </span>
                       Discord — Komunitas Gamer
                     </a>
@@ -302,7 +300,7 @@ const Contact = () => {
                       className="flex items-center gap-3 text-sm text-muted-foreground hover:text-primary transition-colors"
                     >
                       <span className="h-9 w-9 rounded-lg glass flex items-center justify-center">
-                        <Music2 className="h-4 w-4" />
+                        <FaTiktok className="h-4 w-4" />
                       </span>
                       TikTok — @ipann.18
                     </a>
@@ -313,7 +311,7 @@ const Contact = () => {
                       className="flex items-center gap-3 text-sm text-muted-foreground hover:text-primary transition-colors"
                     >
                       <span className="h-9 w-9 rounded-lg glass flex items-center justify-center">
-                        <MessageCircle className="h-4 w-4" />
+                        <FaWhatsapp className="h-4 w-4" />
                       </span>
                       WhatsApp Channel — Update & Promo
                     </a>

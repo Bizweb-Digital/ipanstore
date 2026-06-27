@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Zap } from "lucide-react";
+
 import { WA_LINK } from "./FloatingWhatsApp";
 
 const ClosingCTA = () => {
@@ -9,10 +9,9 @@ const ClosingCTA = () => {
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-primary/20 blur-[140px]" />
       <div className="absolute inset-0 grid-pattern opacity-30" />
 
-      <div className="container mx-auto px-4 relative">
-        <div className="max-w-4xl mx-auto text-center glass-strong rounded-3xl p-10 md:p-16 shadow-elevated">
+      <div className="container mx-auto px-4 relative z-10">
+        <div className="max-w-4xl mx-auto glass-panel border-glow rounded-[2rem] p-8 md:p-16 text-center relative overflow-hidden">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/30 mb-6">
-            <Zap className="h-4 w-4 text-primary" />
             <span className="text-xs font-semibold tracking-wider uppercase text-primary">
               Limited Time Offer
             </span>

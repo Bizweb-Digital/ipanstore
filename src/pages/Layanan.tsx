@@ -177,10 +177,10 @@ const Layanan = () => {
                 return (
                   <div
                     key={p.name}
-                    className={`relative rounded-2xl p-7 flex flex-col transition-all duration-400 hover:-translate-y-2 ${
+                    className={`relative rounded-2xl p-7 flex flex-col transition-all duration-400 hover:-translate-y-2 border-glow ${
                       p.popular
-                        ? "glass-strong shadow-elevated border-primary/40"
-                        : "glass hover:border-primary/40 hover:shadow-elevated"
+                        ? "glass-panel border-primary/40 shadow-elevated"
+                        : "glass-panel border-primary/10 hover:border-primary/40 hover:shadow-elevated"
                     }`}
                   >
                     {p.highlight && (
@@ -306,7 +306,7 @@ const Layanan = () => {
                         <p className="text-sm text-muted-foreground leading-relaxed mb-3">
                           {r.desc}
                         </p>
-                        <div className="glass rounded-xl p-3 mb-4">
+                        <div className="glass-panel border-glow rounded-xl p-3 mb-4">
                           <div className="flex items-center justify-between">
                             <div>
                               <div className="text-xs text-muted-foreground mb-0.5">Rekomendasi:</div>
@@ -323,7 +323,7 @@ const Layanan = () => {
                             </Button>
                           </div>
                           <p className="text-xs text-muted-foreground mt-2 italic">
-                            💡 {r.reason}
+                            {r.reason}
                           </p>
                         </div>
                       </div>

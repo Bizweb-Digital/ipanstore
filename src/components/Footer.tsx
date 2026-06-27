@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Clock, MessageCircle, Music2 } from "lucide-react";
 import { WA_LINK } from "./FloatingWhatsApp";
+import logo from "@/assets/logo.png";
 
 const Footer = () => {
   return (
@@ -8,13 +9,8 @@ const Footer = () => {
       <div className="container mx-auto px-4 py-14">
         <div className="grid md:grid-cols-4 gap-10">
           <div className="md:col-span-2">
-            <Link to="/" className="inline-flex items-center gap-2 mb-4">
-              <span className="h-9 w-9 rounded-lg bg-gradient-primary flex items-center justify-center font-display font-black text-primary-foreground shadow-glow">
-                I
-              </span>
-              <span className="font-display text-xl font-black tracking-wide">
-                IPAN <span className="text-gradient">STORE</span>
-              </span>
+            <Link to="/" className="inline-block mb-4">
+              <img src={logo} alt="Ipan Store" className="h-20 sm:h-24 w-auto object-contain drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]" />
             </Link>
             <p className="text-muted-foreground max-w-md leading-relaxed">
               Spesialis jasa optimasi PC gaming & emulator Free Fire.
