@@ -1,0 +1,7 @@
+services:
+  app:
+    build: .
+    container_name: ipanstore
+    ports:
+      - "5007:80"
+    restart: unless-stopped
