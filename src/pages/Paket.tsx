@@ -9,7 +9,7 @@ import { useScrollReveal } from "@/hooks/useScrollReveal";
 /* ─── Paket Data ─── */
 type Pkg = {
   id: string;
-  category: "Optimize" | "SET PC";
+  category: "Optimize" | "SET PC" | "Anti Cheat";
   name: string;
   price: string;
   features: string[];
@@ -91,6 +91,20 @@ const packages: Pkg[] = [
       "Windows Mod by Ipan",
     ],
   },
+  {
+    id: "anti-cheat-laga",
+    category: "Anti Cheat",
+    name: "ANTICHEAT LAGA",
+    price: "100K",
+    popular: true,
+    highlight: "TOURNAMENT SECURE",
+    features: [
+      "External & Internal Cheat",
+      "Streamer Cheat & Hidden Panel",
+      "Kernel Driver Cheat",
+      "Bypass & Manipulasi Emulator",
+    ],
+  },
 ];
 
 /* Comparison Data */
@@ -120,6 +134,14 @@ const comparisonFeatures = [
   { name: "Performance maksimal", category: "Optimize", STANDART: false, ELITE: false, EXTREME: true },
   { name: "Emulator & Keybind", category: "Optimize", STANDART: false, ELITE: false, EXTREME: true },
   { name: "Sensi X & Y", category: "Optimize", STANDART: false, ELITE: false, EXTREME: true },
+
+  // Anti Cheat Features
+  { name: "External Cheat & Internal Cheat", category: "Anti Cheat", "ANTICHEAT LAGA": true },
+  { name: "Streamer Cheat & Hidden Panel", category: "Anti Cheat", "ANTICHEAT LAGA": true },
+  { name: "Kernel Driver Cheat", category: "Anti Cheat", "ANTICHEAT LAGA": true },
+  { name: "Metode bypass terbaru", category: "Anti Cheat", "ANTICHEAT LAGA": true },
+  { name: "Manipulasi emulator tidak wajar", category: "Anti Cheat", "ANTICHEAT LAGA": true },
+  { name: "Modifikasi emulator mencurigakan", category: "Anti Cheat", "ANTICHEAT LAGA": true },
 ];
 
 const FeatureCheck = ({ ok }: { ok: boolean }) =>
@@ -135,7 +157,7 @@ const FeatureCheck = ({ ok }: { ok: boolean }) =>
 
 const Paket = () => {
   const { ref: tableRef, revealed: tableRevealed } = useScrollReveal<HTMLDivElement>();
-  const [activeTab, setActiveTab] = useState<"Optimize" | "SET PC">("Optimize");
+  const [activeTab, setActiveTab] = useState<"Optimize" | "SET PC" | "Anti Cheat">("Optimize");
 
   const filteredPackages = packages.filter((p) => p.category === activeTab);
   const filteredComparison = comparisonFeatures.filter((f) => f.category === activeTab);
@@ -181,6 +203,16 @@ const Paket = () => {
                 }`}
               >
                 SET PC
+              </button>
+              <button
+                onClick={() => setActiveTab("Anti Cheat")}
+                className={`relative px-6 py-2.5 rounded-full text-sm font-bold tracking-wider transition-all duration-300 ${
+                  activeTab === "Anti Cheat"
+                    ? "text-white bg-red-600/80 shadow-[0_0_15px_rgba(220,38,38,0.5)]"
+                    : "text-muted-foreground hover:text-white"
+                }`}
+              >
+                ANTI CHEAT
               </button>
             </div>
           </div>

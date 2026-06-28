@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowRight, Settings, Cpu, Gauge, Monitor, PenTool, Flame, Laptop2 } from "lucide-react";
+import { ArrowRight, Settings, Cpu, Gauge, Monitor, PenTool, Flame, Laptop2, ShieldCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import SEOHead from "@/components/SEOHead";
@@ -97,11 +97,29 @@ const services = [
     wa_text: "Halo min, saya mau tanya layanan Free Fire & Emulator Custom",
     accent: "text-orange-500",
   },
+  {
+    id: "anti-cheat-laga",
+    category: "Anti Cheat",
+    icon: ShieldCheck,
+    title: "ANTICHEAT LAGA IPAN v1.4.6",
+    desc: "Solusi Anticheat untuk Turnamen Free Fire yang Lebih Aman, Fair, dan Profesional. Jangan biarkan laga rusak karena cheat, bypass, atau manipulasi emulator.",
+    benefits: [
+      "External Cheat & Internal Cheat",
+      "Streamer Cheat & Hidden Panel",
+      "Kernel Driver Cheat",
+      "Metode bypass terbaru",
+      "Manipulasi emulator tidak wajar",
+      "Modifikasi emulator mencurigakan"
+    ],
+    target: "Turnamen, Scrim Kompetitif, Event Online",
+    wa_text: "Halo min, saya tertarik dengan layanan ANTICHEAT LAGA IPAN v1.4.6",
+    accent: "text-red-500",
+  },
 ];
 
 const Layanan = () => {
   const { ref, revealed } = useScrollReveal<HTMLDivElement>();
-  const [activeTab, setActiveTab] = useState<"Optimize" | "SET PC">("Optimize");
+  const [activeTab, setActiveTab] = useState<"Optimize" | "SET PC" | "Anti Cheat">("Optimize");
 
   const filteredServices = services.filter((s) => s.category === activeTab);
 
@@ -163,6 +181,16 @@ const Layanan = () => {
                 }`}
               >
                 SET PC
+              </button>
+              <button
+                onClick={() => setActiveTab("Anti Cheat")}
+                className={`relative px-6 py-2.5 rounded-full text-sm font-bold tracking-wider transition-all duration-300 ${
+                  activeTab === "Anti Cheat"
+                    ? "text-white bg-red-600/80 shadow-[0_0_15px_rgba(220,38,38,0.5)]"
+                    : "text-muted-foreground hover:text-white"
+                }`}
+              >
+                ANTI CHEAT
               </button>
             </div>
           </div>
