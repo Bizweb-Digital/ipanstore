@@ -14,7 +14,7 @@ const LoadingScreen = ({ onComplete }: { onComplete: () => void }) => {
         }
         return Math.min(prev + (Math.random() * 8 + 2), 100);
       });
-    }, 80);
+    }, 60);
 
     return () => clearInterval(interval);
   }, []);
@@ -32,42 +32,46 @@ const LoadingScreen = ({ onComplete }: { onComplete: () => void }) => {
 
   return (
     <div
-      className={`fixed inset-0 z-[9999] flex items-center justify-center bg-[#0a0f1c] overflow-hidden transition-opacity duration-700 ${
+      className={`fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden transition-opacity duration-700 bg-[#060A14] ${
         fadeOut ? "opacity-0 pointer-events-none" : "opacity-100"
       }`}
     >
       <div className="absolute inset-0 pointer-events-none">
-        {/* Subtle grid pattern background */}
-        <div 
-          className="absolute inset-0 opacity-20" 
-          style={{ backgroundImage: "linear-gradient(rgba(59, 130, 246, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(59, 130, 246, 0.2) 1px, transparent 1px)", backgroundSize: "30px 30px" }}
-        />
         {/* Glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-primary/10 blur-[120px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gaming-primary/10 rounded-full blur-[100px]" />
       </div>
 
       <div className="relative w-[min(420px,86vw)] text-center">
-        <div className="mb-8 animate-pulse flex justify-center">
-          <img src={logo} alt="Ipan Store" className="h-16 sm:h-24 w-auto object-contain drop-shadow-[0_0_20px_rgba(59,130,246,0.6)]" />
+        <div className="mb-10 flex justify-center relative">
+          <img src={logo} alt="Ipan Store" className="h-16 sm:h-20 w-auto object-contain relative z-10 drop-shadow-[0_0_15px_rgba(37,99,235,0.5)]" />
         </div>
 
-        <div className="glass-panel border-glow rounded-md p-4 bg-background/50 backdrop-blur-md">
-          <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-2">
-            <span>Booting kernel...</span>
-            <span className="text-primary">{Math.floor(progress)}%</span>
+        <div className="gaming-card p-6 border-white/5">
+          <div className="flex items-center justify-between text-xs font-display uppercase tracking-widest text-muted-foreground mb-4">
+            <span className="cyber-glitch-text" data-text="INITIALIZING SYSTEM">INITIALIZING SYSTEM</span>
+            <span className="text-gaming-accent font-bold">{Math.floor(progress)}%</span>
           </div>
-          
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-800/80">
+
+          <div className="h-1.5 w-full overflow-hidden bg-white/5 rounded-full mb-4 shadow-inner">
             <div
-              className="h-full bg-gradient-to-r from-blue-600 via-cyan-400 to-blue-600 transition-all duration-100"
-              style={{ width: `${progress}%`, boxShadow: "0 0 16px rgba(34,211,238,0.6)" }}
+              className="h-full bg-gradient-to-r from-gaming-primary to-gaming-accent transition-all duration-100 rounded-full shadow-[0_0_10px_rgba(56,189,248,0.5)]"
+              style={{ width: `${progress}%` }}
             />
           </div>
 
-          <div className="mt-3 grid grid-cols-3 gap-1 text-[9px] font-mono text-muted-foreground/70">
-            <span className={progress > 30 ? "text-primary font-bold drop-shadow-[0_0_5px_rgba(59,130,246,0.8)]" : ""}>CPU {progress > 30 ? "✓" : "..."}</span>
-            <span className={progress > 60 ? "text-primary font-bold drop-shadow-[0_0_5px_rgba(59,130,246,0.8)]" : ""}>RAM {progress > 60 ? "✓" : "..."}</span>
-            <span className={progress > 90 ? "text-primary font-bold drop-shadow-[0_0_5px_rgba(59,130,246,0.8)]" : ""}>GPU {progress > 90 ? "✓" : "..."}</span>
+          <div className="grid grid-cols-3 gap-2 text-[10px] font-display uppercase tracking-wider text-muted-foreground/50">
+            <div className={`flex flex-col items-center gap-1 transition-colors ${progress > 30 ? "text-gaming-accent" : ""}`}>
+              <span>CPU TWEAK</span>
+              <span className="text-xs">{progress > 30 ? "DONE" : "WAIT"}</span>
+            </div>
+            <div className={`flex flex-col items-center gap-1 transition-colors ${progress > 60 ? "text-gaming-accent" : ""}`}>
+              <span>RAM BOOST</span>
+              <span className="text-xs">{progress > 60 ? "DONE" : "WAIT"}</span>
+            </div>
+            <div className={`flex flex-col items-center gap-1 transition-colors ${progress > 90 ? "text-gaming-cyan drop-shadow-[0_0_5px_rgba(34,211,238,0.5)]" : ""}`}>
+              <span>GPU TUNE</span>
+              <span className="text-xs">{progress > 90 ? "READY" : "WAIT"}</span>
+            </div>
           </div>
         </div>
       </div>

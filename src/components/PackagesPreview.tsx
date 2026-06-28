@@ -12,38 +12,57 @@ type Pkg = {
   popular?: boolean;
 };
 
+// Based on the new 4 packages requirement
 const packages: Pkg[] = [
   {
-    name: "Standart Optimizer PC",
+    name: "SET PC",
+    price: "50K",
+    features: [
+      "Emulator ringan",
+      "Keybind emulator",
+      "Sensi X & Y",
+      "FF V7A Boost FPS",
+      "DPI Mouse setting",
+      "Regedit & Tweaks",
+    ],
+  },
+  {
+    name: "STANDART",
     price: "50K",
     features: [
       "Semua spek PC/Laptop",
       "Tanpa install ulang",
       "Boost FPS semua game",
       "Optimize CPU, RAM, GPU",
+      "Windows Mod by Ipan",
+      "Cocok daily use",
     ],
   },
   {
-    name: "Elite Optimizer",
+    name: "ELITE",
     price: "100K",
     popular: true,
-    highlight: "Paling Laris",
+    highlight: "PALING LARIS",
     features: [
+      "Optimize CPU/RAM/GPU",
+      "Boost FPS semua game",
+      "Reduce latency",
       "Windows Mod by Ipan",
-      "Boost FPS",
       "Lebih ringan & responsif",
-      "Cocok untuk daily use",
+      "Cocok daily use",
     ],
   },
   {
-    name: "Extreme Optimizer",
+    name: "EXTREME",
     price: "150K",
-    highlight: "Pro Choice",
+    highlight: "PRO CHOICE",
     features: [
       "Semua fitur lengkap",
-      "Windows Mod",
       "Performance maksimal",
-      "Optimize total PC",
+      "Windows Mod by Ipan",
+      "Boost FPS maksimal",
+      "Reduce latency",
+      "Emulator optimization",
     ],
   },
 ];
@@ -52,24 +71,23 @@ const PackagesPreview = () => {
   const { ref, revealed } = useScrollReveal<HTMLDivElement>();
 
   return (
-    <section id="layanan" className="relative py-24 md:py-32 scroll-mt-20">
-      <div className="absolute inset-0 grid-pattern opacity-30 pointer-events-none" />
-      <div className="container mx-auto px-4 relative">
+    <section className="relative py-20 md:py-28 scroll-mt-20 overflow-hidden">
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+      
+      <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-3xl mx-auto text-center mb-16">
-          <span className="text-xs font-semibold tracking-[0.3em] uppercase text-primary">
-            Produk & Layanan
-          </span>
-          <h2 className="font-display text-3xl md:text-5xl font-black mt-4 mb-6">
-            Pilih Paket <span className="text-gradient">Optimasi Terbaik</span>
+          <span className="section-subheading">Produk & Layanan</span>
+          <h2 className="h2-clamp font-display font-bold text-white mb-6">
+            Pilih Paket <span className="text-gaming-accent">Optimasi Terbaik</span>
           </h2>
-          <p className="text-muted-foreground text-lg">
-            Harga ramah pelajar, hasil maksimal. Konsultasi dulu via WhatsApp gratis.
+          <p className="text-muted-foreground body-clamp max-w-2xl mx-auto">
+            Harga ramah pelajar, hasil maksimal. Konsultasi dulu via WhatsApp gratis untuk menentukan paket yang pas.
           </p>
         </div>
 
         <div
           ref={ref}
-          className={`grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto scroll-reveal-stagger ${revealed ? "revealed" : ""}`}
+          className={`grid sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-[1400px] mx-auto scroll-reveal-stagger ${revealed ? "revealed" : ""}`}
         >
           {packages.map((p) => {
             const wa = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(
@@ -78,37 +96,35 @@ const PackagesPreview = () => {
             return (
               <div
                 key={p.name}
-                className={`relative rounded-2xl p-7 flex flex-col transition-all duration-400 hover:-translate-y-2 border-glow ${
-                  p.popular
-                    ? "glass-panel border-primary/40 shadow-elevated"
-                    : "glass-panel border-primary/10 hover:border-primary/40 hover:shadow-elevated"
+                className={`gaming-card p-6 lg:p-8 flex flex-col ${
+                  p.popular ? "border-gaming-accent shadow-[0_0_20px_rgba(56,189,248,0.15)]" : ""
                 }`}
               >
                 {p.highlight && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-gradient-primary text-primary-foreground text-[10px] font-bold tracking-widest uppercase shadow-glow">
+                  <span className="absolute top-0 left-1/2 -translate-x-1/2 bg-gaming-accent text-[#060A14] text-[10px] font-bold px-3 py-1 rounded-b-lg tracking-wider uppercase">
                     {p.highlight}
                   </span>
                 )}
 
-                <h3 className="font-display text-xl font-bold mb-1">{p.name}</h3>
-                <div className="flex items-baseline gap-1 mb-6">
-                  <span className="font-display text-4xl font-black text-gradient">
+                <h3 className="font-display text-lg lg:text-xl font-bold uppercase tracking-wide text-white mt-4 mb-2">{p.name}</h3>
+                <div className="flex items-baseline gap-1 mb-8">
+                  <span className="font-display text-4xl font-black text-gaming-accent">
                     {p.price}
                   </span>
                 </div>
 
-                <ul className="space-y-2.5 mb-8 flex-1">
+                <ul className="space-y-3 mb-8 flex-1">
                   {p.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2 text-sm text-muted-foreground">
-                      <Check className="h-4 w-4 text-primary mt-0.5 shrink-0" strokeWidth={3} />
-                      <span>{f}</span>
+                    <li key={f} className="flex items-start gap-3 text-sm text-muted-foreground">
+                      <Check className="h-4 w-4 text-gaming-accent mt-0.5 shrink-0" strokeWidth={2.5} />
+                      <span className="leading-snug">{f}</span>
                     </li>
                   ))}
                 </ul>
 
-                <Button asChild variant={p.popular ? "hero" : "neon"} className="w-full">
+                <Button asChild variant={p.popular ? "gaming-glow" : "outline"} className="w-full">
                   <a href={wa} target="_blank" rel="noopener noreferrer">
-                    Pesan via WhatsApp
+                    Pesan Sekarang
                   </a>
                 </Button>
               </div>
@@ -117,10 +133,10 @@ const PackagesPreview = () => {
         </div>
 
         <div className="text-center mt-12">
-          <Button asChild variant="neon" size="lg">
-            <Link to="/layanan">
-              Lihat Semua Paket & Perbandingan
-              <ArrowRight className="ml-1 h-5 w-5" />
+          <Button asChild variant="link" size="lg" className="text-muted-foreground hover:text-white">
+            <Link to="/paket" className="flex items-center">
+              Lihat Perbandingan Lengkap
+              <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
         </div>

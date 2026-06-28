@@ -1,36 +1,35 @@
+import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
 import { WA_LINK } from "./FloatingWhatsApp";
 
 const ClosingCTA = () => {
   return (
     <section className="relative py-24 md:py-32 overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-hero" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-primary/20 blur-[140px]" />
-      <div className="absolute inset-0 grid-pattern opacity-30" />
-
-      <div className="container mx-auto px-4 relative z-10">
-        <div className="max-w-4xl mx-auto glass-panel border-glow rounded-[2rem] p-8 md:p-16 text-center relative overflow-hidden">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/30 mb-6">
-            <span className="text-xs font-semibold tracking-wider uppercase text-primary">
-              Limited Time Offer
-            </span>
-          </div>
-          <h2 className="font-display text-4xl md:text-6xl lg:text-7xl font-black mb-6 leading-tight">
-            SAATNYA PC LO <br />
-            <span className="text-gradient">JADI KENCANG!</span>
+      {/* Dynamic Background */}
+      <div className="absolute inset-0 bg-[#060A14]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(37,99,235,0.15)_0%,transparent_70%)]" />
+      
+      <div className="container mx-auto px-4 relative z-10 text-center">
+        <div className="max-w-3xl mx-auto">
+          <span className="gaming-badge-accent mb-6 inline-block">PERSIAPKAN PC KAMU</span>
+          <h2 className="h1-clamp font-display font-bold text-white mb-6 leading-tight">
+            Siap Jadi Elite CS? <br />
+            <span className="text-gradient-blue">Tanpa Frame Drop?</span>
           </h2>
-          <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-xl mx-auto">
-            Stop main lag. Upgrade performa PC kamu sekarang dan rasain
-            bedanya gameplay <span className="text-primary font-semibold">smooth tanpa drop FPS</span>.
+          <p className="text-muted-foreground text-lg md:text-xl mb-10 max-w-xl mx-auto leading-relaxed">
+            Jangan biarkan lag mengganggu gameplay-mu. Optimasi PC kamu sekarang dan rasakan perbedaannya.
           </p>
-          <Button asChild variant="hero" size="xl" className="animate-glow-pulse">
+          
+          <Button asChild variant="whatsapp" size="xl" className="group rounded-2xl animate-pulse-glow">
             <a href={WA_LINK} target="_blank" rel="noopener noreferrer">
-              Chat WhatsApp Sekarang
+              Order via WhatsApp
+              <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
             </a>
           </Button>
-          <p className="mt-6 text-sm text-muted-foreground">
-             Online 24 Jam · Fast Respon · Aman & Bergaransi
+          
+          <p className="mt-6 text-sm text-muted-foreground/60 flex items-center justify-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            Admin sedang online, balas dalam 5 menit.
           </p>
         </div>
       </div>

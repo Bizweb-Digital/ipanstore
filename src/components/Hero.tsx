@@ -1,82 +1,107 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Gauge, Cpu, Users, ShieldCheck } from "lucide-react";
 import heroBg from "@/assets/hero-bg.jpg";
 import { WA_LINK } from "./FloatingWhatsApp";
 import AnimatedCounter from "./AnimatedCounter";
 
 const Hero = () => {
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
-      {/* BG */}
+    <section className="relative min-h-[100svh] flex flex-col justify-center overflow-hidden pt-24 pb-16 lg:pt-32">
+      {/* Background & Overlays */}
       <div className="absolute inset-0 z-0">
         <img
           src={heroBg}
           alt=""
           aria-hidden="true"
-          width={1920}
-          height={1080}
-          className="h-full w-full object-cover opacity-50 animate-pan-image origin-center"
+          className="h-full w-full object-cover opacity-15 mix-blend-luminosity animate-pan-image origin-center"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/40 to-background" />
-        <div className="absolute inset-0 grid-pattern opacity-40" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#060A14]/80 via-[#060A14]/60 to-[#060A14]" />
+        {/* Glow Effects */}
+        <div className="absolute top-1/4 -left-20 w-72 h-72 bg-gaming-primary/20 blur-[120px] rounded-full animate-float-fast pointer-events-none" />
+        <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-gaming-accent/20 blur-[140px] rounded-full animate-float-fast delay-300 pointer-events-none" />
       </div>
 
-      {/* Floating glows */}
-      <div className="absolute top-1/4 -left-20 w-72 h-72 rounded-full bg-primary/30 blur-[120px] animate-float" />
-      <div className="absolute bottom-1/4 -right-20 w-96 h-96 rounded-full bg-[hsl(217_91%_60%)]/30 blur-[140px] animate-float delay-300" />
-
-      <div className="relative z-10 container mx-auto px-4 text-center">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass border-glow mb-8 animate-fade-up">
-          <span className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">
-            #1 Jasa Optimasi PC Gaming Indonesia
+      <div className="relative z-10 container mx-auto px-4 max-w-6xl flex flex-col items-center">
+        {/* Badges */}
+        <div className="flex flex-wrap justify-center gap-3 mb-8 animate-fade-up">
+          <span className="gaming-badge-accent flex items-center gap-1">
+            FAST RESPONSE
           </span>
+          <span className="gaming-badge text-white">#1 JASA OPTIMASI PC</span>
+          <span className="gaming-badge text-white">BOOST FPS FREE FIRE</span>
         </div>
 
-        <div className="relative">
-          {/* Animated background elements behind text */}
+        {/* Main heading */}
+        <div className="text-center max-w-5xl mx-auto mb-6 relative">
           <div className="absolute inset-0 -z-10 flex items-center justify-center overflow-visible pointer-events-none">
-            <div className="absolute w-[150%] h-[120%] bg-gradient-to-r from-transparent via-primary/10 to-transparent blur-[80px] animate-glow-pulse" />
-            <div className="absolute w-[200%] h-32 bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent blur-[40px] animate-sweep" />
-            <div className="absolute w-[200%] h-16 bg-gradient-to-r from-transparent via-blue-500/20 to-transparent blur-[20px] animate-sweep-slow" />
+            <div className="absolute w-[150%] h-[120%] bg-gradient-to-r from-transparent via-gaming-primary/10 to-transparent blur-[80px] animate-pulse-glow-fast" />
+            <div className="absolute w-[200%] h-32 bg-gradient-to-r from-transparent via-gaming-accent/20 to-transparent blur-[40px] animate-sweep" />
           </div>
 
-          <h1 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black mb-4 sm:mb-6 leading-[1.1] sm:leading-[1.05] animate-fade-up delay-100">
-            BOOST FPS <br className="hidden sm:block" />
-            <span className="text-gradient">TANPA BATAS,</span>
-            <br />
-            <span className="text-neon">PC JADI GACOR!</span>
+          <h1 className="h1-clamp font-display font-bold text-white tracking-tight animate-fade-up delay-100">
+            Optimasi PC Gaming & <br className="hidden sm:block" />
+            <span className="text-gradient-blue">Boost FPS Free Fire</span>
           </h1>
         </div>
 
-        <p className="max-w-2xl mx-auto text-base sm:text-lg md:text-xl text-muted-foreground mb-8 sm:mb-10 animate-fade-up delay-200 px-2 sm:px-0">
-          Jasa optimasi PC & emulator profesional khusus gamer Free Fire.
-          Tingkatkan FPS, kurangi lag, gameplay jadi <span className="text-primary font-semibold">smooth maksimal</span>.
+        <p className="max-w-2xl mx-auto text-center text-muted-foreground body-clamp animate-fade-up delay-200 mb-10">
+          IPAN STORE membantu optimasi PC/laptop gaming agar terasa lebih ringan, responsif, dan nyaman digunakan bermain, terutama untuk kebutuhan Free Fire.
         </p>
 
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center animate-fade-up delay-300 w-full sm:w-auto px-4 sm:px-0">
-          <Button asChild variant="hero" size="xl" className="animate-glow-pulse w-full sm:w-auto">
+        {/* CTA Buttons */}
+        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-up delay-300 w-full sm:w-auto px-4 sm:px-0">
+          <Button asChild variant="gaming-glow" size="xl" className="w-full sm:w-auto">
             <a href={WA_LINK} target="_blank" rel="noopener noreferrer">
-              Chat WhatsApp Sekarang
-              <ArrowRight className="ml-1" />
+              Optimasi Sekarang
+              <ArrowRight className="ml-2 h-5 w-5" />
             </a>
           </Button>
-          <Button asChild variant="neon" size="xl" className="w-full sm:w-auto">
-            <Link to="/layanan">Lihat Paket</Link>
+          <Button asChild variant="gaming-outline" size="xl" className="w-full sm:w-auto rounded-xl">
+            <Link to="/layanan">Lihat Layanan</Link>
           </Button>
         </div>
 
-        <div className="mt-12 sm:mt-16 grid grid-cols-3 gap-2 sm:gap-4 max-w-2xl mx-auto animate-fade-up delay-500 w-full">
-          {[
-            { v: <AnimatedCounter end={500} duration={2000} suffix="+" />, l: "Klien Puas" },
-            { v: "24/7", l: "Online Support" },
-            { v: "100%", l: "Garansi Gacor" },
-          ].map((s) => (
-            <div key={s.l} className="glass-panel border-glow rounded-xl sm:rounded-2xl p-2 sm:p-4 md:p-6 hover:border-primary/40 transition-colors flex flex-col justify-center">
-              <div className="font-mono text-xl sm:text-2xl md:text-4xl font-black text-gradient">{s.v}</div>
-              <div className="text-[10px] sm:text-xs md:text-sm text-muted-foreground mt-1 font-mono uppercase tracking-wider leading-tight">{s.l}</div>
+        {/* Performance Dashboard / Stats Visual */}
+        <div className="mt-16 w-full max-w-4xl mx-auto animate-fade-up delay-500">
+          <div className="gaming-card p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-visible">
+            {/* Top accent glow line */}
+            <div className="absolute top-0 left-1/4 right-1/4 h-[1px] bg-gradient-to-r from-transparent via-gaming-accent to-transparent" />
+            
+            <div className="flex-1 flex items-center gap-4 text-left">
+              <div className="h-14 w-14 rounded-2xl bg-gaming-primary/20 border border-gaming-primary/30 flex items-center justify-center text-gaming-accent shrink-0 shadow-glow-sm">
+                <Gauge className="h-7 w-7" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground font-semibold uppercase tracking-wider mb-1">FPS Boost</p>
+                <p className="font-display text-2xl md:text-3xl font-bold text-white">UP TO <span className="text-gaming-cyan"><AnimatedCounter end={240} duration={1500} suffix="+" /></span></p>
+              </div>
             </div>
-          ))}
+
+            <div className="hidden md:block w-[1px] h-16 bg-white/10" />
+
+            <div className="flex-1 flex items-center gap-4 text-left">
+              <div className="h-14 w-14 rounded-2xl bg-gaming-primary/20 border border-gaming-primary/30 flex items-center justify-center text-gaming-accent shrink-0 shadow-glow-sm">
+                <Cpu className="h-7 w-7" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground font-semibold uppercase tracking-wider mb-1">Performance</p>
+                <p className="font-display text-2xl md:text-3xl font-bold text-white"><AnimatedCounter end={100} duration={1500} suffix="%" /> <span className="text-gaming-cyan">STABLE</span></p>
+              </div>
+            </div>
+
+            <div className="hidden md:block w-[1px] h-16 bg-white/10" />
+
+            <div className="flex-1 flex items-center gap-4 text-left">
+              <div className="h-14 w-14 rounded-2xl bg-[#25D366]/20 border border-[#25D366]/30 flex items-center justify-center text-[#25D366] shrink-0 shadow-[0_0_15px_rgba(37,211,102,0.2)]">
+                <Users className="h-7 w-7" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground font-semibold uppercase tracking-wider mb-1">Klien Puas</p>
+                <p className="font-display text-2xl md:text-3xl font-bold text-white"><AnimatedCounter end={500} duration={2000} suffix="+" /> <span className="text-[#25D366]">USER</span></p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>

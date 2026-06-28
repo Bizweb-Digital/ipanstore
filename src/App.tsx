@@ -5,12 +5,15 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import LoadingScreen from "./components/LoadingScreen";
-import CustomCursor from "./components/CustomCursor";
-import Index from "./pages/Index.tsx";
-import Layanan from "./pages/Layanan.tsx";
-import TestimoniPage from "./pages/TestimoniPage.tsx";
-import Contact from "./pages/Contact.tsx";
-import NotFound from "./pages/NotFound.tsx";
+import Index from "./pages/Index";
+import Layanan from "./pages/Layanan";
+import BoostFpsFreeFire from "./pages/BoostFpsFreeFire";
+import TweakingPcGaming from "./pages/TweakingPcGaming";
+import Paket from "./pages/Paket";
+import TestimoniPage from "./pages/TestimoniPage";
+import Faq from "./pages/Faq";
+import Kontak from "./pages/Kontak";
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
@@ -24,7 +27,6 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <CustomCursor />
         <Toaster />
         <Sonner />
         {loading && <LoadingScreen onComplete={handleLoadingComplete} />}
@@ -32,8 +34,12 @@ const App = () => {
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/layanan" element={<Layanan />} />
+            <Route path="/layanan/boost-fps-free-fire" element={<BoostFpsFreeFire />} />
+            <Route path="/layanan/tweaking-pc-gaming" element={<TweakingPcGaming />} />
+            <Route path="/paket" element={<Paket />} />
             <Route path="/testimoni" element={<TestimoniPage />} />
-            <Route path="/contact" element={<Contact />} />
+            <Route path="/faq" element={<Faq />} />
+            <Route path="/kontak" element={<Kontak />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -1,123 +1,145 @@
-import { Star, Users, Award, ShieldCheck } from "lucide-react";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
-import FloatingWhatsApp from "@/components/FloatingWhatsApp";
-import PageTransition from "@/components/PageTransition";
-import { useScrollReveal } from "@/hooks/useScrollReveal";
+import { Star, Quote, CheckCircle2 } from "lucide-react";
+import SEOHead from "@/components/SEOHead";
+import Layout from "@/components/Layout";
 import AnimatedCounter from "@/components/AnimatedCounter";
 
-const testimonials = [
-  { name: "Raxzy", text: "Gacor banget optimize-nya, FPS naik drastis pas main FF. Recommended!", paket: "Elite Optimizer" },
-  { name: "Cakka", text: "Windows oprekan by Ipan beneran beda, ringan & responsif. Mantap!", paket: "Elite Optimizer" },
-  { name: "Evan", text: "Baru 3 hari pake, langsung jago dan smooth tanpa lag. Worth banget.", paket: "Extreme Optimizer" },
-  { name: "Kepin", text: "Semua produk memuaskan, admin fast respon. Dijamin puas.", paket: "Standart Optimizer" },
-  { name: "Gilang", text: "Admin ramah, sabar jelasin. Hasilnya juga top, PC jadi enteng.", paket: "Standart Optimizer" },
-  { name: "Jojo", text: "FPS jadi boost parah, gameplay smooth. Pelayanan bintang lima!", paket: "Elite Optimizer" },
-  { name: "Ardi", text: "Awalnya ragu, tapi setelah dicoba langsung kerasa bedanya. PC gak pernah seringan ini!", paket: "Extreme Optimizer" },
-  { name: "Reza", text: "Emulator gw yang tadinya berat banget sekarang lancar jaya. Makasih bang Ipan!", paket: "SET PC" },
-  { name: "Dimas", text: "Harga murah tapi kualitas gak murahan. Recommended banget buat yang budget tipis.", paket: "Standart Optimizer" },
-];
-
-const stats = [
-  { icon: Users, value: <AnimatedCounter end={500} duration={2000} suffix="+" />, label: "Klien Puas" },
-  { icon: Star, value: "4.9", label: "Rating" },
-  { icon: Award, value: "24/7", label: "Online Support" },
-  { icon: ShieldCheck, value: "100%", label: "Garansi Gacor" },
+export const testimonials = [
+  {
+    name: "Raxzy",
+    paket: "Elite Optimizer",
+    body: "Gacor banget optimize-nya, FPS naik drastis pas main FF. Recommended!",
+    initial: "R",
+  },
+  {
+    name: "Cakka",
+    paket: "Elite Optimizer",
+    body: "Windows oprekan by Ipan beneran beda, ringan & responsif. Mantap!",
+    initial: "C",
+  },
+  {
+    name: "Evan",
+    paket: "Extreme Optimizer",
+    body: "Baru 3 hari pake, langsung jago dan smooth tanpa lag. Worth banget.",
+    initial: "E",
+  },
+  {
+    name: "Kepin",
+    paket: "Standart Optimizer",
+    body: "Semua produk memuaskan, admin fast respon. Dijamin puas.",
+    initial: "K",
+  },
+  {
+    name: "Gilang",
+    paket: "Standart Optimizer",
+    body: "Admin ramah, sabar jelasin. Hasilnya juga top, PC jadi enteng.",
+    initial: "G",
+  },
+  {
+    name: "Jojo",
+    paket: "Elite Optimizer",
+    body: "FPS jadi boost parah, gameplay smooth. Pelayanan bintang lima!",
+    initial: "J",
+  },
+  {
+    name: "Ardi",
+    paket: "Extreme Optimizer",
+    body: "Awalnya ragu, tapi setelah dicoba langsung kerasa bedanya. PC gak pernah seringan ini!",
+    initial: "A",
+  },
+  {
+    name: "Reza",
+    paket: "SET PC",
+    body: "Emulator gw yang tadinya berat banget sekarang lancar jaya. Makasih bang Ipan!",
+    initial: "R",
+  },
+  {
+    name: "Dimas",
+    paket: "Standart Optimizer",
+    body: "Harga murah tapi kualitas gak murahan. Recommended banget buat yang budget tipis.",
+    initial: "D",
+  },
 ];
 
 const TestimoniPage = () => {
-  const { ref: statsRef, revealed: statsRevealed } = useScrollReveal<HTMLDivElement>();
-  const { ref: gridRef, revealed: gridRevealed } = useScrollReveal<HTMLDivElement>();
-
   return (
-    <main className="min-h-screen bg-background text-foreground overflow-x-hidden">
-      <Navbar />
-      <PageTransition>
-        {/* Hero */}
-        <section className="relative pt-32 pb-16 md:pt-40 md:pb-24 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-hero" />
-          <div className="absolute inset-0 grid-pattern opacity-20 pointer-events-none" />
-          <div className="absolute top-1/3 -right-20 w-72 h-72 rounded-full bg-primary/20 blur-[120px]" />
-          <div className="absolute bottom-1/4 -left-20 w-96 h-96 rounded-full bg-[hsl(217_91%_60%)]/20 blur-[140px]" />
+    <Layout>
+      <SEOHead
+        title="Testimoni | IPAN STORE"
+        description="Review dan testimoni pelanggan yang telah menggunakan jasa optimasi PC gaming dan boost FPS Free Fire di IPAN STORE."
+      />
 
-          <div className="container mx-auto px-4 relative text-center">
-            <span className="text-xs font-semibold tracking-[0.3em] uppercase text-primary">
-              Testimoni
-            </span>
-            <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-black mt-4 mb-6 leading-tight animate-fade-up">
-              Kata Mereka yang <span className="text-gradient">Sudah Di OPTIMIZE</span>
-            </h1>
-            <p className="max-w-2xl mx-auto text-lg text-muted-foreground animate-fade-up delay-100">
-              Ratusan klien sudah merasakan bedanya. Berikut review langsung dari mereka.
-            </p>
-          </div>
-        </section>
+      <section className="relative pt-32 pb-16 md:pt-40 md:pb-24 overflow-hidden bg-[#060A14]">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(37,99,235,0.15)_0%,transparent_50%)]" />
+        
+        <div className="container mx-auto px-4 relative z-10 text-center">
+          <span className="gaming-badge-accent mb-4 inline-block">REVIEW & TESTIMONI</span>
+          <h1 className="h1-clamp font-display font-bold text-white mb-6">
+            Apa Kata <span className="text-gaming-accent">Klien Kami?</span>
+          </h1>
+          <p className="max-w-2xl mx-auto text-muted-foreground body-clamp">
+            Lebih dari 500+ gamer telah mempercayakan performa PC mereka kepada kami.
+            Ini adalah pengalaman asli mereka.
+          </p>
 
-        {/* Stats */}
-        <section className="relative py-12">
-          <div className="container mx-auto px-4">
-            <div
-              ref={statsRef}
-              className={`grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto scroll-reveal-stagger ${statsRevealed ? "revealed" : ""}`}
-            >
-              {stats.map((s) => {
-                const Icon = s.icon;
-                return (
-                  <div key={s.label} className="glass-panel border-glow rounded-2xl p-6 text-center">
-                    <Icon className="h-6 w-6 text-primary mx-auto mb-2" strokeWidth={2.2} />
-                    <div className="font-display text-3xl md:text-4xl font-black text-gradient">
-                      {s.value}
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1">{s.label}</div>
-                  </div>
-                );
-              })}
+          <div className="mt-12 mb-8 p-6 gaming-card max-w-4xl mx-auto flex flex-col md:flex-row justify-around gap-6 items-center border-gaming-primary/20">
+            <div className="text-center">
+              <p className="font-display text-4xl font-black text-white"><AnimatedCounter end={500} duration={1500} suffix="+" /></p>
+              <p className="text-sm text-muted-foreground font-bold uppercase tracking-wider mt-1">Klien Puas</p>
+            </div>
+            <div className="hidden md:block w-px h-12 bg-white/10" />
+            <div className="text-center">
+              <p className="font-display text-4xl font-black text-gaming-accent flex justify-center items-center gap-2">
+                4.9 <Star className="w-6 h-6 fill-gaming-accent text-gaming-accent" />
+              </p>
+              <p className="text-sm text-muted-foreground font-bold uppercase tracking-wider mt-1">Rata-rata Rating</p>
+            </div>
+            <div className="hidden md:block w-px h-12 bg-white/10" />
+            <div className="text-center flex flex-col items-center justify-center">
+              <CheckCircle2 className="w-10 h-10 text-[#25D366] mb-1" />
+              <p className="text-sm text-[#25D366] font-bold uppercase tracking-wider">Garansi 100%</p>
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Testimonials grid */}
-        <section className="relative py-16 md:py-24">
-          <div className="container mx-auto px-4">
-            <div
-              ref={gridRef}
-              className={`grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto scroll-reveal-stagger ${gridRevealed ? "revealed" : ""}`}
-            >
-              {testimonials.map((t) => (
-                <div
-                  key={t.name}
-                  className="glass-panel border-glow rounded-2xl p-7 hover:border-primary/40 hover:shadow-elevated transition-all duration-300 hover:-translate-y-1"
-                >
-                  <div className="flex gap-1 mb-4">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star
-                        key={i}
-                        className="h-4 w-4 fill-primary text-primary"
-                        strokeWidth={0}
-                      />
-                    ))}
+      <section className="relative pb-24">
+        <div className="container mx-auto px-4">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+            {testimonials.map((t, idx) => (
+              <div key={idx} className="gaming-card p-6 md:p-8 flex flex-col relative group">
+                <Quote className="absolute top-6 right-6 text-white/5 w-12 h-12 rotate-180 transition-transform group-hover:text-gaming-accent/10" />
+                
+                <div className="flex gap-1 mb-6">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <Star key={i} className="w-4 h-4 fill-gaming-accent text-gaming-accent" />
+                  ))}
+                </div>
+                
+                <p className="text-muted-foreground text-sm md:text-base leading-relaxed mb-8 flex-1 italic relative z-10">
+                  "{t.body}"
+                </p>
+                
+                <div className="flex items-center gap-4 mt-auto pt-6 border-t border-white/5 relative z-10">
+                  <div className="w-12 h-12 rounded-full bg-gaming-primary/20 flex items-center justify-center font-display font-bold text-lg text-gaming-accent">
+                    {t.initial}
                   </div>
-                  <p className="text-foreground/90 leading-relaxed mb-6">"{t.text}"</p>
-                  <div className="flex items-center gap-3 pt-4 border-t border-border/60">
-                    <div className="h-11 w-11 rounded-full bg-gradient-primary flex items-center justify-center font-display font-black text-primary-foreground shadow-glow">
-                      {t.name[0]}
-                    </div>
-                    <div>
-                      <div className="font-bold">{t.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {t.paket} · Verified Customer
-                      </div>
-                    </div>
+                  <div>
+                    <p className="font-bold text-white text-sm md:text-base">{t.name}</p>
+                    <p className="text-[11px] md:text-xs text-muted-foreground mt-0.5">{t.paket} &middot; Verified Customer</p>
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
-        </section>
-      </PageTransition>
-      <Footer />
-      <FloatingWhatsApp />
-    </main>
+
+          <div className="mt-16 text-center">
+            <p className="text-xs text-muted-foreground/60 italic">
+              * Testimoni di atas merupakan contoh ulasan dan dapat diganti dengan review asli dari pelanggan IPAN STORE melalui sistem database/CMS di kemudian hari.
+            </p>
+          </div>
+        </div>
+      </section>
+    </Layout>
   );
 };
 
