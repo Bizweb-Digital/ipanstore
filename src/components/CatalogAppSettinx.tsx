@@ -2,6 +2,7 @@ import { ArrowRight, MousePointer2, Crosshair, Activity, Rocket, BadgeCheck } fr
 import { Button } from "@/components/ui/button";
 import { WA_NUMBER } from "./FloatingWhatsApp";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
+import SettinxGallery from "./SettinxGallery";
 
 const SETTINX_WA_LINK = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(
   "Halo Ipan Store, saya tertarik dengan IPAN APP SettinX dan ingin melihat katalog lengkapnya."
@@ -115,6 +116,22 @@ const CatalogAppSettinx = () => {
               </Button>
             </div>
           </div>
+        </div>
+
+        {/* Preview Gallery */}
+        <div className="max-w-5xl mx-auto mt-10">
+          <div className="text-center mb-6">
+            <span className="gaming-badge-accent inline-flex items-center">
+              PREVIEW TAMPILAN APLIKASI
+            </span>
+            <h3 className="font-display text-xl md:text-2xl font-black text-white uppercase tracking-wide mt-3 mb-2">
+              Tampilan <span className="text-gaming-accent">APP SettinX</span>
+            </h3>
+            <p className="text-sm text-muted-foreground max-w-2xl mx-auto">
+              Klik foto untuk melihat lebih detail. Tampilan menu & halaman login IPAN APP SettinX V1.
+            </p>
+          </div>
+          <SettinxGallery />
         </div>
       </div>
     </section>

@@ -15,6 +15,7 @@ import { WA_NUMBER } from "@/components/FloatingWhatsApp";
 import SEOHead from "@/components/SEOHead";
 import Layout from "@/components/Layout";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
+import SettinxGallery from "@/components/SettinxGallery";
 
 /* ─── Paket Data ─── */
 type Pkg = {
@@ -372,6 +373,19 @@ const Paket = () => {
                       <ArrowRight className="ml-2 h-5 w-5" />
                     </a>
                   </Button>
+                </div>
+
+                {/* Preview Gallery */}
+                <div className="mt-12">
+                  <div className="text-center mb-6">
+                    <h4 className="font-display text-lg md:text-xl font-black text-white uppercase tracking-wider">
+                      Preview <span className="text-gaming-accent">Tampilan Aplikasi</span>
+                    </h4>
+                    <p className="text-xs md:text-sm text-muted-foreground mt-2">
+                      Klik foto untuk melihat lebih detail.
+                    </p>
+                  </div>
+                  <SettinxGallery />
                 </div>
               </div>
             </div>

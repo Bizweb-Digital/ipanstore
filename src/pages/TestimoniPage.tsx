@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import useEmblaCarousel from "embla-carousel-react";
-import { Star, ChevronLeft, ChevronRight, Images, CheckCircle2, Crown, Sparkles, Quote } from "lucide-react";
+import { Star, ChevronLeft, ChevronRight, Images, CheckCircle2, Quote } from "lucide-react";
 import SEOHead from "@/components/SEOHead";
 import Layout from "@/components/Layout";
 import AnimatedCounter from "@/components/AnimatedCounter";
@@ -137,8 +137,7 @@ const TestimoniPage = () => {
 
               {/* Top Crown Badge */}
               <div className="absolute top-0 left-1/2 -translate-x-1/2 z-20">
-                <div className="inline-flex items-center gap-2 bg-gradient-to-r from-gaming-accent via-yellow-400 to-gaming-accent text-[#060A14] text-[11px] md:text-xs font-black px-5 py-2 rounded-b-2xl tracking-[0.25em] uppercase shadow-[0_8px_24px_rgba(56,189,248,0.45)]">
-                  <Crown className="h-4 w-4" />
+                <div className="inline-flex items-center bg-gradient-to-r from-gaming-accent via-yellow-400 to-gaming-accent text-[#060A14] text-[11px] md:text-xs font-black px-5 py-2 rounded-b-2xl tracking-[0.25em] uppercase shadow-[0_8px_24px_rgba(56,189,248,0.45)]">
                   {featuredPhoto.badge ?? "ELITE CUSTOMER"}
                 </div>
               </div>
@@ -164,8 +163,7 @@ const TestimoniPage = () => {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#060A14]/70 via-transparent to-transparent" />
                   </div>
-                  <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 bg-gaming-accent text-[#060A14] text-[10px] font-black px-2.5 py-1 rounded-md uppercase tracking-wider shadow-[0_0_12px_rgba(56,189,248,0.6)]">
-                    <Sparkles className="h-3 w-3" />
+                  <div className="absolute top-3 left-3 inline-flex items-center bg-gaming-accent text-[#060A14] text-[10px] font-black px-2.5 py-1 rounded-md uppercase tracking-wider shadow-[0_0_12px_rgba(56,189,248,0.6)]">
                     FEATURED
                   </div>
                 </button>
@@ -193,11 +191,11 @@ const TestimoniPage = () => {
                   </div>
 
                   <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#25D366]/10 border border-[#25D366]/40 px-3 py-1.5 text-[11px] font-bold text-[#25D366] uppercase tracking-wider">
-                      <CheckCircle2 className="h-3.5 w-3.5" /> Verified WhatsApp
+                    <span className="inline-flex items-center rounded-full bg-[#25D366]/10 border border-[#25D366]/40 px-3 py-1.5 text-[11px] font-bold text-[#25D366] uppercase tracking-wider">
+                      Verified WhatsApp
                     </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-gaming-accent/10 border border-gaming-accent/40 px-3 py-1.5 text-[11px] font-bold text-gaming-accent uppercase tracking-wider">
-                      <Crown className="h-3.5 w-3.5" /> Top Customer
+                    <span className="inline-flex items-center rounded-full bg-gaming-accent/10 border border-gaming-accent/40 px-3 py-1.5 text-[11px] font-bold text-gaming-accent uppercase tracking-wider">
+                      Top Customer
                     </span>
                   </div>
                 </div>
