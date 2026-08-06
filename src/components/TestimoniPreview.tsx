@@ -1,12 +1,22 @@
-import { Star, Quote } from "lucide-react";
+import { Images } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "./ui/button";
-import { testimonials } from "@/pages/TestimoniPage";
+
+const testiPhotos = [
+  "/testimoni/Screenshot_2025-12-23-23-15-30-787_com.whatsapp.w4b.jpg",
+  "/testimoni/Screenshot_2025-12-25-13-18-55-378_com.whatsapp.w4b.jpg",
+  "/testimoni/Screenshot_2025-12-28-20-32-03-375_com.whatsapp.w4b.jpg",
+  "/testimoni/Screenshot_2026-01-04-11-44-26-458_com.whatsapp.w4b.jpg",
+  "/testimoni/Screenshot_2026-01-04-20-43-26-760_com.whatsapp.w4b.jpg",
+  "/testimoni/Screenshot_2026-01-10-22-17-33-377_com.whatsapp.w4b.jpg",
+  "/testimoni/Screenshot_2026-01-15-17-58-16-040_com.whatsapp.w4b.jpg",
+  "/testimoni/Screenshot_2026-01-18-14-57-35-501_com.whatsapp.w4b.jpg",
+  "/testimoni/Screenshot_2026-02-08-13-41-09-236_com.whatsapp.w4b.jpg",
+];
+
+const marqueePhotos = [...testiPhotos, ...testiPhotos];
 
 const TestimoniPreview = () => {
-  // Double the array to create a seamless infinite marquee effect
-  const marqueeItems = [...testimonials, ...testimonials];
-
   return (
     <section className="relative py-20 md:py-28 overflow-hidden bg-[#060A14]">
       {/* Background elements */}
@@ -14,44 +24,34 @@ const TestimoniPreview = () => {
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/5 to-transparent" />
 
       <div className="container mx-auto px-4 relative z-10">
-        <div className="max-w-3xl mx-auto text-center mb-16">
-          <span className="section-subheading">Testimoni Klien</span>
+        <div className="max-w-3xl mx-auto text-center mb-14">
+          <span className="section-subheading">Galeri Testimoni</span>
           <h2 className="h2-clamp font-display font-bold text-white mb-6">
-            Dipercaya 500+ <span className="text-gaming-accent">Gamer</span>
+            Dipercaya <span className="text-gaming-accent">500+ Gamer</span> Indonesia
           </h2>
           <p className="text-muted-foreground body-clamp max-w-2xl mx-auto">
-            Review jujur dari klien yang sudah merasakan perbedaan performa setelah di-optimasi oleh IPAN STORE.
+            Dokumentasi asli dari pelanggan yang telah merasakan peningkatan FPS, optimasi emulator, dan performa PC setelah menggunakan jasa IPAN STORE.
           </p>
         </div>
       </div>
 
-      {/* Infinite Marquee Container */}
+      {/* Infinite Marquee Gallery */}
       <div className="w-full overflow-hidden relative mb-12 group">
-        {/* Gradient Overlays for smooth fade out at edges */}
         <div className="absolute top-0 left-0 w-16 md:w-32 h-full bg-gradient-to-r from-[#060A14] to-transparent z-10 pointer-events-none" />
         <div className="absolute top-0 right-0 w-16 md:w-32 h-full bg-gradient-to-l from-[#060A14] to-transparent z-10 pointer-events-none" />
-        
-        <div className="flex w-max animate-marquee gap-6 py-4 px-4 group-hover:[animation-play-state:paused]">
-          {marqueeItems.map((t, idx) => (
-            <div key={idx} className="w-[280px] md:w-[350px] shrink-0 gaming-card p-6 flex flex-col relative">
-              <Quote className="absolute top-6 right-6 text-white/5 w-10 h-10 rotate-180" />
-              <div className="flex gap-1 mb-4">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <Star key={i} className="w-4 h-4 fill-gaming-accent text-gaming-accent" />
-                ))}
-              </div>
-              <p className="text-muted-foreground text-sm leading-relaxed mb-6 flex-1 italic relative z-10">
-                "{t.body}"
-              </p>
-              <div className="flex items-center gap-4 mt-auto pt-6 border-t border-white/5 relative z-10">
-                <div className="w-10 h-10 rounded-full bg-gaming-primary/20 flex items-center justify-center font-display font-bold text-gaming-accent shrink-0">
-                  {t.initial}
-                </div>
-                <div>
-                  <p className="font-bold text-white text-sm">{t.name}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">{t.paket} &middot; Verified</p>
-                </div>
-              </div>
+
+        <div className="flex w-max animate-marquee gap-4 md:gap-6 py-4 px-4 group-hover:[animation-play-state:paused]">
+          {marqueePhotos.map((src, idx) => (
+            <div
+              key={`${src}-${idx}`}
+              className="w-[180px] sm:w-[200px] md:w-[230px] aspect-[9/16] shrink-0 rounded-2xl overflow-hidden border border-gaming-accent/20 hover:border-gaming-accent/60 transition-all duration-300 hover:-translate-y-1"
+            >
+              <img
+                src={src}
+                alt={`Testimoni pelanggan IPAN STORE ${(idx % testiPhotos.length) + 1} - hasil optimasi PC gaming`}
+                loading="lazy"
+                className="h-full w-full object-cover"
+              />
             </div>
           ))}
         </div>
@@ -59,8 +59,11 @@ const TestimoniPreview = () => {
 
       <div className="container mx-auto px-4 relative z-10">
         <div className="text-center">
-          <Button asChild variant="outline">
-            <Link to="/testimoni">Lihat Semua Review</Link>
+          <Button asChild variant="outline" className="gap-2">
+            <Link to="/testimoni">
+              <Images className="h-4 w-4" />
+              Lihat Semua Galeri
+            </Link>
           </Button>
         </div>
       </div>

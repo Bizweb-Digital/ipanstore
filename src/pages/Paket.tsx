@@ -150,47 +150,62 @@ const packages: Pkg[] = [
   },
 ];
 
-/* Comparison Data */
+/* Comparison Data — IPAN APP SETTINX mendapat semua centang */
 const comparisonFeatures = [
   // SET PC Features
-  { name: "Setting Regedit Tweak", category: "SET PC", "SET PC": true, "Custom FF & Emulator": false },
-  { name: "Settingan RAM & CPU ideal", category: "SET PC", "SET PC": true, "Custom FF & Emulator": false },
-  { name: "Sensi & DPI config", category: "SET PC", "SET PC": true, "Custom FF & Emulator": false },
-  { name: "Free Fire V7A Terbaru", category: "SET PC", "SET PC": true, "Custom FF & Emulator": true },
-  { name: "Tweaks Smoothness", category: "SET PC", "SET PC": true, "Custom FF & Emulator": false },
-  { name: "Model Phone Unlock 144 Fps", category: "SET PC", "SET PC": true, "Custom FF & Emulator": false },
-  { name: "FPS Boost", category: "SET PC", "SET PC": true, "Custom FF & Emulator": true },
-  { name: "Mengurangi Input Lag", category: "SET PC", "SET PC": true, "Custom FF & Emulator": true },
-  { name: "Mengurangi Recoil Senjata", category: "SET PC", "SET PC": true, "Custom FF & Emulator": true },
-  { name: "Anti Force Close Emulator", category: "SET PC", "SET PC": true, "Custom FF & Emulator": true },
+  { name: "Setting Regedit Tweak", category: "SET PC", "SET PC": true, "Custom FF & Emulator": false, "IPAN APP SETTINX": true },
+  { name: "Settingan RAM & CPU ideal", category: "SET PC", "SET PC": true, "Custom FF & Emulator": false, "IPAN APP SETTINX": true },
+  { name: "Sensi & DPI config", category: "SET PC", "SET PC": true, "Custom FF & Emulator": false, "IPAN APP SETTINX": true },
+  { name: "Free Fire V7A Terbaru", category: "SET PC", "SET PC": true, "Custom FF & Emulator": true, "IPAN APP SETTINX": true },
+  { name: "Tweaks Smoothness", category: "SET PC", "SET PC": true, "Custom FF & Emulator": false, "IPAN APP SETTINX": true },
+  { name: "Model Phone Unlock 144 Fps", category: "SET PC", "SET PC": true, "Custom FF & Emulator": false, "IPAN APP SETTINX": true },
+  { name: "FPS Boost", category: "SET PC", "SET PC": true, "Custom FF & Emulator": true, "IPAN APP SETTINX": true },
+  { name: "Mengurangi Input Lag", category: "SET PC", "SET PC": true, "Custom FF & Emulator": true, "IPAN APP SETTINX": true },
+  { name: "Mengurangi Recoil Senjata", category: "SET PC", "SET PC": true, "Custom FF & Emulator": true, "IPAN APP SETTINX": true },
+  { name: "Anti Force Close Emulator", category: "SET PC", "SET PC": true, "Custom FF & Emulator": true, "IPAN APP SETTINX": true },
 
   // Optimize Features
-  { name: "Regedit & Tweaks", category: "Optimize", STANDART: true, ELITE: false, EXTREME: true },
-  { name: "Optimize CPU/RAM/GPU", category: "Optimize", STANDART: true, ELITE: true, EXTREME: true },
-  { name: "Boost FPS semua game", category: "Optimize", STANDART: true, ELITE: true, EXTREME: true },
-  { name: "Tanpa install ulang", category: "Optimize", STANDART: true, ELITE: false, EXTREME: false },
-  { name: "Reduce latency", category: "Optimize", STANDART: true, ELITE: true, EXTREME: true },
-  { name: "Windows Mod by Ipan", category: "Optimize", STANDART: true, ELITE: true, EXTREME: true },
-  { name: "Lebih ringan & responsif", category: "Optimize", STANDART: true, ELITE: true, EXTREME: true },
-  { name: "Cocok daily use", category: "Optimize", STANDART: true, ELITE: true, EXTREME: true },
-  { name: "Semua fitur lengkap", category: "Optimize", STANDART: false, ELITE: false, EXTREME: true },
-  { name: "Performance maksimal", category: "Optimize", STANDART: false, ELITE: false, EXTREME: true },
-  { name: "Emulator & Keybind", category: "Optimize", STANDART: false, ELITE: false, EXTREME: true },
-  { name: "Sensi X & Y", category: "Optimize", STANDART: false, ELITE: false, EXTREME: true },
+  { name: "Regedit & Tweaks", category: "Optimize", STANDART: true, ELITE: false, EXTREME: true, "IPAN APP SETTINX": true },
+  { name: "Optimize CPU/RAM/GPU", category: "Optimize", STANDART: true, ELITE: true, EXTREME: true, "IPAN APP SETTINX": true },
+  { name: "Boost FPS semua game", category: "Optimize", STANDART: true, ELITE: true, EXTREME: true, "IPAN APP SETTINX": true },
+  { name: "Tanpa install ulang", category: "Optimize", STANDART: true, ELITE: false, EXTREME: false, "IPAN APP SETTINX": true },
+  { name: "Reduce latency", category: "Optimize", STANDART: true, ELITE: true, EXTREME: true, "IPAN APP SETTINX": true },
+  { name: "Windows Mod by Ipan", category: "Optimize", STANDART: true, ELITE: true, EXTREME: true, "IPAN APP SETTINX": true },
+  { name: "Lebih ringan & responsif", category: "Optimize", STANDART: true, ELITE: true, EXTREME: true, "IPAN APP SETTINX": true },
+  { name: "Cocok daily use", category: "Optimize", STANDART: true, ELITE: true, EXTREME: true, "IPAN APP SETTINX": true },
+  { name: "Semua fitur lengkap", category: "Optimize", STANDART: false, ELITE: false, EXTREME: true, "IPAN APP SETTINX": true },
+  { name: "Performance maksimal", category: "Optimize", STANDART: false, ELITE: false, EXTREME: true, "IPAN APP SETTINX": true },
+  { name: "Emulator & Keybind", category: "Optimize", STANDART: false, ELITE: false, EXTREME: true, "IPAN APP SETTINX": true },
+  { name: "Sensi X & Y", category: "Optimize", STANDART: false, ELITE: false, EXTREME: true, "IPAN APP SETTINX": true },
 
   // Anti Cheat Features
-  { name: "External Cheat & Internal Cheat", category: "Anti Cheat", "ANTICHEAT LAGA": true },
-  { name: "Streamer Cheat & Hidden Panel", category: "Anti Cheat", "ANTICHEAT LAGA": true },
-  { name: "Kernel Driver Cheat", category: "Anti Cheat", "ANTICHEAT LAGA": true },
-  { name: "Metode bypass terbaru", category: "Anti Cheat", "ANTICHEAT LAGA": true },
-  { name: "Manipulasi emulator tidak wajar", category: "Anti Cheat", "ANTICHEAT LAGA": true },
-  { name: "Modifikasi emulator mencurigakan", category: "Anti Cheat", "ANTICHEAT LAGA": true },
+  { name: "External Cheat & Internal Cheat", category: "Anti Cheat", "ANTICHEAT LAGA": true, "IPAN APP SETTINX": true },
+  { name: "Streamer Cheat & Hidden Panel", category: "Anti Cheat", "ANTICHEAT LAGA": true, "IPAN APP SETTINX": true },
+  { name: "Kernel Driver Cheat", category: "Anti Cheat", "ANTICHEAT LAGA": true, "IPAN APP SETTINX": true },
+  { name: "Metode bypass terbaru", category: "Anti Cheat", "ANTICHEAT LAGA": true, "IPAN APP SETTINX": true },
+  { name: "Manipulasi emulator tidak wajar", category: "Anti Cheat", "ANTICHEAT LAGA": true, "IPAN APP SETTINX": true },
+  { name: "Modifikasi emulator mencurigakan", category: "Anti Cheat", "ANTICHEAT LAGA": true, "IPAN APP SETTINX": true },
 ];
 
-const FeatureCheck = ({ ok }: { ok: boolean }) =>
+/* Column metadata untuk APP SETTINX (harga coret + harga baru) */
+const SETTINX_COL = {
+  name: "IPAN APP SETTINX",
+  priceOld: "100K",
+  priceNew: "75K",
+  badge: "PALING UNGGUL",
+};
+
+const FeatureCheck = ({ ok, highlight = false }: { ok: boolean; highlight?: boolean }) =>
   ok ? (
     <div className="flex justify-center items-center">
-      <Check className="h-5 w-5 text-gaming-cyan drop-shadow-[0_0_5px_rgba(34,211,238,0.5)]" strokeWidth={3} />
+      <Check
+        className={`h-5 w-5 drop-shadow-[0_0_5px_rgba(34,211,238,0.5)] ${
+          highlight
+            ? "h-6 w-6 text-gaming-accent drop-shadow-[0_0_8px_rgba(56,189,248,0.7)]"
+            : "text-gaming-cyan"
+        }`}
+        strokeWidth={3}
+      />
     </div>
   ) : (
     <div className="flex justify-center items-center">
@@ -208,8 +223,9 @@ const Paket = () => {
   return (
     <Layout>
       <SEOHead
-        title="Paket Optimasi Gaming | IPAN STORE"
-        description="Pilih paket optimasi PC gaming IPAN STORE sesuai kebutuhan device, mulai dari basic tuning hingga full optimization."
+        title="Paket Optimasi Gaming & IPAN APP SettinX | IPAN STORE"
+        description="Pilih paket optimasi PC gaming IPAN STORE mulai dari 20K: SET PC, Standart, Elite, Extreme, AntiCheat Laga, dan IPAN APP SettinX (hemat Rp 25.000 dari Rp 100.000). Konsultasi gratis via WhatsApp."
+        keywords="paket optimasi PC, harga boost FPS Free Fire, IPAN APP SettinX, tweak emulator, jasa optimasi gaming murah"
       />
 
       {/* Hero */}
@@ -410,33 +426,36 @@ const Paket = () => {
         </div>
       </section>
 
-      {/* Comparison Table */}
-      {activeTab !== "APP SETTINX" && (
+{/* Comparison Table */}
       <section className="relative py-16 md:py-24">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center mb-14">
             <span className="section-subheading">Perbandingan</span>
             <h2 className="h2-clamp font-display font-bold text-white mt-4 mb-4">
-              Bandingkan <span className="text-gaming-accent">Paket {activeTab}</span>
+              {activeTab === "APP SETTINX"
+                ? <>Kenapa <span className="text-gaming-accent">IPAN APP SETTINX</span> Paling Unggul?</>
+                : <>Banding kan <span className="text-gaming-accent">Paket {activeTab}</span></>}
             </h2>
             <p className="text-muted-foreground">
-              Cek fitur yang tersedia secara mendetail di setiap paket.
+              {activeTab === "APP SETTINX"
+                ? "Satu paket ini sudah mencakup semua fitur dari paket Optimize, SET PC, dan Anti Cheat dengan lisensi lifetime."
+                : "Cek fitur yang tersedia secara mendetail di setiap paket. IPAN APP SettinX tetap ditampilkan sebagai acuan paket terlengkap."}
             </p>
           </div>
 
           <div
             ref={tableRef}
-            className={`max-w-5xl mx-auto scroll-reveal ${tableRevealed ? "revealed" : ""}`}
+            className={`max-w-6xl mx-auto scroll-reveal ${tableRevealed ? "revealed" : ""}`}
           >
             <p className="text-xs text-muted-foreground/60 text-center mb-3 lg:hidden">
               Geser tabel ke samping untuk melihat semua fitur
             </p>
             <div key={activeTab} className="gaming-table-wrapper overflow-x-auto shadow-glow-sm animate-fade-right" style={{ animationDelay: '300ms' }}>
-              <table className="w-full min-w-[768px] gaming-table">
+              <table className="w-full min-w-[900px] gaming-table">
                 <thead>
                   <tr>
                     <th className="text-left font-display tracking-widest uppercase text-gaming-accent min-w-[220px]">
-                      Fitur Optimasi
+                      Fitur
                     </th>
                     {filteredPackages.map((p) => (
                       <th key={p.name} className="min-w-[120px] pb-4">
@@ -446,6 +465,22 @@ const Paket = () => {
                         </div>
                       </th>
                     ))}
+                    {/* Kolom IPAN APP SETTINX — selalu tampil */}
+                    <th className="min-w-[170px] pb-4 relative">
+                      <div className="absolute inset-0 bg-gradient-to-b from-gaming-accent/15 via-gaming-accent/5 to-transparent pointer-events-none" />
+                      <div className="flex flex-col items-center gap-1.5 relative z-10">
+                        <span className="inline-block bg-gaming-accent text-[#060A14] text-[9px] font-black px-2.5 py-0.5 rounded-full tracking-widest uppercase shadow-[0_0_10px_rgba(56,189,248,0.5)]">
+                          {SETTINX_COL.badge}
+                        </span>
+                        <span className="text-white text-sm font-bold uppercase">{SETTINX_COL.name}</span>
+                        <div className="flex flex-col items-center leading-tight">
+                          <span className="text-muted-foreground/60 text-xs line-through font-semibold">Rp {SETTINX_COL.priceOld}.000</span>
+                          <span className="text-gaming-accent text-lg font-black bg-gaming-accent/15 px-3 py-0.5 rounded-full border border-gaming-accent/40 shadow-[0_0_10px_rgba(56,189,248,0.3)]">
+                            Rp {SETTINX_COL.priceNew}.000
+                          </span>
+                        </div>
+                      </div>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -455,13 +490,22 @@ const Paket = () => {
                       {filteredPackages.map((p) => (
                         <td key={p.name}><FeatureCheck ok={f[p.name]} /></td>
                       ))}
+                      <td className="relative bg-gaming-accent/[0.04] border-l border-r border-gaming-accent/20">
+                        <FeatureCheck ok={f[SETTINX_COL.name]} highlight />
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
 
-            <div className="mt-10 text-center">
+            <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-4 text-center">
+              <p className="text-xs text-muted-foreground italic max-w-md">
+                Kolom IPAN APP SettinX ditampilkan sebagai pembanding. Semua paket memiliki centang penuh dibanding paket lain di kategori ini.
+              </p>
+            </div>
+
+            <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Button asChild variant="whatsapp" size="xl" className="animate-pulse-glow shadow-glow-sm rounded-2xl w-full sm:w-auto">
                 <a
                   href={`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent("Halo min, saya mau pilih paket setelah melihat tabel perbandingan")}`}
@@ -473,11 +517,16 @@ const Paket = () => {
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </a>
               </Button>
+              <Button asChild variant="gaming-glow" size="xl" className="rounded-2xl w-full sm:w-auto">
+                <a href={SETTINX_WA_LINK} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center">
+                  Beli IPAN APP SETTINX
+                  <BadgeCheck className="ml-2 h-5 w-5" />
+                </a>
+              </Button>
             </div>
           </div>
         </div>
       </section>
-      )}
     </Layout>
   );
 };
