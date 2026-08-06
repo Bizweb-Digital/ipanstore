@@ -65,7 +65,7 @@ const packages: Pkg[] = [
     id: "set-pc",
     category: "SET PC",
     name: "SET PC",
-    price: "50K",
+    price: "Rp 50.000",
     features: [
       "Setting Regedit Tweak",
       "Settingan RAM & CPU ideal",
@@ -79,7 +79,7 @@ const packages: Pkg[] = [
     id: "custom-ff",
     category: "SET PC",
     name: "Custom FF & Emulator",
-    price: "20K",
+    price: "Rp 20.000",
     popular: true,
     highlight: "REKOMENDASI",
     features: [
@@ -93,7 +93,7 @@ const packages: Pkg[] = [
     id: "standart",
     category: "Optimize",
     name: "STANDART",
-    price: "50K",
+    price: "Rp 50.000",
     features: [
       "Regedit & Tweaks",
       "Optimize CPU/RAM/GPU",
@@ -107,7 +107,7 @@ const packages: Pkg[] = [
     id: "elite",
     category: "Optimize",
     name: "ELITE",
-    price: "100K",
+    price: "Rp 100.000",
     popular: true,
     highlight: "PALING LARIS",
     features: [
@@ -123,7 +123,7 @@ const packages: Pkg[] = [
     id: "extreme",
     category: "Optimize",
     name: "EXTREME",
-    price: "150K",
+    price: "Rp 150.000",
     highlight: "PRO CHOICE",
     features: [
       "Emulator & Keybind",
@@ -138,7 +138,7 @@ const packages: Pkg[] = [
     id: "anti-cheat-laga",
     category: "Anti Cheat",
     name: "ANTICHEAT LAGA",
-    price: "100K",
+    price: "Rp 100.000",
     popular: true,
     highlight: "TOURNAMENT SECURE",
     features: [
@@ -190,8 +190,8 @@ const comparisonFeatures = [
 /* Column metadata untuk APP SETTINX (harga coret + harga baru) */
 const SETTINX_COL = {
   name: "IPAN APP SETTINX",
-  priceOld: "100K",
-  priceNew: "75K",
+  priceOld: "Rp 100.000",
+  priceNew: "Rp 75.000",
   badge: "PALING UNGGUL",
 };
 
@@ -224,7 +224,7 @@ const Paket = () => {
     <Layout>
       <SEOHead
         title="Paket Optimasi Gaming & IPAN APP SettinX | IPAN STORE"
-        description="Pilih paket optimasi PC gaming IPAN STORE mulai dari 20K: SET PC, Standart, Elite, Extreme, AntiCheat Laga, dan IPAN APP SettinX (hemat Rp 25.000 dari Rp 100.000). Konsultasi gratis via WhatsApp."
+        description="Pilih paket optimasi PC gaming IPAN STORE mulai dari Rp 20.000: SET PC, Standart, Elite, Extreme, AntiCheat Laga, dan IPAN APP SettinX (hemat Rp 25.000 dari Rp 100.000). Konsultasi gratis via WhatsApp."
         keywords="paket optimasi PC, harga boost FPS Free Fire, IPAN APP SettinX, tweak emulator, jasa optimasi gaming murah"
       />
 
@@ -474,9 +474,9 @@ const Paket = () => {
                         </span>
                         <span className="text-white text-sm font-bold uppercase">{SETTINX_COL.name}</span>
                         <div className="flex flex-col items-center leading-tight">
-                          <span className="text-muted-foreground/60 text-xs line-through font-semibold">Rp {SETTINX_COL.priceOld}.000</span>
+                          <span className="text-muted-foreground/60 text-xs line-through font-semibold">{SETTINX_COL.priceOld}</span>
                           <span className="text-gaming-accent text-lg font-black bg-gaming-accent/15 px-3 py-0.5 rounded-full border border-gaming-accent/40 shadow-[0_0_10px_rgba(56,189,248,0.3)]">
-                            Rp {SETTINX_COL.priceNew}.000
+                            {SETTINX_COL.priceNew}
                           </span>
                         </div>
                       </div>

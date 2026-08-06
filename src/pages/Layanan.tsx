@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowRight, Settings, Cpu, Gauge, Monitor, PenTool, Flame, Laptop2, ShieldCheck, MousePointer2, Crosshair, Activity, Rocket, BadgeCheck } from "lucide-react";
+import { ArrowRight, Settings, Cpu, Gauge, Monitor, PenTool, Flame, Laptop2, ShieldCheck, MousePointer2, Crosshair, Activity, Rocket, BadgeCheck, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import SEOHead from "@/components/SEOHead";
@@ -249,6 +249,10 @@ const Layanan = () => {
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 h-[2px] w-3/4 bg-gradient-to-r from-transparent via-gaming-accent to-transparent" />
                 <span className="absolute top-0 right-6 bg-gaming-accent text-[#060A14] text-[10px] font-bold px-3 py-1 rounded-b-lg tracking-wider uppercase">
                   GRAND LAUNCHING
+                </span>
+                <span className="absolute top-0 left-6 inline-flex items-center gap-1.5 bg-gradient-to-r from-yellow-400 via-orange-500 to-yellow-400 text-[#060A14] text-[10px] font-black px-3 py-1 rounded-b-lg tracking-[0.2em] uppercase shadow-[0_8px_18px_rgba(250,204,21,0.45)] animate-pulse-glow">
+                  <Sparkles className="h-3 w-3" />
+                  RECOMMENDED
                 </span>
 
                 <div className="text-center mb-10">

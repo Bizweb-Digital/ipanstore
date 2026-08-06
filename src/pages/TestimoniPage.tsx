@@ -1,33 +1,46 @@
 import { useCallback, useEffect, useState } from "react";
 import useEmblaCarousel from "embla-carousel-react";
-import { Star, ChevronLeft, ChevronRight, Images, CheckCircle2 } from "lucide-react";
+import { Star, ChevronLeft, ChevronRight, Images, CheckCircle2, Crown, Sparkles, Quote } from "lucide-react";
 import SEOHead from "@/components/SEOHead";
 import Layout from "@/components/Layout";
 import AnimatedCounter from "@/components/AnimatedCounter";
 import Lightbox from "yet-another-react-lightbox";
 import "yet-another-react-lightbox/styles.css";
 
-const testiPhotos = [
-  "/img/testimoni/Screenshot_2025-12-23-23-15-30-787_com.whatsapp.w4b.jpg",
-  "/img/testimoni/Screenshot_2025-12-25-13-18-55-378_com.whatsapp.w4b.jpg",
-  "/img/testimoni/Screenshot_2025-12-28-20-32-03-375_com.whatsapp.w4b.jpg",
-  "/img/testimoni/Screenshot_2026-01-04-11-44-26-458_com.whatsapp.w4b.jpg",
-  "/img/testimoni/Screenshot_2026-01-04-20-43-26-760_com.whatsapp.w4b.jpg",
-  "/img/testimoni/Screenshot_2026-01-10-22-17-33-377_com.whatsapp.w4b.jpg",
-  "/img/testimoni/Screenshot_2026-01-15-17-58-16-040_com.whatsapp.w4b.jpg",
-  "/img/testimoni/Screenshot_2026-01-18-14-57-35-501_com.whatsapp.w4b.jpg",
-  "/img/testimoni/Screenshot_2026-02-08-13-41-09-236_com.whatsapp.w4b.jpg",
-  "/img/testimoni/Screenshot_2026-02-11-15-09-07-600_com.whatsapp.w4b.jpg",
-  "/img/testimoni/Screenshot_2026-02-17-15-20-07-341_com.whatsapp.w4b.jpg",
-  "/img/testimoni/Screenshot_2026-02-17-15-21-40-166_com.whatsapp.w4b.jpg",
-  "/img/testimoni/Screenshot_2026-03-17-17-15-10-591_com.whatsapp.w4b.jpg",
-  "/img/testimoni/Screenshot_2026-04-05-17-55-37-278_com.whatsapp.w4b.jpg",
-  "/img/testimoni/Screenshot_2026-04-07-00-00-27-950_com.whatsapp.w4b.jpg",
-  "/img/testimoni/Screenshot_2026-05-18-14-37-56-057_com.whatsapp.w4b.jpg",
-  "/img/testimoni/Screenshot_20260502_141435.jpg",
+type TestiPhoto = {
+  src: string;
+  featured?: boolean;
+  customer?: string;
+  badge?: string;
+};
+
+const testiPhotos: TestiPhoto[] = [
+  {
+    src: "/img/testimoni/Screenshot_2025-12-23-23-15-30-787_com.whatsapp.w4b.jpg",
+    featured: true,
+    customer: "Raxzy MJ",
+    badge: "ELITE CUSTOMER",
+  },
+  { src: "/img/testimoni/Screenshot_2025-12-25-13-18-55-378_com.whatsapp.w4b.jpg" },
+  { src: "/img/testimoni/Screenshot_2025-12-28-20-32-03-375_com.whatsapp.w4b.jpg" },
+  { src: "/img/testimoni/Screenshot_2026-01-04-11-44-26-458_com.whatsapp.w4b.jpg" },
+  { src: "/img/testimoni/Screenshot_2026-01-04-20-43-26-760_com.whatsapp.w4b.jpg" },
+  { src: "/img/testimoni/Screenshot_2026-01-10-22-17-33-377_com.whatsapp.w4b.jpg" },
+  { src: "/img/testimoni/Screenshot_2026-01-15-17-58-16-040_com.whatsapp.w4b.jpg" },
+  { src: "/img/testimoni/Screenshot_2026-01-18-14-57-35-501_com.whatsapp.w4b.jpg" },
+  { src: "/img/testimoni/Screenshot_2026-02-08-13-41-09-236_com.whatsapp.w4b.jpg" },
+  { src: "/img/testimoni/Screenshot_2026-02-11-15-09-07-600_com.whatsapp.w4b.jpg" },
+  { src: "/img/testimoni/Screenshot_2026-02-17-15-20-07-341_com.whatsapp.w4b.jpg" },
+  { src: "/img/testimoni/Screenshot_2026-02-17-15-21-40-166_com.whatsapp.w4b.jpg" },
+  { src: "/img/testimoni/Screenshot_2026-03-17-17-15-10-591_com.whatsapp.w4b.jpg" },
+  { src: "/img/testimoni/Screenshot_2026-04-05-17-55-37-278_com.whatsapp.w4b.jpg" },
+  { src: "/img/testimoni/Screenshot_2026-04-07-00-00-27-950_com.whatsapp.w4b.jpg" },
+  { src: "/img/testimoni/Screenshot_2026-05-18-14-37-56-057_com.whatsapp.w4b.jpg" },
+  { src: "/img/testimoni/Screenshot_20260502_141435.jpg" },
 ];
 
-const lightboxSlides = testiPhotos.map((src) => ({ src }));
+const lightboxSlides = testiPhotos.map((p) => ({ src: p.src }));
+const featuredPhoto = testiPhotos.find((p) => p.featured) ?? testiPhotos[0];
 
 const TestimoniPage = () => {
   const [emblaRef, emblaApi] = useEmblaCarousel({
@@ -107,8 +120,91 @@ const TestimoniPage = () => {
         </div>
       </section>
 
-      <section className="relative pb-24">
+      {/* FEATURED TESTIMONI — Raxzy MJ ELITE CS */}
+      <section className="relative pb-12 md:pb-16">
         <div className="container mx-auto px-4">
+          <div className="max-w-5xl mx-auto mb-12 px-2">
+            <div
+              className="relative rounded-3xl overflow-hidden border-2 border-gaming-accent/60 bg-gradient-to-br from-gaming-accent/15 via-[#0B1120] to-gaming-primary/15 shadow-[0_0_40px_rgba(56,189,248,0.35)] animate-fade-up"
+              role="figure"
+              aria-label="Testimoni unggulan dari Raxzy MJ ELITE CUSTOMER"
+            >
+              {/* Glow background */}
+              <div className="absolute inset-0 pointer-events-none">
+                <div className="absolute -top-12 -left-12 w-56 h-56 bg-gaming-accent/25 blur-[90px] rounded-full" />
+                <div className="absolute -bottom-12 -right-12 w-72 h-72 bg-gaming-primary/25 blur-[100px] rounded-full" />
+              </div>
+
+              {/* Top Crown Badge */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 z-20">
+                <div className="inline-flex items-center gap-2 bg-gradient-to-r from-gaming-accent via-yellow-400 to-gaming-accent text-[#060A14] text-[11px] md:text-xs font-black px-5 py-2 rounded-b-2xl tracking-[0.25em] uppercase shadow-[0_8px_24px_rgba(56,189,248,0.45)]">
+                  <Crown className="h-4 w-4" />
+                  {featuredPhoto.badge ?? "ELITE CUSTOMER"}
+                </div>
+              </div>
+
+              <div className="relative z-10 grid md:grid-cols-[260px_1fr] gap-6 p-6 md:p-10 pt-12 md:pt-14 items-center">
+                {/* Photo */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const idx = testiPhotos.findIndex((p) => p.src === featuredPhoto.src);
+                    setLightboxIndex(idx >= 0 ? idx : 0);
+                    setLightboxOpen(true);
+                  }}
+                  className="group relative block rounded-2xl overflow-hidden border-2 border-gaming-accent/60 hover:border-gaming-accent transition-all hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(56,189,248,0.5)]"
+                  aria-label={`Buka foto testimoni unggulan ${featuredPhoto.customer ?? "Raxzy MJ"}`}
+                >
+                  <div className="aspect-[9/16] bg-[#060A14] relative">
+                    <img
+                      src={featuredPhoto.src}
+                      alt={`Testimoni unggulan ${featuredPhoto.customer ?? "Raxzy MJ"} - hasil optimasi IPAN STORE`}
+                      loading="eager"
+                      className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#060A14]/70 via-transparent to-transparent" />
+                  </div>
+                  <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 bg-gaming-accent text-[#060A14] text-[10px] font-black px-2.5 py-1 rounded-md uppercase tracking-wider shadow-[0_0_12px_rgba(56,189,248,0.6)]">
+                    <Sparkles className="h-3 w-3" />
+                    FEATURED
+                  </div>
+                </button>
+
+                {/* Text Content */}
+                <div className="text-center md:text-left">
+                  <div className="inline-flex items-center gap-1 mb-3">
+                    <Star className="h-4 w-4 fill-gaming-accent text-gaming-accent" />
+                    <Star className="h-4 w-4 fill-gaming-accent text-gaming-accent" />
+                    <Star className="h-4 w-4 fill-gaming-accent text-gaming-accent" />
+                    <Star className="h-4 w-4 fill-gaming-accent text-gaming-accent" />
+                    <Star className="h-4 w-4 fill-gaming-accent text-gaming-accent" />
+                  </div>
+
+                  <h3 className="font-display text-2xl md:text-4xl font-black text-white leading-tight mb-4">
+                    <span className="text-gaming-accent">{featuredPhoto.customer ?? "Raxzy MJ"}</span>{" "}
+                    <span className="text-white/85 font-bold">ELITE CS aja optimize di sini</span>
+                  </h3>
+
+                  <div className="relative mb-4 md:mb-6 pl-5 border-l-2 border-gaming-accent/60">
+                    <Quote className="absolute -left-[14px] -top-2 h-6 w-6 text-gaming-accent bg-[#060A14] rounded-full p-1" />
+                    <p className="text-base md:text-lg text-white/90 leading-relaxed italic">
+                      Pelanggan Elite kami yang sudah mempercayakan PC gaming-nya di IPAN STORE. Hasilnya? FPS naik drastis, aiming makin presisi, dan gameplay jadi lebih nyaman tanpa lag.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#25D366]/10 border border-[#25D366]/40 px-3 py-1.5 text-[11px] font-bold text-[#25D366] uppercase tracking-wider">
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Verified WhatsApp
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-gaming-accent/10 border border-gaming-accent/40 px-3 py-1.5 text-[11px] font-bold text-gaming-accent uppercase tracking-wider">
+                      <Crown className="h-3.5 w-3.5" /> Top Customer
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Heading strip */}
           <div className="flex items-center justify-between max-w-7xl mx-auto mb-8 px-2">
             <div className="flex items-center gap-3">
@@ -146,9 +242,9 @@ const TestimoniPage = () => {
 
             <div ref={emblaRef} className="overflow-hidden cursor-grab active:cursor-grabbing">
               <div className="flex gap-4 md:gap-6">
-                {testiPhotos.map((src, idx) => (
+                {testiPhotos.map((p, idx) => (
                   <div
-                    key={src}
+                    key={p.src}
                     className="flex-[0_0_70%] sm:flex-[0_0_45%] md:flex-[0_0_32%] lg:flex-[0_0_25%] min-w-0"
                   >
                     <button
@@ -159,7 +255,7 @@ const TestimoniPage = () => {
                     >
                       <div className="aspect-[9/16] bg-[#0B1120] relative">
                         <img
-                          src={src}
+                          src={p.src}
                           alt={`Testimoni pelanggan IPAN STORE ${idx + 1} - hasil optimasi PC gaming`}
                           loading="lazy"
                           className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"

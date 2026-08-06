@@ -13,7 +13,7 @@ type Pkg = {
 const packages: Pkg[] = [
 {
     name: "SET PC",
-    price: "50K",
+    price: "Rp 50.000",
     features: [
       "Emulator ringan",
       "Keybind emulator",
@@ -25,7 +25,7 @@ const packages: Pkg[] = [
   },
   {
     name: "Standart Optimizer PC",
-    price: "50K",
+    price: "Rp 50.000",
     features: [
       "Semua spek PC/Laptop",
       "Tanpa install ulang",
@@ -36,7 +36,7 @@ const packages: Pkg[] = [
   },
   {
     name: "Elite Optimizer",
-    price: "100K",
+    price: "Rp 100.000",
     popular: true,
     highlight: "Paling Laris",
     features: [
@@ -48,7 +48,7 @@ const packages: Pkg[] = [
   },
   {
     name: "Extreme Optimizer",
-    price: "150K",
+    price: "Rp 150.000",
     highlight: "Pro Choice",
     features: [
       "Semua fitur lengkap",

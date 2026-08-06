@@ -1,4 +1,4 @@
-import { ArrowRight, MousePointer2, Crosshair, Activity, Rocket, ShieldCheck, BadgeCheck, Sparkles, Zap, Star } from "lucide-react";
+import { ArrowRight, MousePointer2, Crosshair, Activity, Rocket, BadgeCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WA_NUMBER } from "./FloatingWhatsApp";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
@@ -29,7 +29,7 @@ const CatalogAppSettinx = () => {
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-3xl mx-auto text-center mb-14">
           <span className="gaming-badge-accent mb-4 inline-flex items-center gap-1.5">
-            <Sparkles className="h-3 w-3" /> KATALOG PRODUK
+            KATALOG PRODUK
           </span>
           <h2 className="h2-clamp font-display font-bold text-white mb-5">
             IPAN APP <span className="text-gaming-accent">SettinX V1</span>
@@ -75,7 +75,6 @@ const CatalogAppSettinx = () => {
               <div className="absolute -top-10 -right-10 w-40 h-40 bg-gaming-accent/10 blur-3xl rounded-full pointer-events-none" />
 
               <div className="inline-flex items-center gap-2 rounded-full bg-gaming-accent/10 border border-gaming-accent/30 px-3 py-1 text-[10px] font-black tracking-widest uppercase text-gaming-accent mb-4">
-                <Zap className="h-3 w-3" />
                 PALING UNGGUL
               </div>
 
@@ -84,16 +83,13 @@ const CatalogAppSettinx = () => {
                 <span className="font-display text-5xl md:text-6xl font-black text-gaming-accent leading-none drop-shadow-[0_0_20px_rgba(56,189,248,0.4)]">
                   Rp 75.000
                 </span>
-                <span className="text-xs text-muted-foreground mt-2">Hemat Rp 25.000 · Promo launching</span>
               </div>
 
               <div className="space-y-2.5 mb-6 text-left">
                 {[
                   "Bayar sekali, pakai selamanya (lifetime)",
                   "Lebih unggul dari semua paket optimasi",
-                  "Mencakup Optimize, SET PC, & Anti Cheat",
                   "Aman dengan System Restore bawaan",
-                  "Update fitur gratis selamanya",
                 ].map((b) => (
                   <div key={b} className="flex items-start gap-2 text-xs md:text-sm text-white/85">
                     <BadgeCheck className="h-4 w-4 text-gaming-accent shrink-0 mt-0.5" />
@@ -104,10 +100,10 @@ const CatalogAppSettinx = () => {
 
               <div className="flex flex-wrap justify-center gap-2 mb-5">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-gaming-accent/10 border border-gaming-accent/30 px-3 py-1 text-[10px] font-bold text-gaming-accent uppercase tracking-wider">
-                  <ShieldCheck className="h-3 w-3" /> Lifetime
+                  Lifetime
                 </span>
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-gaming-accent/10 border border-gaming-accent/30 px-3 py-1 text-[10px] font-bold text-gaming-accent uppercase tracking-wider">
-                  <Star className="h-3 w-3" /> 1 Akun = 1 PC
+                  1 Akun = 1 PC
                 </span>
               </div>
 
