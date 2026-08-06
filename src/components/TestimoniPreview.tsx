@@ -3,15 +3,15 @@ import { Link } from "react-router-dom";
 import { Button } from "./ui/button";
 
 const testiPhotos = [
-  "/testimoni/Screenshot_2025-12-23-23-15-30-787_com.whatsapp.w4b.jpg",
-  "/testimoni/Screenshot_2025-12-25-13-18-55-378_com.whatsapp.w4b.jpg",
-  "/testimoni/Screenshot_2025-12-28-20-32-03-375_com.whatsapp.w4b.jpg",
-  "/testimoni/Screenshot_2026-01-04-11-44-26-458_com.whatsapp.w4b.jpg",
-  "/testimoni/Screenshot_2026-01-04-20-43-26-760_com.whatsapp.w4b.jpg",
-  "/testimoni/Screenshot_2026-01-10-22-17-33-377_com.whatsapp.w4b.jpg",
-  "/testimoni/Screenshot_2026-01-15-17-58-16-040_com.whatsapp.w4b.jpg",
-  "/testimoni/Screenshot_2026-01-18-14-57-35-501_com.whatsapp.w4b.jpg",
-  "/testimoni/Screenshot_2026-02-08-13-41-09-236_com.whatsapp.w4b.jpg",
+  "/img/testimoni/Screenshot_2025-12-23-23-15-30-787_com.whatsapp.w4b.jpg",
+  "/img/testimoni/Screenshot_2025-12-25-13-18-55-378_com.whatsapp.w4b.jpg",
+  "/img/testimoni/Screenshot_2025-12-28-20-32-03-375_com.whatsapp.w4b.jpg",
+  "/img/testimoni/Screenshot_2026-01-04-11-44-26-458_com.whatsapp.w4b.jpg",
+  "/img/testimoni/Screenshot_2026-01-04-20-43-26-760_com.whatsapp.w4b.jpg",
+  "/img/testimoni/Screenshot_2026-01-10-22-17-33-377_com.whatsapp.w4b.jpg",
+  "/img/testimoni/Screenshot_2026-01-15-17-58-16-040_com.whatsapp.w4b.jpg",
+  "/img/testimoni/Screenshot_2026-01-18-14-57-35-501_com.whatsapp.w4b.jpg",
+  "/img/testimoni/Screenshot_2026-02-08-13-41-09-236_com.whatsapp.w4b.jpg",
 ];
 
 const marqueePhotos = [...testiPhotos, ...testiPhotos];
