@@ -81,20 +81,22 @@ const TestimoniPage = () => {
             Ini adalah pengalaman asli mereka.
           </p>
 
-          <div className="mt-12 mb-8 p-6 gaming-card max-w-4xl mx-auto flex flex-col md:flex-row justify-around gap-6 items-center border-gaming-primary/20">
-            <div className="text-center">
-              <p className="font-display text-4xl font-black text-white"><AnimatedCounter end={500} duration={1500} suffix="+" /></p>
+          <div className="mt-12 mb-8 p-5 sm:p-6 gaming-card max-w-4xl mx-auto flex flex-col md:flex-row justify-around gap-5 md:gap-6 items-center border-gaming-primary/20">
+            <div className="text-center w-full md:w-auto">
+              <p className="font-display text-3xl sm:text-4xl font-black text-white"><AnimatedCounter end={500} duration={1500} suffix="+" /></p>
               <p className="text-sm text-muted-foreground font-bold uppercase tracking-wider mt-1">Klien Puas</p>
             </div>
             <div className="hidden md:block w-px h-12 bg-white/10" />
-            <div className="text-center">
-              <p className="font-display text-4xl font-black text-gaming-accent flex justify-center items-center gap-2">
+            <div className="md:hidden w-full h-px bg-white/10" />
+            <div className="text-center w-full md:w-auto">
+              <p className="font-display text-3xl sm:text-4xl font-black text-gaming-accent flex justify-center items-center gap-2">
                 4.9 <Star className="w-6 h-6 fill-gaming-accent text-gaming-accent" />
               </p>
               <p className="text-sm text-muted-foreground font-bold uppercase tracking-wider mt-1">Rata-rata Rating</p>
             </div>
             <div className="hidden md:block w-px h-12 bg-white/10" />
-            <div className="text-center flex flex-col items-center justify-center">
+            <div className="md:hidden w-full h-px bg-white/10" />
+            <div className="text-center flex flex-col items-center justify-center w-full md:w-auto">
               <CheckCircle2 className="w-10 h-10 text-[#25D366] mb-1" />
               <p className="text-sm text-[#25D366] font-bold uppercase tracking-wider">Garansi 100%</p>
             </div>

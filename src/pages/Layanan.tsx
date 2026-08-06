@@ -194,10 +194,10 @@ const Layanan = () => {
 
           {/* Tabs */}
           <div className="mt-12 flex justify-center">
-            <div className="inline-flex flex-wrap justify-center gap-1.5 p-1.5 bg-[#101827] border border-white/10 rounded-full shadow-glow-sm">
+            <div className="inline-flex flex-wrap justify-center gap-1.5 p-1.5 bg-[#101827] border border-white/10 rounded-3xl shadow-glow-sm">
               <button
                 onClick={() => setActiveTab("Optimize")}
-                className={`relative px-6 py-2.5 rounded-full text-sm font-bold tracking-wider transition-all duration-300 ${
+                className={`relative px-4 sm:px-6 py-2.5 rounded-full text-sm font-bold tracking-wider transition-all duration-300 ${
                   activeTab === "Optimize"
                     ? "text-white bg-gaming-primary/80 shadow-[0_0_15px_rgba(37,99,235,0.5)]"
                     : "text-muted-foreground hover:text-white"
@@ -207,7 +207,7 @@ const Layanan = () => {
               </button>
               <button
                 onClick={() => setActiveTab("SET PC")}
-                className={`relative px-6 py-2.5 rounded-full text-sm font-bold tracking-wider transition-all duration-300 ${
+                className={`relative px-4 sm:px-6 py-2.5 rounded-full text-sm font-bold tracking-wider transition-all duration-300 ${
                   activeTab === "SET PC"
                     ? "text-white bg-gaming-primary/80 shadow-[0_0_15px_rgba(37,99,235,0.5)]"
                     : "text-muted-foreground hover:text-white"
@@ -217,7 +217,7 @@ const Layanan = () => {
               </button>
               <button
                 onClick={() => setActiveTab("Anti Cheat")}
-                className={`relative px-6 py-2.5 rounded-full text-sm font-bold tracking-wider transition-all duration-300 ${
+                className={`relative px-4 sm:px-6 py-2.5 rounded-full text-sm font-bold tracking-wider transition-all duration-300 ${
                   activeTab === "Anti Cheat"
                     ? "text-white bg-red-600/80 shadow-[0_0_15px_rgba(220,38,38,0.5)]"
                     : "text-muted-foreground hover:text-white"
@@ -227,7 +227,7 @@ const Layanan = () => {
               </button>
               <button
                 onClick={() => setActiveTab("APP SETTINX")}
-                className={`relative px-6 py-2.5 rounded-full text-sm font-bold tracking-wider transition-all duration-300 ${
+                className={`relative px-4 sm:px-6 py-2.5 rounded-full text-sm font-bold tracking-wider transition-all duration-300 ${
                   activeTab === "APP SETTINX"
                     ? "text-white bg-gaming-accent/80 shadow-[0_0_15px_rgba(56,189,248,0.5)]"
                     : "text-muted-foreground hover:text-white"
@@ -297,9 +297,9 @@ const Layanan = () => {
 
                 {/* Pricing */}
                 <div className="flex flex-col items-center mb-8">
-                  <div className="flex items-baseline gap-3 mb-2">
-                    <span className="text-xl text-muted-foreground/50 line-through">Rp 100.000</span>
-                    <span className="font-display text-5xl font-black text-gaming-accent">Rp 75.000</span>
+                  <div className="flex flex-col sm:flex-row sm:items-baseline items-center gap-1 sm:gap-3 mb-2">
+                    <span className="text-base sm:text-xl text-muted-foreground/50 line-through">Rp 100.000</span>
+                    <span className="font-display text-4xl md:text-5xl font-black text-gaming-accent">Rp 75.000</span>
                   </div>
                   <p className="text-sm font-semibold text-white mb-6">
                     Bayar sekali, pakai selamanya. Lisensi lifetime (1 akun = 1 PC).

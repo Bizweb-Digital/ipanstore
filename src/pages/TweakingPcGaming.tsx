@@ -23,7 +23,7 @@ const TweakingPcGaming = () => {
               <ArrowLeft className="mr-2 h-4 w-4" /> Kembali ke Layanan
             </Link>
 
-            <div className="gaming-card p-8 md:p-12 border-gaming-accent/30">
+            <div className="gaming-card p-6 md:p-12 border-gaming-accent/30">
               <span className="gaming-badge text-gaming-accent border-gaming-accent/30 bg-gaming-accent/10 mb-4 inline-block">
                 SYSTEM OPTIMIZATION
               </span>
@@ -32,7 +32,7 @@ const TweakingPcGaming = () => {
               </h1>
               
               <div className="prose prose-invert prose-p:text-muted-foreground prose-p:leading-relaxed max-w-none">
-                <p className="text-lg">
+                <p className="text-base sm:text-lg">
                   Windows bawaan pabrik (default) dipenuhi dengan bloatware, background services yang tidak perlu, 
                   dan settingan power yang membatasi performa hardware. Layanan Tweaking PC Gaming kami 
                   akan membongkar batasan tersebut dan memaksa PC kamu fokus 100% untuk menjalankan game.
@@ -84,13 +84,13 @@ const TweakingPcGaming = () => {
               </div>
 
               <div className="mt-12 flex flex-col sm:flex-row gap-4 border-t border-white/10 pt-8">
-                <Button asChild variant="gaming-glow" size="lg">
+                <Button asChild variant="gaming-glow" size="lg" className="w-full sm:w-auto">
                   <a href={`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent("Halo min, saya mau tanya layanan Tweaking PC Gaming")}`} target="_blank" rel="noopener noreferrer">
                     Konsultasi via WhatsApp
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </a>
                 </Button>
-                <Button asChild variant="gaming-outline" size="lg">
+                <Button asChild variant="gaming-outline" size="lg" className="w-full sm:w-auto">
                   <Link to="/paket">Lihat Harga Paket</Link>
                 </Button>
               </div>

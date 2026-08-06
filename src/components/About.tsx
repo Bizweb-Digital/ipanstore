@@ -44,15 +44,15 @@ const About = () => {
           {features.map((f) => (
             <div
               key={f.title}
-              className="gaming-card p-8 group"
+              className="gaming-card p-6 md:p-8 group"
             >
               <div className="flex justify-between items-start mb-6">
-                <div className="h-14 w-14 rounded-2xl bg-gaming-primary/10 border border-gaming-primary/20 flex items-center justify-center text-gaming-accent group-hover:scale-110 group-hover:bg-gaming-primary/20 transition-all duration-300">
-                  <f.icon className="h-7 w-7" strokeWidth={1.5} />
+                <div className="h-12 w-12 md:h-14 md:w-14 rounded-2xl bg-gaming-primary/10 border border-gaming-primary/20 flex items-center justify-center text-gaming-accent group-hover:scale-110 group-hover:bg-gaming-primary/20 transition-all duration-300">
+                  <f.icon className="h-6 w-6 md:h-7 md:w-7" strokeWidth={1.5} />
                 </div>
                 <span className="gaming-badge text-[9px]">{f.badge}</span>
               </div>
-              <h3 className="font-display text-xl font-semibold text-white mb-3 tracking-wide">{f.title}</h3>
+              <h3 className="font-display text-lg md:text-xl font-semibold text-white mb-3 tracking-wide">{f.title}</h3>
               <p className="text-muted-foreground text-sm leading-relaxed">{f.desc}</p>
             </div>
           ))}

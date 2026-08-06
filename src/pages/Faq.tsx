@@ -87,13 +87,13 @@ const Faq = () => {
             </Accordion>
           </div>
 
-          <div className="mt-16 text-center gaming-card max-w-2xl mx-auto p-8 border-gaming-primary/20 bg-gaming-primary/5">
+          <div className="mt-16 text-center gaming-card max-w-2xl mx-auto p-6 md:p-8 border-gaming-primary/20 bg-gaming-primary/5">
             <h3 className="font-display font-bold text-xl text-white mb-3">Punya Pertanyaan Lain?</h3>
             <p className="text-muted-foreground mb-8 text-sm md:text-base">
               Jangan ragu untuk bertanya langsung ke admin. Kami siap membantu menganalisa keluhan performa PC kamu.
             </p>
-            <Button asChild variant="whatsapp" className="rounded-xl shadow-[0_0_15px_rgba(37,211,102,0.3)]">
-              <a href={WA_LINK} target="_blank" rel="noopener noreferrer">
+            <Button asChild variant="whatsapp" className="rounded-xl shadow-[0_0_15px_rgba(37,211,102,0.3)] w-full sm:w-auto">
+              <a href={WA_LINK} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center">
                 Chat via WhatsApp
                 <ArrowRight className="ml-2 h-4 w-4" />
               </a>

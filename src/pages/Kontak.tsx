@@ -113,7 +113,7 @@ const Kontak = () => {
             </div>
 
             {/* Quick Form Trigger to WA */}
-            <div className="gaming-card p-8 relative overflow-hidden">
+            <div className="gaming-card p-6 md:p-8 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-gaming-primary/20 blur-[50px] rounded-full" />
               
               <h2 className="font-display font-bold text-2xl text-white mb-2 relative z-10">Kirim Pesan</h2>

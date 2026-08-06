@@ -33,7 +33,7 @@ const TestimoniPreview = () => {
         
         <div className="flex w-max animate-marquee gap-6 py-4 px-4 group-hover:[animation-play-state:paused]">
           {marqueeItems.map((t, idx) => (
-            <div key={idx} className="w-[300px] md:w-[350px] shrink-0 gaming-card p-6 flex flex-col relative">
+            <div key={idx} className="w-[280px] md:w-[350px] shrink-0 gaming-card p-6 flex flex-col relative">
               <Quote className="absolute top-6 right-6 text-white/5 w-10 h-10 rotate-180" />
               <div className="flex gap-1 mb-4">
                 {[1, 2, 3, 4, 5].map((i) => (

@@ -64,41 +64,43 @@ const Hero = () => {
 
         {/* Performance Dashboard / Stats Visual */}
         <div className="mt-16 w-full max-w-4xl mx-auto animate-fade-up delay-500">
-          <div className="gaming-card p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-visible">
+          <div className="gaming-card p-5 sm:p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-5 md:gap-8 relative overflow-visible">
             {/* Top accent glow line */}
             <div className="absolute top-0 left-1/4 right-1/4 h-[1px] bg-gradient-to-r from-transparent via-gaming-accent to-transparent" />
             
-            <div className="flex-1 flex items-center gap-4 text-left">
-              <div className="h-14 w-14 rounded-2xl bg-gaming-primary/20 border border-gaming-primary/30 flex items-center justify-center text-gaming-accent shrink-0 shadow-glow-sm">
-                <Gauge className="h-7 w-7" />
+            <div className="flex-1 flex items-center gap-3 sm:gap-4 text-left w-full">
+              <div className="h-11 w-11 sm:h-14 sm:w-14 rounded-2xl bg-gaming-primary/20 border border-gaming-primary/30 flex items-center justify-center text-gaming-accent shrink-0 shadow-glow-sm">
+                <Gauge className="h-6 w-6 sm:h-7 sm:w-7" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground font-semibold uppercase tracking-wider mb-1">FPS Boost</p>
-                <p className="font-display text-2xl md:text-3xl font-bold text-white">UP TO <span className="text-gaming-cyan"><AnimatedCounter end={240} duration={1500} suffix="+" /></span></p>
+                <p className="text-[11px] sm:text-sm text-muted-foreground font-semibold uppercase tracking-wider mb-1">FPS Boost</p>
+                <p className="font-display text-xl sm:text-2xl md:text-3xl font-bold text-white">UP TO <span className="text-gaming-cyan"><AnimatedCounter end={240} duration={1500} suffix="+" /></span></p>
               </div>
             </div>
 
             <div className="hidden md:block w-[1px] h-16 bg-white/10" />
+            <div className="md:hidden w-full h-[1px] bg-white/5" />
 
-            <div className="flex-1 flex items-center gap-4 text-left">
-              <div className="h-14 w-14 rounded-2xl bg-gaming-primary/20 border border-gaming-primary/30 flex items-center justify-center text-gaming-accent shrink-0 shadow-glow-sm">
-                <Cpu className="h-7 w-7" />
+            <div className="flex-1 flex items-center gap-3 sm:gap-4 text-left w-full">
+              <div className="h-11 w-11 sm:h-14 sm:w-14 rounded-2xl bg-gaming-primary/20 border border-gaming-primary/30 flex items-center justify-center text-gaming-accent shrink-0 shadow-glow-sm">
+                <Cpu className="h-6 w-6 sm:h-7 sm:w-7" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground font-semibold uppercase tracking-wider mb-1">Performance</p>
-                <p className="font-display text-2xl md:text-3xl font-bold text-white"><AnimatedCounter end={100} duration={1500} suffix="%" /> <span className="text-gaming-cyan">STABLE</span></p>
+                <p className="text-[11px] sm:text-sm text-muted-foreground font-semibold uppercase tracking-wider mb-1">Performance</p>
+                <p className="font-display text-xl sm:text-2xl md:text-3xl font-bold text-white"><AnimatedCounter end={100} duration={1500} suffix="%" /> <span className="text-gaming-cyan">STABLE</span></p>
               </div>
             </div>
 
             <div className="hidden md:block w-[1px] h-16 bg-white/10" />
+            <div className="md:hidden w-full h-[1px] bg-white/5" />
 
-            <div className="flex-1 flex items-center gap-4 text-left">
-              <div className="h-14 w-14 rounded-2xl bg-[#25D366]/20 border border-[#25D366]/30 flex items-center justify-center text-[#25D366] shrink-0 shadow-[0_0_15px_rgba(37,211,102,0.2)]">
-                <Users className="h-7 w-7" />
+            <div className="flex-1 flex items-center gap-3 sm:gap-4 text-left w-full">
+              <div className="h-11 w-11 sm:h-14 sm:w-14 rounded-2xl bg-[#25D366]/20 border border-[#25D366]/30 flex items-center justify-center text-[#25D366] shrink-0 shadow-[0_0_15px_rgba(37,211,102,0.2)]">
+                <Users className="h-6 w-6 sm:h-7 sm:w-7" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground font-semibold uppercase tracking-wider mb-1">Klien Puas</p>
-                <p className="font-display text-2xl md:text-3xl font-bold text-white"><AnimatedCounter end={500} duration={2000} suffix="+" /> <span className="text-[#25D366]">USER</span></p>
+                <p className="text-[11px] sm:text-sm text-muted-foreground font-semibold uppercase tracking-wider mb-1">Klien Puas</p>
+                <p className="font-display text-xl sm:text-2xl md:text-3xl font-bold text-white"><AnimatedCounter end={500} duration={2000} suffix="+" /> <span className="text-[#25D366]">USER</span></p>
               </div>
             </div>
           </div>

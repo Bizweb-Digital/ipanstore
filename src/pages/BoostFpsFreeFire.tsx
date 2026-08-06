@@ -23,7 +23,7 @@ const BoostFpsFreeFire = () => {
               <ArrowLeft className="mr-2 h-4 w-4" /> Kembali ke Layanan
             </Link>
 
-            <div className="gaming-card p-8 md:p-12 border-orange-500/30">
+            <div className="gaming-card p-6 md:p-12 border-orange-500/30">
               <span className="gaming-badge text-orange-500 border-orange-500/30 bg-orange-500/10 mb-4 inline-block">
                 EMULATOR OPTIMIZATION
               </span>
@@ -32,7 +32,7 @@ const BoostFpsFreeFire = () => {
               </h1>
               
               <div className="prose prose-invert prose-p:text-muted-foreground prose-p:leading-relaxed max-w-none">
-                <p className="text-lg">
+                <p className="text-base sm:text-lg">
                   Bermain Free Fire di emulator PC seringkali terkendala oleh frame drop saat bertemu musuh (war), 
                   sensitivitas mouse yang tidak konsisten (mouse delay/acceleration), dan resource emulator yang berat. 
                   Layanan ini dirancang khusus untuk mengatasi masalah tersebut.
@@ -61,31 +61,31 @@ const BoostFpsFreeFire = () => {
                   </div>
                 </div>
 
-                <h3 className="text-xl font-display font-bold text-white mb-4 mt-8">Proses Pengerjaan</h3>
+                <h3 className="text-lg sm:text-xl font-display font-bold text-white mb-4 mt-8">Proses Pengerjaan</h3>
                 <ol className="space-y-4">
-                  <li className="flex gap-4">
-                    <span className="flex-shrink-0 w-8 h-8 rounded-full bg-orange-500/20 text-orange-500 flex items-center justify-center font-bold font-display">1</span>
+                  <li className="flex gap-3 sm:gap-4">
+                    <span className="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-orange-500/20 text-orange-500 flex items-center justify-center font-bold font-display text-sm">1</span>
                     <div>
                       <strong className="block text-white">Pengecekan Spesifikasi</strong>
                       <span className="text-sm">Analisa spek PC untuk menentukan emulator dan versi Android yang paling ringan.</span>
                     </div>
                   </li>
-                  <li className="flex gap-4">
-                    <span className="flex-shrink-0 w-8 h-8 rounded-full bg-orange-500/20 text-orange-500 flex items-center justify-center font-bold font-display">2</span>
+                  <li className="flex gap-3 sm:gap-4">
+                    <span className="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-orange-500/20 text-orange-500 flex items-center justify-center font-bold font-display text-sm">2</span>
                     <div>
                       <strong className="block text-white">Instalasi & Tweaking Emulator</strong>
                       <span className="text-sm">Setting resolusi, DPI, dan engine emulator (OpenGL/DirectX) sesuai hardware.</span>
                     </div>
                   </li>
-                  <li className="flex gap-4">
-                    <span className="flex-shrink-0 w-8 h-8 rounded-full bg-orange-500/20 text-orange-500 flex items-center justify-center font-bold font-display">3</span>
+                  <li className="flex gap-3 sm:gap-4">
+                    <span className="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-orange-500/20 text-orange-500 flex items-center justify-center font-bold font-display text-sm">3</span>
                     <div>
                       <strong className="block text-white">Regedit & Mouse Optimization</strong>
                       <span className="text-sm">Injeksi regedit VIP dan setting Windows pointer precision.</span>
                     </div>
                   </li>
-                  <li className="flex gap-4">
-                    <span className="flex-shrink-0 w-8 h-8 rounded-full bg-orange-500/20 text-orange-500 flex items-center justify-center font-bold font-display">4</span>
+                  <li className="flex gap-3 sm:gap-4">
+                    <span className="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-orange-500/20 text-orange-500 flex items-center justify-center font-bold font-display text-sm">4</span>
                     <div>
                       <strong className="block text-white">In-game Setting</strong>
                       <span className="text-sm">Setting sensitivitas X/Y dan penyesuaian custom HUD di dalam game.</span>
@@ -93,19 +93,19 @@ const BoostFpsFreeFire = () => {
                   </li>
                 </ol>
 
-                <div className="mt-10 p-5 rounded-xl bg-orange-500/10 border border-orange-500/20 text-sm">
+                <div className="mt-10 p-4 sm:p-5 rounded-xl bg-orange-500/10 border border-orange-500/20 text-sm">
                   <strong className="text-orange-500">Catatan Penting:</strong> Hasil maksimal (seperti FPS tembus 90+) akan sangat bergantung pada hardware PC kamu (terutama Processor dan VGA). Kami membantu mengoptimalkan *potensi maksimal* dari hardware yang ada.
                 </div>
               </div>
 
               <div className="mt-12 flex flex-col sm:flex-row gap-4 border-t border-white/10 pt-8">
-                <Button asChild variant="gaming-glow" size="lg">
+                <Button asChild variant="gaming-glow" size="lg" className="w-full sm:w-auto">
                   <a href={`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent("Halo min, saya mau tanya layanan Boost FPS Free Fire")}`} target="_blank" rel="noopener noreferrer">
                     Konsultasi via WhatsApp
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </a>
                 </Button>
-                <Button asChild variant="gaming-outline" size="lg">
+                <Button asChild variant="gaming-outline" size="lg" className="w-full sm:w-auto">
                   <Link to="/paket">Lihat Harga Paket</Link>
                 </Button>
               </div>

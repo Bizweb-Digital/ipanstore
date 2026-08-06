@@ -20,15 +20,15 @@ const ClosingCTA = () => {
             Jangan biarkan lag mengganggu gameplay-mu. Optimasi PC kamu sekarang dan rasakan perbedaannya.
           </p>
           
-          <Button asChild variant="whatsapp" size="xl" className="group rounded-2xl animate-pulse-glow">
-            <a href={WA_LINK} target="_blank" rel="noopener noreferrer">
+          <Button asChild variant="whatsapp" size="xl" className="group rounded-2xl animate-pulse-glow w-full sm:w-auto">
+            <a href={WA_LINK} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center">
               Order via WhatsApp
               <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
             </a>
           </Button>
           
           <p className="mt-6 text-sm text-muted-foreground/60 flex items-center justify-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse shrink-0" />
             Admin sedang online, balas dalam 5 menit.
           </p>
         </div>
