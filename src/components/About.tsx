@@ -1,62 +1,93 @@
 import { Cpu, Gauge, ShieldCheck } from "lucide-react";
+import { BentoCard, BentoGrid } from "@/components/ui/bento-grid";
+import Reveal from "@/components/Reveal";
+import SplitText from "@/components/SplitText";
 
 const features = [
   {
-    icon: Cpu,
-    title: "Optimasi PC & Emulator",
-    desc: "Fokus tweak total: CPU, RAM, GPU, dan emulator agar Free Fire smooth tanpa drop.",
-    badge: "SYSTEM",
+    Icon: Cpu,
+    name: "Optimasi PC & Emulator",
+    description:
+      "Fokus tweak total: CPU, RAM, GPU, dan emulator agar Free Fire smooth tanpa drop.",
+    className: "sm:col-span-1",
+    background: (
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(ellipse 60% 50% at 20% 0%, rgba(148,163,184,0.08), transparent 70%)",
+        }}
+      />
+    ),
   },
   {
-    icon: Gauge,
-    title: "Boost FPS Maksimal",
-    desc: "Tingkatkan performa gaming sampai batas terjauh PC kamu — no install ulang (untuk paket tertentu).",
-    badge: "PERFORMANCE",
+    Icon: Gauge,
+    name: "Boost FPS Maksimal",
+    description:
+      "Tingkatkan performa gaming sampai batas terjauh PC kamu — tanpa install ulang untuk paket tertentu.",
+    className: "",
+    background: (
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(ellipse 60% 50% at 80% 100%, rgba(148,163,184,0.08), transparent 70%)",
+        }}
+      />
+    ),
   },
   {
-    icon: ShieldCheck,
-    title: "Aman & Bergaransi",
-    desc: "Pengerjaan rapi, data aman, garansi gacor. Tidak puas? Kami benerin sampai mantap.",
-    badge: "TRUST",
+    Icon: ShieldCheck,
+    name: "Aman & Bergaransi",
+    description:
+      "Pengerjaan rapi, data aman, garansi gacor. Tidak puas? Kami benerin sampai mantap.",
+    className: "",
+    background: (
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(ellipse 60% 50% at 50% 0%, rgba(148,163,184,0.08), transparent 70%)",
+        }}
+      />
+    ),
   },
 ];
 
 const About = () => {
   return (
     <section className="relative py-20 md:py-28 overflow-hidden">
-      {/* Ambient background glow */}
-      <div className="absolute top-1/2 right-0 -translate-y-1/2 w-[500px] h-[500px] bg-gaming-accent/5 blur-[120px] rounded-full pointer-events-none" />
-
-      <div className="container mx-auto px-4 relative z-10">
-        <div className="max-w-3xl mx-auto text-center mb-16">
+      <div className="container mx-auto px-4">
+        <Reveal className="text-center max-w-2xl mx-auto mb-14 pt-6 md:pt-10">
           <span className="section-subheading">Tentang IPAN STORE</span>
-          <h2 className="h2-clamp font-display font-bold text-white mb-6">
-            Spesialis <span className="text-gaming-accent">Optimasi PC Gaming</span> & Emulator
-          </h2>
-          <p className="text-muted-foreground body-clamp">
+          <SplitText
+            tag="h2"
+            text="Spesialis Optimasi PC Gaming & Emulator"
+            className="h2-clamp font-bold tracking-tight text-[#F4F4F5] mb-4"
+            splitType="words"
+            threshold={0.2}
+          />
+          <p className="text-zinc-400 body-clamp leading-relaxed">
             IPAN STORE adalah jasa profesional yang fokus meningkatkan performa, FPS,
             dan pengalaman gaming kamu. Tanpa perlu install ulang (untuk paket tertentu)
             — PC spek rendah pun bisa jadi lebih responsif dan ringan.
           </p>
-        </div>
+        </Reveal>
 
-        <div className="grid md:grid-cols-3 gap-6 lg:gap-8 max-w-6xl mx-auto">
+        <BentoGrid className="max-w-5xl mx-auto auto-rows-[13.5rem]">
           {features.map((f) => (
-            <div
-              key={f.title}
-              className="gaming-card p-6 md:p-8 group"
-            >
-              <div className="flex justify-between items-start mb-6">
-                <div className="h-12 w-12 md:h-14 md:w-14 rounded-2xl bg-gaming-primary/10 border border-gaming-primary/20 flex items-center justify-center text-gaming-accent group-hover:scale-110 group-hover:bg-gaming-primary/20 transition-all duration-300">
-                  <f.icon className="h-6 w-6 md:h-7 md:w-7" strokeWidth={1.5} />
-                </div>
-                <span className="gaming-badge text-[9px]">{f.badge}</span>
-              </div>
-              <h3 className="font-display text-lg md:text-xl font-semibold text-white mb-3 tracking-wide">{f.title}</h3>
-              <p className="text-muted-foreground text-sm leading-relaxed">{f.desc}</p>
-            </div>
+            <BentoCard
+              key={f.name}
+              name={f.name}
+              description={f.description}
+              Icon={f.Icon}
+              href="/paket"
+              cta="Selengkapnya"
+              background={f.background}
+              className={f.className}
+            />
           ))}
-        </div>
+        </BentoGrid>
       </div>
     </section>
   );

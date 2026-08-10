@@ -43,7 +43,7 @@ const LoadingScreen = ({ onComplete }: { onComplete: () => void }) => {
 
       <div className="relative w-[min(420px,86vw)] text-center">
         <div className="mb-10 flex justify-center relative">
-          <img src={logo} alt="Ipan Store" className="h-16 sm:h-20 w-auto object-contain relative z-10 drop-shadow-[0_0_15px_rgba(37,99,235,0.5)]" />
+          <img src={logo} alt="Ipan Store" className="h-16 sm:h-20 w-auto object-contain relative z-10 drop-shadow-[0_0_15px_rgba(148,163,184,0.35)]" />
         </div>
 
         <div className="gaming-card p-6 border-white/5">
@@ -54,7 +54,7 @@ const LoadingScreen = ({ onComplete }: { onComplete: () => void }) => {
 
           <div className="h-1.5 w-full overflow-hidden bg-white/5 rounded-full mb-4 shadow-inner">
             <div
-              className="h-full bg-gradient-to-r from-gaming-primary to-gaming-accent transition-all duration-100 rounded-full shadow-[0_0_10px_rgba(56,189,248,0.5)]"
+              className="h-full bg-gradient-to-r from-gaming-primary to-gaming-accent transition-all duration-100 rounded-full shadow-[0_0_10px_rgba(148,163,184,0.35)]"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -68,7 +68,7 @@ const LoadingScreen = ({ onComplete }: { onComplete: () => void }) => {
               <span>RAM BOOST</span>
               <span className="text-xs">{progress > 60 ? "DONE" : "WAIT"}</span>
             </div>
-            <div className={`flex flex-col items-center gap-1 transition-colors ${progress > 90 ? "text-gaming-cyan drop-shadow-[0_0_5px_rgba(34,211,238,0.5)]" : ""}`}>
+            <div className={`flex flex-col items-center gap-1 transition-colors ${progress > 90 ? "text-gaming-cyan drop-shadow-[0_0_5px_rgba(148,163,184,0.35)]" : ""}`}>
               <span>GPU TUNE</span>
               <span className="text-xs">{progress > 90 ? "READY" : "WAIT"}</span>
             </div>

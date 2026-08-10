@@ -5,25 +5,32 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 rounded-xl",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 rounded-lg active:scale-[0.98]",
   {
     variants: {
       variant: {
-        default: "bg-gaming-primary text-white hover:bg-gaming-primary/90 shadow-glow-sm hover:shadow-glow-md",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        outline: "border border-white/10 bg-gaming-card hover:bg-gaming-card-hover hover:border-gaming-accent text-foreground hover:shadow-glow-cyan",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-white/5 hover:text-foreground",
-        link: "text-gaming-accent underline-offset-4 hover:underline",
-        whatsapp: "bg-[#25D366] text-white font-bold hover:bg-[#20bd5a] shadow-[0_0_15px_rgba(37,211,102,0.3)] hover:shadow-[0_0_25px_rgba(37,211,102,0.5)]",
-        "gaming-outline": "border border-gaming-accent bg-transparent text-gaming-accent hover:bg-gaming-accent/10 shadow-glow-cyan",
-        "gaming-glow": "bg-gaming-primary text-white shadow-glow-md hover:shadow-glow-lg hover:-translate-y-1 font-bold tracking-wide",
+        default:
+          "bg-[#111111] text-white hover:bg-[#333333] shadow-soft-sm",
+        destructive:
+          "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        outline:
+          "border border-white/16 bg-transparent text-[#F4F4F5] hover:bg-white/5 hover:border-white/24",
+        secondary:
+          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        ghost: "text-zinc-300 hover:bg-white/5 hover:text-[#F4F4F5]",
+        link: "text-zinc-50 underline-offset-4 hover:underline",
+        whatsapp:
+          "bg-[#25D366] text-white font-semibold hover:bg-[#20bd5a] shadow-soft-sm",
+        "gaming-outline":
+          "border border-white/16 bg-transparent text-[#F4F4F5] hover:bg-white/5 hover:border-white/24",
+        "gaming-glow":
+          "bg-[#111111] text-white font-semibold shadow-soft-sm hover:bg-[#333333]",
       },
       size: {
-        default: "h-11 px-5 py-2",
+        default: "h-10 px-5 py-2",
         sm: "h-9 px-4 text-xs",
-        lg: "h-14 px-8 text-base",
-        xl: "h-14 md:h-16 px-8 md:px-10 text-base md:text-lg",
+        lg: "h-12 px-7 text-base",
+        xl: "h-12 md:h-14 px-7 md:px-9 text-base",
         icon: "h-10 w-10",
       },
     },

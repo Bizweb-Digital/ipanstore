@@ -3,7 +3,12 @@ import tailwindcssAnimate from "tailwindcss-animate";
 
 export default {
   darkMode: ["class"],
-  content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
+  content: [
+    "./index.html",
+    "./pages/**/*.{ts,tsx}", 
+    "./components/**/*.{ts,tsx}", 
+    "./src/**/*.{ts,tsx}"
+  ],
   prefix: "",
   theme: {
     container: {
@@ -51,35 +56,37 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        /* Warm Dark Minimal Gaming Palette */
         gaming: {
-          bg: "#060A14",
-          card: "#101827",
-          "card-hover": "#111C2E",
-          primary: "#2563EB",
-          accent: "#38BDF8",
-          cyan: "#22D3EE",
+          bg: "#0C0C0C",          /* warm black base */
+          card: "#131314",        /* charcoal card */
+          "card-hover": "#27272A", /* hover state */
+          primary: "#94A3B8",     /* slate-400 desaturated accent */
+          accent: "#94A3B8",      /* same as primary (desaturated) */
+          cyan: "#E2E8F0",        /* light pastel highlight */
         },
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
-        xl: "1.5rem",
-        "2xl": "2rem",
+        xl: "0.75rem",
+        "2xl": "1rem",
       },
       fontFamily: {
-        display: ["Orbitron", "sans-serif"],
-        sans: ["Inter", "system-ui", "sans-serif"],
+        display: ["Plus Jakarta Sans", "system-ui", "sans-serif"],
+        sans: ["Plus Jakarta Sans", "system-ui", "sans-serif"],
+        mono: ["JetBrains Mono", "ui-monospace", "SFMono-Regular", "monospace"],
       },
       boxShadow: {
-        "glow-sm": "0 0 10px rgba(37, 99, 235, 0.2)",
-        "glow-md": "0 0 20px rgba(37, 99, 235, 0.35)",
-        "glow-lg": "0 0 30px rgba(56, 189, 248, 0.3)",
-        "glow-cyan": "0 0 15px rgba(34, 211, 238, 0.3)",
+        /* Ultra-diffuse shadows only (NO neon glow) */
+        "inset-highlight": "inset 0 1px 0 0 rgba(255, 255, 255, 0.04)",
+        "soft-sm": "0 1px 3px rgba(0, 0, 0, 0.04)",
+        "soft-md": "0 2px 8px rgba(0, 0, 0, 0.04)",
       },
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
-        "gradient-subtle": "linear-gradient(to bottom, #101827, #060A14)",
+        "gradient-subtle": "linear-gradient(to bottom, #131314, #0C0C0C)",
       },
       keyframes: {
         "accordion-down": {
@@ -92,38 +99,54 @@ export default {
         },
         float: {
           "0%, 100%": { transform: "translateY(0)" },
-          "50%": { transform: "translateY(-10px)" },
-        },
-        pulseGlow: {
-          "0%, 100%": { boxShadow: "0 0 10px rgba(37, 99, 235, 0.3)" },
-          "50%": { boxShadow: "0 0 20px rgba(56, 189, 248, 0.6)" },
-        },
-        sweep: {
-          "0%": { transform: "translateX(-100%)" },
-          "100%": { transform: "translateX(100%)" },
-        },
-        marquee: {
-          "0%": { transform: "translateX(0%)" },
-          "100%": { transform: "translateX(-100%)" },
+          "50%": { transform: "translateY(-8px)" },
         },
         panImage: {
-          "0%": { transform: "scale(1.15) translate(-2%, -1%) rotate(-0.5deg)" },
-          "25%": { transform: "scale(1.17) translate(1%, 2%) rotate(0.5deg)" },
-          "50%": { transform: "scale(1.14) translate(2%, -1%) rotate(-0.5deg)" },
-          "75%": { transform: "scale(1.16) translate(-1%, 1%) rotate(0.5deg)" },
-          "100%": { transform: "scale(1.15) translate(-2%, -1%) rotate(-0.5deg)" },
-        }
+          "0%": { transform: "scale(1.1) translate(-1%, -1%) rotate(-0.3deg)" },
+          "25%": { transform: "scale(1.12) translate(1%, 1%) rotate(0.3deg)" },
+          "50%": { transform: "scale(1.09) translate(1%, -1%) rotate(-0.3deg)" },
+          "75%": { transform: "scale(1.11) translate(-1%, 1%) rotate(0.3deg)" },
+          "100%": { transform: "scale(1.1) translate(-1%, -1%) rotate(-0.3deg)" }
+        },
+        /* ── Magic UI additions ─────────────────────────────── */
+        marquee: {
+          from: { transform: "translateX(0)" },
+          to: { transform: "translateX(calc(-100% - var(--gap)))" },
+        },
+        "marquee-vertical": {
+          from: { transform: "translateY(0)" },
+          to: { transform: "translateY(calc(-100% - var(--gap)))" },
+        },
+        shine: {
+          "0%": { backgroundPosition: "0% 0%" },
+          "50%": { backgroundPosition: "100% 100%" },
+          "100%": { backgroundPosition: "0% 0%" },
+        },
+        aurora: {
+          "0%": { backgroundPosition: "0% 50%" },
+          "50%": { backgroundPosition: "100% 50%" },
+          "100%": { backgroundPosition: "0% 50%" },
+        },
+        "hero-breathe": {
+          "0%, 100%": { opacity: 0.55, transform: "scale(1)" },
+          "50%": { opacity: 1, transform: "scale(1.06)" },
+        },
+        "shimmer-sweep": {
+          "0%": { transform: "translateX(-120%) skewX(-12deg)" },
+          "60%, 100%": { transform: "translateX(320%) skewX(-12deg)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "float": "float 6s ease-in-out infinite",
-        "float-fast": "float 3s ease-in-out infinite",
-        "pulse-glow": "pulseGlow 3s infinite",
-        "pulse-glow-fast": "pulseGlow 1.5s infinite",
-        "sweep": "sweep 4s linear infinite",
-        "marquee": "marquee 25s linear infinite",
         "pan-image": "panImage 10s ease-in-out infinite",
+        marquee: "marquee var(--duration, 40s) linear infinite",
+        "marquee-vertical": "marquee-vertical var(--duration, 40s) linear infinite",
+        shine: "shine var(--duration, 14s) linear infinite",
+        aurora: "aurora var(--duration, 8s) ease-in-out infinite",
+        "hero-breathe": "hero-breathe 9s ease-in-out infinite",
+        "shimmer-sweep": "shimmer-sweep var(--duration, 2.5s) ease-in-out infinite",
       },
     },
   },

@@ -17,28 +17,29 @@ const NotFound = () => {
   return (
     <>
       <SEOHead title="404 Not Found | IPAN STORE" description="Halaman tidak ditemukan." />
-      <div className="min-h-screen bg-[#060A14] flex items-center justify-center p-4 relative overflow-hidden">
-        {/* Glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-red-500/10 blur-[150px] rounded-full pointer-events-none" />
+      <div className="min-h-screen bg-zinc-950 relative overflow-hidden flex items-center justify-center p-4">
+        {/* Subtle grid + faint glow */}
+        <div className="absolute inset-0 hero-grid pointer-events-none" />
+        <div className="absolute inset-0 hero-glow pointer-events-none" />
 
-        <div className="gaming-card p-10 md:p-16 max-w-md w-full text-center relative z-10 border-red-500/20">
-          <div className="cyber-glitch-text font-display font-black text-7xl md:text-8xl text-red-500 mb-4 tracking-tighter" data-text="404">
+        <div className="relative z-10 max-w-md w-full text-center">
+          <p className="font-mono text-7xl md:text-8xl font-bold text-zinc-500 tracking-tight mb-6">
             404
-          </div>
-          <h1 className="font-display font-bold text-2xl text-white mb-3">
+          </p>
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-50 mb-3">
             System Failure
           </h1>
-          <p className="text-muted-foreground text-sm mb-8">
+          <p className="text-zinc-400 text-sm mb-10">
             Halaman yang kamu cari tidak ditemukan atau telah dipindahkan.
           </p>
-          <div className="flex flex-col gap-3">
-            <Button asChild variant="gaming-glow" className="w-full">
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button asChild variant="default">
               <Link to="/">
                 <Home className="mr-2 h-4 w-4" />
                 Kembali ke Beranda
               </Link>
             </Button>
-            <Button asChild variant="outline" className="w-full text-white/70 border-white/10 hover:bg-white/5 hover:text-white">
+            <Button asChild variant="outline">
               <a href="javascript:history.back()">
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Go Back

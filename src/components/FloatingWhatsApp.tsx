@@ -12,24 +12,23 @@ const FloatingWhatsApp = () => {
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Chat WhatsApp IPAN STORE"
-      className="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-50 group flex items-center justify-center"
+      className="fixed bottom-6 left-6 md:bottom-8 md:left-8 z-50 group flex items-center justify-center"
     >
-      {/* Pulse rings */}
-      <span className="absolute h-full w-full rounded-full bg-[#25D366] opacity-30 animate-ping duration-1000" />
-      <span className="absolute h-[120%] w-[120%] rounded-full bg-[#25D366] opacity-10 animate-ping duration-1000 delay-150" />
-      
+      {/* Pulse ring */}
+      <span className="absolute h-full w-full rounded-full bg-[#25D366] opacity-15 animate-ping [animation-duration:3s]" />
+
       {/* Main button */}
-      <div className="relative flex h-14 w-14 md:h-16 md:w-16 items-center justify-center rounded-full bg-[#25D366] text-white shadow-[0_0_20px_rgba(37,211,102,0.4)] transition-all group-hover:scale-110 group-hover:shadow-[0_0_30px_rgba(37,211,102,0.6)]">
-        <FaWhatsapp className="h-7 w-7 md:h-8 md:w-8" />
+       <div className="relative flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-soft-sm transition-all duration-200 group-hover:scale-105 group-hover:bg-[#20bd5a]">
+        <FaWhatsapp className="h-6 w-6 md:h-7 md:w-7" />
       </div>
 
       {/* Tooltip */}
-      <div className="absolute right-full mr-4 top-1/2 -translate-y-1/2 hidden md:flex items-center opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none translate-x-2 group-hover:translate-x-0">
-        <div className="bg-[#101827] border border-white/10 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow-xl whitespace-nowrap">
+      <div className="absolute left-full ml-4 top-1/2 -translate-y-1/2 hidden md:flex items-center opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none -translate-x-2 group-hover:translate-x-0">
+        {/* Triangle arrow */}
+        <div className="w-0 h-0 border-y-[6px] border-y-transparent border-r-[6px] border-r-zinc-900 -mr-[1px]" />
+        <div className="bg-zinc-900 border border-zinc-800 text-zinc-100 font-mono text-xs px-4 py-2 rounded-md shadow-inset-highlight whitespace-nowrap">
           Chat Admin
         </div>
-        {/* Triangle arrow */}
-        <div className="w-0 h-0 border-y-[6px] border-y-transparent border-l-[6px] border-l-[#101827] -ml-[1px]" />
       </div>
     </a>
   );

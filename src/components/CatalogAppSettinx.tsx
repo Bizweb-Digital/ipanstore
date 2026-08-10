@@ -1,11 +1,11 @@
-import { ArrowRight, MousePointer2, Crosshair, Activity, Rocket, ShieldCheck, BadgeCheck, Sparkles, Zap, Star } from "lucide-react";
+import { ArrowRight, MousePointer2, Crosshair, Activity, Rocket, BadgeCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { WA_NUMBER } from "./FloatingWhatsApp";
+import { ShineBorder } from "@/components/ui/shine-border";
+import ElectricBorder from "./ElectricBorder";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
-
-const SETTINX_WA_LINK = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(
-  "Halo Ipan Store, saya tertarik dengan IPAN APP SettinX dan ingin melihat katalog lengkapnya."
-)}`;
+import SettinxGallery from "./SettinxGallery";
+import Reveal from "./Reveal";
+import SplitText from "./SplitText";
 
 const features = [
   { icon: MousePointer2, name: "DragShot Velocity X", desc: "Tarikan mouse saat jump shot SG2 jadi lebih ringan & responsif." },
@@ -18,107 +18,127 @@ const CatalogAppSettinx = () => {
   const { ref, revealed } = useScrollReveal<HTMLDivElement>();
 
   return (
-    <section className="relative py-20 md:py-28 overflow-hidden bg-[#060A14]">
-      {/* Top divider */}
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gaming-accent/30 to-transparent" />
-
-      {/* Glow */}
-      <div className="absolute top-1/4 -left-20 w-72 h-72 bg-gaming-accent/10 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-gaming-primary/10 blur-[120px] rounded-full pointer-events-none" />
-
-      <div className="container mx-auto px-4 relative z-10">
-        <div className="max-w-3xl mx-auto text-center mb-14">
-          <span className="gaming-badge-accent mb-4 inline-flex items-center gap-1.5">
-            <Sparkles className="h-3 w-3" /> KATALOG PRODUK
-          </span>
-          <h2 className="h2-clamp font-display font-bold text-white mb-5">
-            IPAN APP <span className="text-gaming-accent">SettinX V1</span>
-          </h2>
-          <p className="text-muted-foreground body-clamp max-w-2xl mx-auto">
+    <section className="relative py-16 md:py-20 overflow-hidden border-t border-white/16">
+      <div className="container mx-auto px-4">
+        <Reveal className="text-center max-w-2xl mx-auto mb-14">
+          <span className="section-subheading">KATALOG PRODUK</span>
+          <SplitText
+            tag="h2"
+            text="IPAN APP SettinX V1"
+            className="h2-clamp font-bold tracking-tight text-[#F4F4F5] mb-4"
+            splitType="words"
+            threshold={0.2}
+          />
+          <p className="text-zinc-400 body-clamp leading-relaxed">
             Aplikasi tweak premium untuk emulator Free Fire. Menggabungkan semua keunggulan paket optimasi, tweak menu, dan advanced tweak dalam satu aplikasi otomatis dengan lisensi lifetime.
           </p>
-        </div>
+        </Reveal>
 
         <div
           ref={ref}
-          className={`max-w-5xl mx-auto gaming-card p-6 lg:p-10 relative scroll-reveal-stagger ${revealed ? "revealed" : ""}`}
+          className={`max-w-5xl mx-auto scroll-reveal-stagger ${revealed ? "revealed" : ""}`}
         >
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 h-[2px] w-3/4 bg-gradient-to-r from-transparent via-gaming-accent to-transparent" />
-          <span className="absolute top-0 right-6 bg-gaming-accent text-[#060A14] text-[10px] font-bold px-3 py-1 rounded-b-lg tracking-wider uppercase">
-            GRAND LAUNCHING
-          </span>
+          <div className="relative">
+            <div
+              className="absolute -inset-2 rounded-3xl pointer-events-none"
+              style={{
+                background:
+                  "radial-gradient(ellipse 70% 70% at 50% 0%, rgba(148,163,184,0.12), transparent 70%)",
+                filter: "blur(24px)",
+              }}
+            />
+            <ElectricBorder
+              color="#94A3B8"
+              speed={0.8}
+              chaos={0.08}
+              borderRadius={16}
+              className="relative"
+            >
+            <div className="relative gaming-card p-6 lg:p-10">
+              <div className="flex justify-end mb-6">
+                <span className="gaming-badge-accent bg-[#0C0C0C]">
+                  GRAND LAUNCHING
+                </span>
+              </div>
 
-          <div className="grid lg:grid-cols-2 gap-8 items-center">
+              <div className="grid lg:grid-cols-2 gap-8 lg:gap-10 items-center">
             {/* Left: features */}
             <div>
-              <h3 className="font-display text-xl md:text-2xl font-black text-white uppercase tracking-wide mb-5">
-                Fitur <span className="text-gaming-accent">Unggulan</span>
+              <h3 className="text-xl font-semibold tracking-tight text-[#F4F4F5] mb-5">
+                Fitur Unggulan
               </h3>
               <div className="grid sm:grid-cols-2 gap-4">
                 {features.map((f) => (
                   <div
                     key={f.name}
-                    className="group rounded-xl bg-[#0B1120] border border-white/10 p-4 hover:border-gaming-accent/50 transition-all duration-300 hover:-translate-y-1"
+                    className="rounded-lg bg-[#131314]/50 border border-white/16 p-4 transition-colors duration-200 hover:border-white/24"
                   >
-                    <div className="h-9 w-9 rounded-lg bg-gaming-accent/10 border border-gaming-accent/30 flex items-center justify-center mb-3 group-hover:bg-gaming-accent/20 transition-all">
-                      <f.icon className="h-4 w-4 text-gaming-accent" strokeWidth={2} />
-                    </div>
-                    <h4 className="font-display font-bold text-white uppercase tracking-wide text-sm mb-1.5">{f.name}</h4>
-                    <p className="text-xs text-muted-foreground leading-relaxed">{f.desc}</p>
+                    <f.icon className="h-5 w-5 text-[#94A3B8] mb-3" strokeWidth={1.75} />
+                    <h4 className="text-sm font-semibold tracking-tight text-[#F4F4F5] mb-1.5">
+                      {f.name}
+                    </h4>
+                    <p className="text-xs text-zinc-400 leading-relaxed">{f.desc}</p>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Right: pricing + benefits */}
-            <div className="rounded-2xl bg-gradient-to-br from-gaming-accent/[0.07] via-transparent to-gaming-primary/[0.07] border border-gaming-accent/20 p-6 lg:p-8 text-center relative overflow-hidden">
-              <div className="absolute -top-10 -right-10 w-40 h-40 bg-gaming-accent/10 blur-3xl rounded-full pointer-events-none" />
+            <div className="rounded-lg bg-[#131314] border border-white/16 p-6 lg:p-8 text-center">
+              <span className="gaming-badge-accent mb-5 inline-block">PALING UNGGUL</span>
 
-              <div className="inline-flex items-center gap-2 rounded-full bg-gaming-accent/10 border border-gaming-accent/30 px-3 py-1 text-[10px] font-black tracking-widest uppercase text-gaming-accent mb-4">
-                <Zap className="h-3 w-3" />
-                PALING UNGGUL
-              </div>
-
-              <div className="flex flex-col items-center mb-4">
-                <span className="text-base text-muted-foreground/60 line-through font-semibold mb-1">Rp 100.000</span>
-                <span className="font-display text-5xl md:text-6xl font-black text-gaming-accent leading-none drop-shadow-[0_0_20px_rgba(56,189,248,0.4)]">
+              <div className="flex flex-col items-center mb-5">
+                <span className="font-mono text-base text-zinc-600 line-through mb-1">
+                  Rp 100.000
+                </span>
+                <span className="font-mono text-4xl md:text-5xl font-bold text-[#F4F4F5] tracking-tight leading-none">
                   Rp 75.000
                 </span>
-                <span className="text-xs text-muted-foreground mt-2">Hemat Rp 25.000 · Promo launching</span>
               </div>
 
               <div className="space-y-2.5 mb-6 text-left">
                 {[
                   "Bayar sekali, pakai selamanya (lifetime)",
                   "Lebih unggul dari semua paket optimasi",
-                  "Mencakup Optimize, SET PC, & Anti Cheat",
                   "Aman dengan System Restore bawaan",
-                  "Update fitur gratis selamanya",
                 ].map((b) => (
-                  <div key={b} className="flex items-start gap-2 text-xs md:text-sm text-white/85">
-                    <BadgeCheck className="h-4 w-4 text-gaming-accent shrink-0 mt-0.5" />
+                  <div key={b} className="flex items-start gap-2.5 text-sm text-[#F4F4F5]">
+                    <BadgeCheck className="h-4 w-4 text-[#94A3B8] shrink-0 mt-0.5" strokeWidth={2} />
                     <span>{b}</span>
                   </div>
                 ))}
               </div>
 
-              <div className="flex flex-wrap justify-center gap-2 mb-5">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-gaming-accent/10 border border-gaming-accent/30 px-3 py-1 text-[10px] font-bold text-gaming-accent uppercase tracking-wider">
-                  <ShieldCheck className="h-3 w-3" /> Lifetime
-                </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-gaming-accent/10 border border-gaming-accent/30 px-3 py-1 text-[10px] font-bold text-gaming-accent uppercase tracking-wider">
-                  <Star className="h-3 w-3" /> 1 Akun = 1 PC
-                </span>
+              <div className="flex flex-wrap justify-center gap-2 mb-6">
+                <span className="gaming-tag">Lifetime</span>
+                <span className="gaming-tag">1 Akun = 1 PC</span>
               </div>
 
-              <Button asChild variant="gaming-glow" size="lg" className="w-full rounded-xl animate-pulse-glow">
-                <a href={SETTINX_WA_LINK} target="_blank" rel="noopener noreferrer">
+              <Button asChild size="lg" className="w-full bg-[#111111] text-white hover:bg-[#333333]">
+                <a href="/order?paket=app-settinx">
                   Beli Sekarang
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </a>
               </Button>
             </div>
+            </div>
+            </div>
+            </ElectricBorder>
           </div>
+        </div>
+
+        {/* Preview Gallery */}
+        <div className="max-w-5xl mx-auto mt-16">
+          <div className="text-center mb-8">
+            <span className="section-subheading">PREVIEW TAMPILAN APLIKASI</span>
+            <h3 className="text-xl md:text-2xl font-semibold tracking-tight text-[#F4F4F5] mb-2">
+              Tampilan APP SettinX
+            </h3>
+            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#F4F4F5]/50">
+              Klik foto untuk melihat lebih detail
+            </p>
+          </div>
+          <SettinxGallery />
         </div>
       </div>
     </section>
@@ -126,3 +146,4 @@ const CatalogAppSettinx = () => {
 };
 
 export default CatalogAppSettinx;
+

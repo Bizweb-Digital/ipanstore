@@ -1,107 +1,110 @@
+import { useRef } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Gauge, Cpu, Users, ShieldCheck } from "lucide-react";
-import heroBg from "@/assets/hero-bg.jpg";
+import { ArrowRight } from "lucide-react";
 import { WA_LINK } from "./FloatingWhatsApp";
 import AnimatedCounter from "./AnimatedCounter";
+import VariableProximity from "./VariableProximity";
 
 const Hero = () => {
-  return (
-    <section className="relative min-h-[100svh] flex flex-col justify-center overflow-hidden pt-24 pb-16 lg:pt-32">
-      {/* Background & Overlays */}
-      <div className="absolute inset-0 z-0">
-        <img
-          src={heroBg}
-          alt=""
-          aria-hidden="true"
-          className="h-full w-full object-cover opacity-15 mix-blend-luminosity animate-pan-image origin-center"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#060A14]/80 via-[#060A14]/60 to-[#060A14]" />
-        {/* Glow Effects */}
-        <div className="absolute top-1/4 -left-20 w-72 h-72 bg-gaming-primary/20 blur-[120px] rounded-full animate-float-fast pointer-events-none" />
-        <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-gaming-accent/20 blur-[140px] rounded-full animate-float-fast delay-300 pointer-events-none" />
-      </div>
+  // Ref container untuk area pelacakan mouse VariableProximity — mencakup
+  // seluruh hero section agar efek ketebalan font mengikuti kursor di area
+  // heading. Aman untuk mobile (fallback: jika tidak ada pointer mouse,
+  // efek tetap aktif via touchmove).
+  const heroRef = useRef<HTMLDivElement>(null);
 
-      <div className="relative z-10 container mx-auto px-4 max-w-6xl flex flex-col items-center">
+  return (
+    <section ref={heroRef} className="relative flex flex-col justify-center overflow-hidden pt-28 pb-16 md:pt-36 md:pb-20">
+      {/* Lapisan dasar solid — efek Scanner global sudah dirender di Layout
+          sebagai background fixed, jadi tidak perlu Scanner kedua di sini
+          (menghemat satu WebGL context). */}
+      <div className="absolute inset-0 z-0 pointer-events-none bg-[#1a1a1a]/60" />
+      {/* Gradient fade ke background di bawah hero untuk transisi halus */}
+      <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-[#1a1a1a] to-transparent z-[1]" />
+
+      <div className="relative z-10 container mx-auto px-4 max-w-5xl flex flex-col items-center">
         {/* Badges */}
-        <div className="flex flex-wrap justify-center gap-3 mb-8 animate-fade-up">
+        <div className="flex flex-wrap justify-center gap-2.5 mb-6 animate-fade-up">
           <span className="gaming-badge-accent flex items-center gap-1">
             FAST RESPONSE
           </span>
-          <span className="gaming-badge text-white">#1 JASA OPTIMASI PC</span>
-          <span className="gaming-badge text-white">BOOST FPS FREE FIRE</span>
+          <span className="gaming-badge">#1 JASA OPTIMASI PC</span>
+          <span className="gaming-badge">BOOST FPS FREE FIRE</span>
         </div>
 
-        {/* Main heading */}
-        <div className="text-center max-w-5xl mx-auto mb-6 relative">
-          <div className="absolute inset-0 -z-10 flex items-center justify-center overflow-visible pointer-events-none">
-            <div className="absolute w-[150%] h-[120%] bg-gradient-to-r from-transparent via-gaming-primary/10 to-transparent blur-[80px] animate-pulse-glow-fast" />
-            <div className="absolute w-[200%] h-32 bg-gradient-to-r from-transparent via-gaming-accent/20 to-transparent blur-[40px] animate-sweep" />
-          </div>
+        {/* Main heading — Variable Proximity (React Bits).
+            Teks dipecah per-huruf; ketebalan font (wght) & optical size (opsz)
+            diinterpolasi berdasarkan jarak kursor ke tiap huruf.
+            fromFontVariationSettings = kondisi normal (ringan),
+            toFontVariationSettings = kondisi dekat kursor (tebal & besar).
+            radius 120 agar area pengaruh cukup luas (mobile-friendly: tidak
+            perlu hover presisi tinggi). falloff gaussian untuk transisi
+            mulus. */}
+        <h1 className="h1-clamp text-center font-bold tracking-tight text-[#F4F4F5] mb-5 animate-fade-up delay-100">
+          <VariableProximity
+            label="Optimasi PC Gaming & Boost FPS Free Fire"
+            fromFontVariationSettings="'wght' 400, 'opsz' 9"
+            toFontVariationSettings="'wght' 1000, 'opsz' 40"
+            containerRef={heroRef}
+            radius={120}
+            falloff="gaussian"
+          />
+        </h1>
 
-          <h1 className="h1-clamp font-display font-bold text-white tracking-tight animate-fade-up delay-100">
-            Optimasi PC Gaming & <br className="hidden sm:block" />
-            <span className="text-gradient-blue">Boost FPS Free Fire</span>
-          </h1>
-        </div>
-
-        <p className="max-w-2xl mx-auto text-center text-muted-foreground body-clamp animate-fade-up delay-200 mb-10">
-          IPAN STORE membantu optimasi PC/laptop gaming agar terasa lebih ringan, responsif, dan nyaman digunakan bermain, terutama untuk kebutuhan Free Fire.
+        <p className="max-w-2xl mx-auto text-center text-zinc-400 body-clamp mb-8 leading-relaxed animate-fade-up delay-200">
+          IPAN STORE membantu optimasi PC/laptop gaming agar terasa lebih ringan,
+          responsif, dan nyaman digunakan bermain, terutama untuk kebutuhan Free Fire.
         </p>
 
         {/* CTA Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-up delay-300 w-full sm:w-auto px-4 sm:px-0">
-          <Button asChild variant="gaming-glow" size="xl" className="w-full sm:w-auto">
-            <a href={WA_LINK} target="_blank" rel="noopener noreferrer">
-              Optimasi Sekarang
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </a>
-          </Button>
-          <Button asChild variant="gaming-outline" size="xl" className="w-full sm:w-auto rounded-xl">
+          <a
+            href={WA_LINK}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shimmer-cta w-full sm:w-auto"
+          >
+            Optimasi Sekarang
+            <ArrowRight className="h-5 w-5" />
+          </a>
+          <Button asChild variant="gaming-outline" size="xl" className="w-full sm:w-auto">
             <Link to="/layanan">Lihat Layanan</Link>
           </Button>
         </div>
 
-        {/* Performance Dashboard / Stats Visual */}
-        <div className="mt-16 w-full max-w-4xl mx-auto animate-fade-up delay-500">
-          <div className="gaming-card p-5 sm:p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-5 md:gap-8 relative overflow-visible">
-            {/* Top accent glow line */}
-            <div className="absolute top-0 left-1/4 right-1/4 h-[1px] bg-gradient-to-r from-transparent via-gaming-accent to-transparent" />
-            
-            <div className="flex-1 flex items-center gap-3 sm:gap-4 text-left w-full">
-              <div className="h-11 w-11 sm:h-14 sm:w-14 rounded-2xl bg-gaming-primary/20 border border-gaming-primary/30 flex items-center justify-center text-gaming-accent shrink-0 shadow-glow-sm">
-                <Gauge className="h-6 w-6 sm:h-7 sm:w-7" />
-              </div>
-              <div>
-                <p className="text-[11px] sm:text-sm text-muted-foreground font-semibold uppercase tracking-wider mb-1">FPS Boost</p>
-                <p className="font-display text-xl sm:text-2xl md:text-3xl font-bold text-white">UP TO <span className="text-gaming-cyan"><AnimatedCounter end={240} duration={1500} suffix="+" /></span></p>
-              </div>
+        {/* Stats */}
+        <div className="mt-12 w-full max-w-4xl mx-auto animate-fade-up delay-500">
+           <div className="gaming-card grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-white/16">
+            <div className="px-6 py-6 md:py-8">
+              <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-zinc-500 mb-2">
+                FPS Boost
+              </p>
+              <p className="font-mono text-2xl md:text-3xl font-semibold text-[#F4F4F5]">
+                UP TO{" "}
+                <span className="text-[#94A3B8]">
+                  <AnimatedCounter end={240} duration={1500} suffix="+" />
+                </span>
+              </p>
             </div>
 
-            <div className="hidden md:block w-[1px] h-16 bg-white/10" />
-            <div className="md:hidden w-full h-[1px] bg-white/5" />
-
-            <div className="flex-1 flex items-center gap-3 sm:gap-4 text-left w-full">
-              <div className="h-11 w-11 sm:h-14 sm:w-14 rounded-2xl bg-gaming-primary/20 border border-gaming-primary/30 flex items-center justify-center text-gaming-accent shrink-0 shadow-glow-sm">
-                <Cpu className="h-6 w-6 sm:h-7 sm:w-7" />
-              </div>
-              <div>
-                <p className="text-[11px] sm:text-sm text-muted-foreground font-semibold uppercase tracking-wider mb-1">Performance</p>
-                <p className="font-display text-xl sm:text-2xl md:text-3xl font-bold text-white"><AnimatedCounter end={100} duration={1500} suffix="%" /> <span className="text-gaming-cyan">STABLE</span></p>
-              </div>
+            <div className="px-6 py-6 md:py-8">
+              <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-zinc-500 mb-2">
+                Performance
+              </p>
+              <p className="font-mono text-2xl md:text-3xl font-semibold text-[#F4F4F5]">
+                <AnimatedCounter end={100} duration={1500} suffix="%" />{" "}
+                <span className="text-zinc-400">STABLE</span>
+              </p>
             </div>
 
-            <div className="hidden md:block w-[1px] h-16 bg-white/10" />
-            <div className="md:hidden w-full h-[1px] bg-white/5" />
-
-            <div className="flex-1 flex items-center gap-3 sm:gap-4 text-left w-full">
-              <div className="h-11 w-11 sm:h-14 sm:w-14 rounded-2xl bg-[#25D366]/20 border border-[#25D366]/30 flex items-center justify-center text-[#25D366] shrink-0 shadow-[0_0_15px_rgba(37,211,102,0.2)]">
-                <Users className="h-6 w-6 sm:h-7 sm:w-7" />
-              </div>
-              <div>
-                <p className="text-[11px] sm:text-sm text-muted-foreground font-semibold uppercase tracking-wider mb-1">Klien Puas</p>
-                <p className="font-display text-xl sm:text-2xl md:text-3xl font-bold text-white"><AnimatedCounter end={500} duration={2000} suffix="+" /> <span className="text-[#25D366]">USER</span></p>
-              </div>
+            <div className="px-6 py-6 md:py-8">
+              <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-zinc-500 mb-2">
+                Klien Puas
+              </p>
+              <p className="font-mono text-2xl md:text-3xl font-semibold text-[#F4F4F5]">
+                <AnimatedCounter end={500} duration={2000} suffix="+" />{" "}
+                <span className="text-zinc-400">USER</span>
+              </p>
             </div>
           </div>
         </div>

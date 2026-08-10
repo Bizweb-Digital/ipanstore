@@ -53,14 +53,14 @@ const CustomCursor = () => {
   return (
     <>
       <div
-        className={`fixed top-0 left-0 w-2 h-2 bg-[#38BDF8] rounded-full pointer-events-none z-[99999] -translate-x-1/2 -translate-y-1/2 transition-transform duration-100 ease-out ${
+        className={`fixed top-0 left-0 w-2 h-2 bg-[#94A3B8] rounded-full pointer-events-none z-[99999] -translate-x-1/2 -translate-y-1/2 transition-transform duration-100 ease-out ${
           isHovering ? "scale-150 opacity-70" : ""
         } ${isVisible ? "opacity-100" : "opacity-0"}`}
         style={{ transform: `translate(${position.x}px, ${position.y}px) translate(-50%, -50%)` }}
       />
       <div
-        className={`fixed top-0 left-0 w-8 h-8 border border-[#38BDF8]/50 rounded-full pointer-events-none z-[99998] -translate-x-1/2 -translate-y-1/2 transition-all duration-300 ease-out ${
-          isHovering ? "w-12 h-12 opacity-20 bg-[#38BDF8]/5" : "opacity-30"
+        className={`fixed top-0 left-0 w-8 h-8 border border-[#94A3B8]/30 rounded-full pointer-events-none z-[99998] -translate-x-1/2 -translate-y-1/2 transition-all duration-300 ease-out ${
+          isHovering ? "w-12 h-12 opacity-30 bg-[#94A3B8]/5 border-[#94A3B8]/50" : "opacity-25"
         } ${isVisible ? "" : "opacity-0"}`}
         style={{ transform: `translate(${position.x}px, ${position.y}px) translate(-50%, -50%)` }}
       />

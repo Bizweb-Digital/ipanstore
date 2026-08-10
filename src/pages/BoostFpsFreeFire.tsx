@@ -4,6 +4,49 @@ import { Button } from "@/components/ui/button";
 import SEOHead from "@/components/SEOHead";
 import Layout from "@/components/Layout";
 import { WA_NUMBER } from "@/components/FloatingWhatsApp";
+import PageBackground from "@/components/PageBackground";
+
+const features = [
+  {
+    icon: Target,
+    title: "Sensi Nempel Kepala",
+    desc: "Tweaking DPI dan regedit khusus agar aiming lebih presisi dan konsisten.",
+  },
+  {
+    icon: Zap,
+    title: "Anti Frame Drop",
+    desc: "Optimasi resource alokasi emulator agar FPS stabil meski sedang war ramai.",
+  },
+  {
+    icon: MousePointer2,
+    title: "No Mouse Delay",
+    desc: "Mematikan mouse acceleration dari sistem Windows agar pergerakan 1:1.",
+  },
+  {
+    icon: Crosshair,
+    title: "Keybind Optimal",
+    desc: "Settingan keybind emulator yang responsif untuk pergerakan lincah.",
+  },
+];
+
+const steps = [
+  {
+    title: "Pengecekan Spesifikasi",
+    desc: "Analisa spek PC untuk menentukan emulator dan versi Android yang paling ringan.",
+  },
+  {
+    title: "Instalasi & Tweaking Emulator",
+    desc: "Setting resolusi, DPI, dan engine emulator (OpenGL/DirectX) sesuai hardware.",
+  },
+  {
+    title: "Regedit & Mouse Optimization",
+    desc: "Injeksi regedit VIP dan setting Windows pointer precision.",
+  },
+  {
+    title: "In-game Setting",
+    desc: "Setting sensitivitas X/Y dan penyesuaian custom HUD di dalam game.",
+  },
+];
 
 const BoostFpsFreeFire = () => {
   return (
@@ -13,106 +56,78 @@ const BoostFpsFreeFire = () => {
         description="Jasa boost FPS Free Fire di emulator PC. Atasi lag, frame drop, dan mouse delay untuk pengalaman bermain FF yang lebih kompetitif."
       />
 
-      <section className="relative pt-32 pb-16 md:pt-40 md:pb-24 overflow-hidden bg-[#060A14]">
-        {/* Glow Effects */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-orange-500/10 blur-[150px] rounded-full pointer-events-none" />
+      {/* Section mengalir normal (tanpa ScrollStack pembungkus). */}
+      <section className="relative pt-24 pb-16 md:pt-32 md:pb-20 overflow-hidden">
+            <PageBackground opacity={0.2} />
+            <div className="container mx-auto px-4 relative z-10">
+              <article className="max-w-4xl mx-auto">
+                {/* Back link */}
+                <Button asChild variant="ghost" size="sm" className="-ml-3 mb-8 text-zinc-400">
+                  <Link to="/layanan">
+                    <ArrowLeft className="mr-2 h-4 w-4" /> Kembali ke Layanan
+                  </Link>
+                </Button>
 
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="max-w-4xl mx-auto">
-            <Link to="/layanan" className="inline-flex items-center text-muted-foreground hover:text-white transition-colors mb-8 text-sm font-semibold uppercase tracking-wider">
-              <ArrowLeft className="mr-2 h-4 w-4" /> Kembali ke Layanan
-            </Link>
-
-            <div className="gaming-card p-6 md:p-12 border-orange-500/30">
-              <span className="gaming-badge text-orange-500 border-orange-500/30 bg-orange-500/10 mb-4 inline-block">
-                EMULATOR OPTIMIZATION
-              </span>
-              <h1 className="h2-clamp font-display font-bold text-white mb-6">
-                Boost FPS <span className="text-orange-500">Free Fire</span>
-              </h1>
-              
-              <div className="prose prose-invert prose-p:text-muted-foreground prose-p:leading-relaxed max-w-none">
-                <p className="text-base sm:text-lg">
-                  Bermain Free Fire di emulator PC seringkali terkendala oleh frame drop saat bertemu musuh (war), 
-                  sensitivitas mouse yang tidak konsisten (mouse delay/acceleration), dan resource emulator yang berat. 
+                {/* Header */}
+                <span className="gaming-badge mb-5 inline-flex">EMULATOR OPTIMIZATION</span>
+                <h1 className="h1-clamp font-bold tracking-tight text-zinc-50 mb-6">
+                  Boost FPS Free Fire
+                </h1>
+                <p className="text-base sm:text-lg text-zinc-400 leading-relaxed max-w-2xl">
+                  Bermain Free Fire di emulator PC seringkali terkendala oleh frame drop saat bertemu musuh (war),
+                  sensitivitas mouse yang tidak konsisten (mouse delay/acceleration), dan resource emulator yang berat.
                   Layanan ini dirancang khusus untuk mengatasi masalah tersebut.
                 </p>
 
-                <div className="my-10 grid sm:grid-cols-2 gap-4">
-                  <div className="p-5 rounded-xl bg-white/5 border border-white/10">
-                    <Target className="h-6 w-6 text-orange-500 mb-3" />
-                    <h3 className="font-bold text-white mb-2">Sensi Nempel Kepala</h3>
-                    <p className="text-sm">Tweaking DPI dan regedit khusus agar aiming lebih presisi dan konsisten.</p>
-                  </div>
-                  <div className="p-5 rounded-xl bg-white/5 border border-white/10">
-                    <Zap className="h-6 w-6 text-orange-500 mb-3" />
-                    <h3 className="font-bold text-white mb-2">Anti Frame Drop</h3>
-                    <p className="text-sm">Optimasi resource alokasi emulator agar FPS stabil meski sedang war ramai.</p>
-                  </div>
-                  <div className="p-5 rounded-xl bg-white/5 border border-white/10">
-                    <MousePointer2 className="h-6 w-6 text-orange-500 mb-3" />
-                    <h3 className="font-bold text-white mb-2">No Mouse Delay</h3>
-                    <p className="text-sm">Mematikan mouse acceleration dari sistem Windows agar pergerakan 1:1.</p>
-                  </div>
-                  <div className="p-5 rounded-xl bg-white/5 border border-white/10">
-                    <Crosshair className="h-6 w-6 text-orange-500 mb-3" />
-                    <h3 className="font-bold text-white mb-2">Keybind Optimal</h3>
-                    <p className="text-sm">Settingan keybind emulator yang responsif untuk pergerakan lincah.</p>
-                  </div>
+                {/* Feature cards */}
+                <div className="mt-12 grid sm:grid-cols-2 gap-4">
+                  {features.map((f) => (
+                    <div key={f.title} className="gaming-card p-5">
+                      <f.icon className="h-5 w-5 text-zinc-300 mb-4" strokeWidth={1.75} />
+                      <h3 className="font-semibold tracking-tight text-zinc-50 mb-2">{f.title}</h3>
+                      <p className="text-sm text-zinc-400 leading-relaxed">{f.desc}</p>
+                    </div>
+                  ))}
                 </div>
 
-                <h3 className="text-lg sm:text-xl font-display font-bold text-white mb-4 mt-8">Proses Pengerjaan</h3>
-                <ol className="space-y-4">
-                  <li className="flex gap-3 sm:gap-4">
-                    <span className="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-orange-500/20 text-orange-500 flex items-center justify-center font-bold font-display text-sm">1</span>
-                    <div>
-                      <strong className="block text-white">Pengecekan Spesifikasi</strong>
-                      <span className="text-sm">Analisa spek PC untuk menentukan emulator dan versi Android yang paling ringan.</span>
-                    </div>
-                  </li>
-                  <li className="flex gap-3 sm:gap-4">
-                    <span className="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-orange-500/20 text-orange-500 flex items-center justify-center font-bold font-display text-sm">2</span>
-                    <div>
-                      <strong className="block text-white">Instalasi & Tweaking Emulator</strong>
-                      <span className="text-sm">Setting resolusi, DPI, dan engine emulator (OpenGL/DirectX) sesuai hardware.</span>
-                    </div>
-                  </li>
-                  <li className="flex gap-3 sm:gap-4">
-                    <span className="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-orange-500/20 text-orange-500 flex items-center justify-center font-bold font-display text-sm">3</span>
-                    <div>
-                      <strong className="block text-white">Regedit & Mouse Optimization</strong>
-                      <span className="text-sm">Injeksi regedit VIP dan setting Windows pointer precision.</span>
-                    </div>
-                  </li>
-                  <li className="flex gap-3 sm:gap-4">
-                    <span className="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-orange-500/20 text-orange-500 flex items-center justify-center font-bold font-display text-sm">4</span>
-                    <div>
-                      <strong className="block text-white">In-game Setting</strong>
-                      <span className="text-sm">Setting sensitivitas X/Y dan penyesuaian custom HUD di dalam game.</span>
-                    </div>
-                  </li>
+                {/* Process steps */}
+                <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-50 mb-8 mt-16">
+                  Proses Pengerjaan
+                </h3>
+                <ol className="space-y-6">
+                  {steps.map((s, i) => (
+                    <li key={s.title} className="flex gap-4 sm:gap-5">
+                      <span className="flex-shrink-0 w-10 h-10 rounded-lg border border-zinc-800 bg-zinc-900/50 text-zinc-300 flex items-center justify-center font-mono text-xs">
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                      <div className="pt-1.5">
+                        <strong className="block font-semibold tracking-tight text-zinc-50 mb-1">{s.title}</strong>
+                        <span className="text-sm text-zinc-400 leading-relaxed">{s.desc}</span>
+                      </div>
+                    </li>
+                  ))}
                 </ol>
 
-                <div className="mt-10 p-4 sm:p-5 rounded-xl bg-orange-500/10 border border-orange-500/20 text-sm">
-                  <strong className="text-orange-500">Catatan Penting:</strong> Hasil maksimal (seperti FPS tembus 90+) akan sangat bergantung pada hardware PC kamu (terutama Processor dan VGA). Kami membantu mengoptimalkan *potensi maksimal* dari hardware yang ada.
+                {/* Note */}
+                <div className="mt-12 p-5 sm:p-6 rounded-lg border border-zinc-800 bg-zinc-900/50 text-sm text-zinc-400 leading-relaxed">
+                  <strong className="text-zinc-50 font-semibold">Catatan Penting:</strong> Hasil maksimal (seperti FPS tembus 90+) akan sangat bergantung pada hardware PC kamu (terutama Processor dan VGA). Kami membantu mengoptimalkan *potensi maksimal* dari hardware yang ada.
                 </div>
-              </div>
 
-              <div className="mt-12 flex flex-col sm:flex-row gap-4 border-t border-white/10 pt-8">
-                <Button asChild variant="gaming-glow" size="lg" className="w-full sm:w-auto">
-                  <a href={`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent("Halo min, saya mau tanya layanan Boost FPS Free Fire")}`} target="_blank" rel="noopener noreferrer">
-                    Konsultasi via WhatsApp
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </a>
-                </Button>
-                <Button asChild variant="gaming-outline" size="lg" className="w-full sm:w-auto">
-                  <Link to="/paket">Lihat Harga Paket</Link>
-                </Button>
-              </div>
+                {/* CTA */}
+                <div className="mt-12 flex flex-col sm:flex-row gap-4 border-t border-zinc-800 pt-8">
+                  <Button asChild variant="whatsapp" size="lg" className="w-full sm:w-auto">
+                    <a href={`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent("Halo min, saya mau tanya layanan Boost FPS Free Fire")}`} target="_blank" rel="noopener noreferrer">
+                      Konsultasi via WhatsApp
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </a>
+                  </Button>
+                  <Button asChild variant="outline" size="lg" className="w-full sm:w-auto">
+                    <Link to="/paket">Lihat Harga Paket</Link>
+                  </Button>
+                </div>
+              </article>
             </div>
-          </div>
-        </div>
-      </section>
+          </section>
     </Layout>
   );
 };

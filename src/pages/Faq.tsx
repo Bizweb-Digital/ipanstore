@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { Plus, ArrowRight, MessageCircleQuestion, Sparkles } from "lucide-react";
+import { Plus, ArrowRight } from "lucide-react";
 import SEOHead from "@/components/SEOHead";
 import Layout from "@/components/Layout";
+import { Button } from "@/components/ui/button";
 import { WA_LINK } from "@/components/FloatingWhatsApp";
+import PageBackground from "@/components/PageBackground";
 
 const faqs = [
   {
@@ -39,32 +41,13 @@ const faqs = [
   },
   {
     q: "Apakah ada garansi dan support setelah optimasi?",
-    a: "Ada. Kami memberikan garansi setelah optimasi. Jika ada settingan yang kurang pas (misalnya mouse terasa terlalu licin atau FPS belum maksimal), cukup chat admin kapan saja. Kami akan bantu调整 ulang secara gratis.",
+    a: "Ada. Kami memberikan garansi setelah optimasi. Jika ada settingan yang kurang pas (misalnya mouse terasa terlalu licin atau FPS belum maksimal), cukup chat admin kapan saja. Kami akan bantu sesuaikan ulang secara gratis.",
   },
   {
     q: "Apakah data dan file di PC saya aman?",
     a: "100% aman. Kami hanya menonaktifkan service Windows yang tidak penting dan membersihkan cache/registry sampah. Semua file pribadi, dokumen, foto, dan game Anda tetap utuh. Untuk paket tertentu yang membutuhkan install ulang, kami selalu konfirmasi dan backup data dulu sebelumnya.",
   },
 ];
-
-const QuestionBadge = ({ open }: { open: boolean }) => (
-  <div
-    className={`relative shrink-0 h-10 w-10 sm:h-12 sm:w-12 rounded-xl flex items-center justify-center font-display font-black text-lg sm:text-xl transition-all duration-300 ${
-      open
-        ? "bg-gaming-accent text-[#060A14] shadow-[0_0_20px_rgba(56,189,248,0.5)] rotate-[360deg]"
-        : "bg-[#0B1120] border border-gaming-accent/30 text-gaming-accent"
-    }`}
-    aria-hidden="true"
-  >
-    <span className="relative z-10">?</span>
-    {!open && (
-      <>
-        <span className="absolute inset-0 rounded-xl border border-gaming-accent/40 animate-pulse-glow" />
-        <Sparkles className="absolute -top-1 -right-1 h-3 w-3 text-gaming-accent opacity-70" />
-      </>
-    )}
-  </div>
-);
 
 const Faq = () => {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
@@ -79,105 +62,89 @@ const Faq = () => {
         keywords="FAQ optimasi PC, tanya jawab boost FPS, jasa tweak emulator Free Fire, pertanyaan IPAN APP SettinX"
       />
 
-      <section className="relative pt-32 pb-24 min-h-[80vh] overflow-hidden bg-[#060A14]">
-        {/* Abstract Background Elements */}
-        <div className="absolute top-40 right-10 w-72 h-72 bg-gaming-primary/5 blur-[80px] rounded-full" />
-        <div className="absolute bottom-10 left-10 w-96 h-96 bg-gaming-accent/5 blur-[100px] rounded-full" />
+      {/* Section mengalir normal (tanpa ScrollStack pembungkus). */}
+      <section className="relative pt-24 pb-16 md:pt-32 md:pb-20 overflow-hidden">
+            <PageBackground opacity={0.2} />
+            <div className="container mx-auto px-4 relative z-10">
+              {/* Hero */}
+              <div className="max-w-3xl mx-auto text-center mb-16">
+                <span className="gaming-badge mb-5 inline-block">FAQ</span>
+                <h1 className="h1-clamp font-bold tracking-tight text-[#F4F4F5] mb-5">
+                  Pertanyaan Umum
+                </h1>
+                <p className="text-zinc-400">
+                  Jawaban lengkap untuk pertanyaan yang sering diajukan seputar jasa optimasi PC gaming, boost FPS Free Fire, dan IPAN APP SettinX di IPAN STORE.
+                </p>
+              </div>
 
-        {/* Decorative grid */}
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:60px_60px] [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_75%)] pointer-events-none" />
+              {/* Accordion — divider lines, no boxed items */}
+              <div className="max-w-3xl mx-auto border-b border-white/16">
+                {faqs.map((faq, i) => {
+                  const isOpen = openIndex === i;
+                  return (
+                    <div key={i} className="border-t border-white/16">
+                      <button
+                        type="button"
+                        onClick={() => toggle(i)}
+                        aria-expanded={isOpen}
+                        aria-controls={`faq-panel-${i}`}
+                        className="w-full flex items-center gap-4 sm:gap-6 text-left py-5 sm:py-6 group"
+                      >
+                        <span className="font-mono text-xs text-zinc-600 shrink-0 w-6">
+                          {String(i + 1).padStart(2, "0")}
+                        </span>
 
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="max-w-3xl mx-auto text-center mb-16">
-            <span className="gaming-badge-accent mb-4 inline-flex items-center gap-1.5">
-              <MessageCircleQuestion className="h-3 w-3" /> FAQ
-            </span>
-            <h1 className="h1-clamp font-display font-bold text-white mb-6">
-              Pertanyaan <span className="text-gaming-accent">Umum</span>
-            </h1>
-            <p className="text-muted-foreground body-clamp">
-              Jawaban lengkap untuk pertanyaan yang sering diajukan seputar jasa optimasi PC gaming, boost FPS Free Fire, dan IPAN APP SettinX di IPAN STORE.
-            </p>
-          </div>
+                        <span
+                          className={`flex-1 font-medium text-base sm:text-lg tracking-tight transition-colors duration-200 ${
+                            isOpen ? "text-[#F4F4F5]" : "text-zinc-200 group-hover:text-[#F4F4F5]"
+                          }`}
+                        >
+                          {faq.q}
+                        </span>
 
-          <div className="max-w-3xl mx-auto space-y-4">
-            {faqs.map((faq, i) => {
-              const isOpen = openIndex === i;
-              return (
-                <div
-                  key={i}
-                  className={`relative rounded-2xl border transition-all duration-300 ${
-                    isOpen
-                      ? "bg-[#0F172A] border-gaming-accent/60 shadow-[0_0_25px_rgba(56,189,248,0.15)]"
-                      : "bg-[#0B1120] border-white/10 hover:border-gaming-accent/30"
-                  }`}
-                >
-                  <button
-                    type="button"
-                    onClick={() => toggle(i)}
-                    aria-expanded={isOpen}
-                    aria-controls={`faq-panel-${i}`}
-                    className="w-full flex items-center gap-4 sm:gap-5 text-left p-4 sm:p-5 group"
-                  >
-                    <QuestionBadge open={isOpen} />
+                        <Plus
+                          className={`h-4 w-4 shrink-0 text-[#F4F4F5]/50 transition-transform duration-200 ${
+                            isOpen ? "rotate-45 text-[#94A3B8]" : "group-hover:text-[#94A3B8]"
+                          }`}
+                          strokeWidth={2}
+                        />
+                      </button>
 
-                    <span
-                      className={`flex-1 font-display font-bold text-sm sm:text-base uppercase tracking-wider transition-colors ${
-                        isOpen ? "text-white" : "text-white/90 group-hover:text-gaming-accent"
-                      }`}
-                    >
-                      {faq.q}
-                    </span>
-
-                    <span
-                      className={`h-9 w-9 shrink-0 rounded-lg border flex items-center justify-center transition-all ${
-                        isOpen
-                          ? "bg-gaming-accent/15 border-gaming-accent/60 text-gaming-accent rotate-45"
-                          : "border-white/10 text-muted-foreground group-hover:border-gaming-accent/40 group-hover:text-gaming-accent"
-                      }`}
-                    >
-                      <Plus className="h-4 w-4" strokeWidth={2.5} />
-                    </span>
-                  </button>
-
-                  <div
-                    id={`faq-panel-${i}`}
-                    className={`grid transition-[grid-template-rows] duration-300 ease-out ${
-                      isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-                    }`}
-                  >
-                    <div className="overflow-hidden">
-                      <div className="pl-[68px] sm:pl-[76px] pr-4 pb-5 text-sm md:text-base text-muted-foreground leading-relaxed">
-                        <div className="border-l-2 border-gaming-accent/30 pl-4">
-                          {faq.a}
+                      <div
+                        id={`faq-panel-${i}`}
+                        className={`grid transition-[grid-template-rows] duration-300 ease-out ${
+                          isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                        }`}
+                      >
+                        <div className="overflow-hidden">
+                          <div className="pl-10 sm:pl-12 pr-8 pb-6 text-sm md:text-base text-zinc-400 leading-relaxed">
+                            {faq.a}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                  );
+                })}
+              </div>
 
-          <div className="mt-16 text-center gaming-card max-w-2xl mx-auto p-6 md:p-8 border-gaming-primary/20 bg-gaming-primary/5">
-            <h3 className="font-display font-bold text-xl text-white mb-3">Punya Pertanyaan Lain?</h3>
-            <p className="text-muted-foreground mb-8 text-sm md:text-base">
-              Jangan ragu untuk bertanya langsung ke admin. Kami siap membantu menganalisa keluhan performa PC kamu dan merekomendasikan paket terbaik.
-            </p>
-            <a
-              href={WA_LINK}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 px-6 h-12 rounded-xl bg-[#25D366] hover:bg-[#1FB958] text-white font-bold text-sm shadow-[0_0_20px_rgba(37,211,102,0.3)] hover:shadow-[0_0_30px_rgba(37,211,102,0.5)] transition-all"
-            >
-              Chat via WhatsApp
-              <ArrowRight className="h-4 w-4" />
-            </a>
-          </div>
-        </div>
-      </section>
+              {/* CTA box */}
+              <div className="mt-16 gaming-card max-w-2xl mx-auto p-6 md:p-10 text-center">
+                <h3 className="text-xl font-semibold tracking-tight text-[#F4F4F5] mb-3">Punya Pertanyaan Lain?</h3>
+                <p className="text-zinc-400 mb-8 text-sm md:text-base">
+                  Jangan ragu untuk bertanya langsung ke admin. Kami siap membantu menganalisa keluhan performa PC kamu dan merekomendasikan paket terbaik.
+                </p>
+                <Button asChild variant="default" size="lg">
+                  <a href={WA_LINK} target="_blank" rel="noopener noreferrer">
+                    Chat via WhatsApp
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </a>
+                </Button>
+              </div>
+            </div>
+          </section>
     </Layout>
   );
 };
 
 export default Faq;
+

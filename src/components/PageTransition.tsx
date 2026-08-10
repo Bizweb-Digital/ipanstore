@@ -24,10 +24,10 @@ const PageTransition = ({ children }: { children: ReactNode }) => {
 
   return (
     <div
-      className={`transition-all duration-500 ease-out ${
+      className={`transition-all duration-500 ease-&lsqb;cubic-bezier(0.16,1,0.3,1)&rsqb; ${
         show
           ? "opacity-100 translate-y-0"
-          : "opacity-0 translate-y-6"
+          : "opacity-0 translate-y-2"
       }`}
     >
       {children}

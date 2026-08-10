@@ -1,63 +1,80 @@
+import { useState } from "react";
 import { Images } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "./ui/button";
+import DepthCarousel from "./DepthCarousel";
+import Lightbox from "yet-another-react-lightbox";
+import "yet-another-react-lightbox/styles.css";
+import Reveal from "./Reveal";
+import SplitText from "./SplitText";
 
 const testiPhotos = [
-  "/img/testimoni/Screenshot_2025-12-23-23-15-30-787_com.whatsapp.w4b.jpg",
-  "/img/testimoni/Screenshot_2025-12-25-13-18-55-378_com.whatsapp.w4b.jpg",
-  "/img/testimoni/Screenshot_2025-12-28-20-32-03-375_com.whatsapp.w4b.jpg",
-  "/img/testimoni/Screenshot_2026-01-04-11-44-26-458_com.whatsapp.w4b.jpg",
-  "/img/testimoni/Screenshot_2026-01-04-20-43-26-760_com.whatsapp.w4b.jpg",
-  "/img/testimoni/Screenshot_2026-01-10-22-17-33-377_com.whatsapp.w4b.jpg",
-  "/img/testimoni/Screenshot_2026-01-15-17-58-16-040_com.whatsapp.w4b.jpg",
-  "/img/testimoni/Screenshot_2026-01-18-14-57-35-501_com.whatsapp.w4b.jpg",
-  "/img/testimoni/Screenshot_2026-02-08-13-41-09-236_com.whatsapp.w4b.jpg",
+  { image: "/img/testimoni/Screenshot_2025-12-23-23-15-30-787_com.whatsapp.w4b.jpg", alt: "Testimoni 1" },
+  { image: "/img/testimoni/Screenshot_2025-12-25-13-18-55-378_com.whatsapp.w4b.jpg", alt: "Testimoni 2" },
+  { image: "/img/testimoni/Screenshot_2025-12-28-20-32-03-375_com.whatsapp.w4b.jpg", alt: "Testimoni 3" },
+  { image: "/img/testimoni/Screenshot_2026-01-04-11-44-26-458_com.whatsapp.w4b.jpg", alt: "Testimoni 4" },
+  { image: "/img/testimoni/Screenshot_2026-01-04-20-43-26-760_com.whatsapp.w4b.jpg", alt: "Testimoni 5" },
+  { image: "/img/testimoni/Screenshot_2026-01-10-22-17-33-377_com.whatsapp.w4b.jpg", alt: "Testimoni 6" },
+  { image: "/img/testimoni/Screenshot_2026-01-15-17-58-16-040_com.whatsapp.w4b.jpg", alt: "Testimoni 7" },
+  { image: "/img/testimoni/Screenshot_2026-01-18-14-57-35-501_com.whatsapp.w4b.jpg", alt: "Testimoni 8" },
+  { image: "/img/testimoni/Screenshot_2026-02-08-13-41-09-236_com.whatsapp.w4b.jpg", alt: "Testimoni 9" },
 ];
 
-const marqueePhotos = [...testiPhotos, ...testiPhotos];
+const lightboxSlides = testiPhotos.map((p) => ({ src: p.image }));
 
 const TestimoniPreview = () => {
-  return (
-    <section className="relative py-20 md:py-28 overflow-hidden bg-[#060A14]">
-      {/* Background elements */}
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
 
-      <div className="container mx-auto px-4 relative z-10">
-        <div className="max-w-3xl mx-auto text-center mb-14">
+  const openLightbox = (index: number) => {
+    setLightboxIndex(index);
+    setLightboxOpen(true);
+  };
+
+  return (
+    <section className="relative py-16 md:py-20 overflow-hidden border-t border-zinc-800/60">
+      <div className="container mx-auto px-4">
+        <Reveal className="text-center max-w-2xl mx-auto mb-14">
           <span className="section-subheading">Galeri Testimoni</span>
-          <h2 className="h2-clamp font-display font-bold text-white mb-6">
-            Dipercaya <span className="text-gaming-accent">500+ Gamer</span> Indonesia
-          </h2>
-          <p className="text-muted-foreground body-clamp max-w-2xl mx-auto">
+          <SplitText
+            tag="h2"
+            text="Dipercaya 500+ Gamer Indonesia"
+            className="h2-clamp font-bold tracking-tight text-[#F4F4F5] mb-4"
+            splitType="words"
+            threshold={0.2}
+          />
+          <p className="text-zinc-400 body-clamp leading-relaxed">
             Dokumentasi asli dari pelanggan yang telah merasakan peningkatan FPS, optimasi emulator, dan performa PC setelah menggunakan jasa IPAN STORE.
           </p>
-        </div>
+        </Reveal>
       </div>
 
-      {/* Infinite Marquee Gallery */}
-      <div className="w-full overflow-hidden relative mb-12 group">
-        <div className="absolute top-0 left-0 w-16 md:w-32 h-full bg-gradient-to-r from-[#060A14] to-transparent z-10 pointer-events-none" />
-        <div className="absolute top-0 right-0 w-16 md:w-32 h-full bg-gradient-to-l from-[#060A14] to-transparent z-10 pointer-events-none" />
-
-        <div className="flex w-max animate-marquee gap-4 md:gap-6 py-4 px-4 group-hover:[animation-play-state:paused]">
-          {marqueePhotos.map((src, idx) => (
-            <div
-              key={`${src}-${idx}`}
-              className="w-[180px] sm:w-[200px] md:w-[230px] aspect-[9/16] shrink-0 rounded-2xl overflow-hidden border border-gaming-accent/20 hover:border-gaming-accent/60 transition-all duration-300 hover:-translate-y-1"
-            >
-              <img
-                src={src}
-                alt={`Testimoni pelanggan IPAN STORE ${(idx % testiPhotos.length) + 1} - hasil optimasi PC gaming`}
-                loading="lazy"
-                className="h-full w-full object-cover"
-              />
-            </div>
-          ))}
-        </div>
+      {/* Depth Carousel Gallery */}
+      <div className="relative w-full h-[380px] sm:h-[460px] md:h-[520px] mb-10">
+        <DepthCarousel
+          items={testiPhotos}
+          cardWidth={230}
+          cardHeight={400}
+          radius={16}
+          tint="#0C0C0C"
+          depth={200}
+          spread={80}
+          tilt={18}
+          perspective={1200}
+          visibleCards={4}
+          falloff={0.2}
+          blur={4}
+          duration={600}
+          autoplay={true}
+          autoplayDelay={3500}
+          loop={true}
+          showControls={false}
+          showIndicators={true}
+          onCardClick={(idx) => openLightbox(idx)}
+        />
       </div>
 
-      <div className="container mx-auto px-4 relative z-10">
+      <div className="container mx-auto px-4">
         <div className="text-center">
           <Button asChild variant="outline" className="gap-2">
             <Link to="/testimoni">
@@ -67,6 +84,19 @@ const TestimoniPreview = () => {
           </Button>
         </div>
       </div>
+
+      {/* Lightbox */}
+      <Lightbox
+        open={lightboxOpen}
+        close={() => setLightboxOpen(false)}
+        index={lightboxIndex}
+        slides={lightboxSlides}
+        carousel={{ finite: false, preload: 2 }}
+        animation={{ fade: 350, swipe: 500 }}
+        styles={{
+          container: { backgroundColor: "rgba(9,9,11,0.96)" },
+        }}
+      />
     </section>
   );
 };
