@@ -21,7 +21,14 @@
 | GitHub remote (via `github.com-bizwebdigital`) | ✅ Terhubung & authenticated |
 | Server `sever-h81m-s2ph` (`100.89.140.16`) | ✅ Akses SSH root OK, path `/project/website/padel/IpanStore/ipanstore` |
 | Deploy pipeline | ✅ `deploy.sh` = `git pull` → `docker compose down` → `docker compose up --build -d` |
-| Commit/status git lokal | ✅ sesuai commit terakhir (lihat Riwayat) |
+| Commit/status git lokal | ✅ merge `168e4b6` (termasuk commit remote `c6c563a`/`be6b8b0` dari server) |
+| Push terakhir | ✅ `168e4b6` → GitHub (key `github.com-bizwebdigital`) |
+| Pull+deploy server | ✅ container `ipanstore` aktif, bundle `index-K4Oq3TSC.js` live |
+| Verifikasi live | ✅ `/` `/layanan` `/paket` `/order` `/testimoni` `/faq` `/kontak` `/sitemap.xml` → 200 |
+
+> **Catatan server**: SSH config `~/.ssh/config` dibuat di server agar `git pull` memakai
+> key `id_ed25519_bizweb` (Host `github.com` → IdentityFile). Jika `docker compose` error
+> "container name in use", jalankan `docker rm -f ipanstore` lalu `docker compose up -d`.
 
 ---
 
@@ -103,6 +110,19 @@ src/
 - Gallery foto SettinX di halaman `Layanan.tsx` & `Paket.tsx` (+ `CatalogAppSettinx.tsx`).
 - Badge & ikon di `TestimoniPage.tsx` (Crown/Sparkles, featured card "Raxzy MJ ELITE CS").
 - Format harga `Rp XX.000` (bukan K).
+
+### Sesi: Git merge + Commit/Push/Deploy + Auto-update LASTACTIVITY (11 Agustus 2026)
+- Branch lokal (`996a3f6`) digabung dengan branch remote (`be6b8b0`, `c6c563a` dari server) via merge → `168e4b6`.
+- Konflik resolved: file yang di-restrukturisasi (CatalogAppSettinx, PackagesPreview, Packages, SettinxGallery
+  lama) dihapus karena versi lebih baru sudah ada di `src/components/sections/`; Layanan/Paket/TestimoniPage
+  memakai versi lokal (lebih lengkap; galeri SettinX sudah ada via `AppSettinxSection`).
+- `tsc --noEmit` bersih · `npm run build` sukses (chunk per-route, tanpa >500KB) · `vitest` lulus.
+- **Push** `168e4b6` ke GitHub sukses (`c6c563a..168e4b6 main -> main`).
+- **Deploy server**: dibuat `~/.ssh/config` di server (key `id_ed25519_bizweb`) → `git pull` sukses →
+  `docker compose down` → `up --build -d` (container lama `docker rm -f ipanstore`) → live
+  `https://ipanstore.my.id` HTTP 200, bundle `index-K4Oq3TSC.js`.
+- **Auto-update LASTACTIVITY.md diaktifkan** (aturan di buka file ini bagian "Cara Merawat" + `AGENTS.md`),
+  jangkauan diperluas: status deploy, arsitektur file, riwayat per-sesi, masalah, checklist, cara merawat.
 
 ---
 
