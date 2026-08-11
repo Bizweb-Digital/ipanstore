@@ -1,7 +1,7 @@
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { WA_LINK } from "./FloatingWhatsApp";
-import Reveal from "./Reveal";
+import { WA_LINK } from "../FloatingWhatsApp";
+import Reveal from "../effects/Reveal";
 
 const ClosingCTA = () => {
   return (

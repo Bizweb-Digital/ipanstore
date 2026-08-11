@@ -8,10 +8,10 @@ import {
   BadgeCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import ElectricBorder from "@/components/ElectricBorder";
+import ElectricBorder from "@/components/effects/ElectricBorder";
 import SettinxGallery from "./SettinxGallery";
-import ScrollStackCards from "./ScrollStackCards";
-import Reveal from "./Reveal";
+import ScrollStackCards from "../effects/ScrollStackCards";
+import Reveal from "../effects/Reveal";
 
 const appSettinxFeatures = [
   {
@@ -159,11 +159,11 @@ const AppSettinxSection = ({ compact = false }: { compact?: boolean }) => {
 
               {/* Preview Gallery */}
               <div>
-                <div className="text-center mb-7">
+                <div className="text-center mb-7 md:max-w-4xl md:mx-auto">
                   <h4 className="font-semibold tracking-tight text-[#F4F4F5] text-lg">
                     Preview Tampilan Aplikasi
                   </h4>
-                  <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#F4F4F5]/50 mt-2">
+                  <p className="gallery-hint font-mono text-[11px] uppercase tracking-[0.18em] text-[#F4F4F5]/50 mt-2">
                     Klik foto untuk melihat lebih detail
                   </p>
                 </div>

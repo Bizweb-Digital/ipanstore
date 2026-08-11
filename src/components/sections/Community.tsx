@@ -1,7 +1,7 @@
 import { FaDiscord, FaTiktok } from "react-icons/fa";
 import { Button } from "@/components/ui/button";
-import { Marquee } from "./ui/marquee";
-import Reveal from "./Reveal";
+import { Marquee } from "../ui/marquee";
+import Reveal from "../effects/Reveal";
 
 const trustTags = [
   "FPS BOOST",

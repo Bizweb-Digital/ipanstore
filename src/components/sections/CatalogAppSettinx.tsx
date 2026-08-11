@@ -1,11 +1,11 @@
 import { ArrowRight, MousePointer2, Crosshair, Activity, Rocket, BadgeCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ShineBorder } from "@/components/ui/shine-border";
-import ElectricBorder from "./ElectricBorder";
+import ElectricBorder from "../effects/ElectricBorder";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import SettinxGallery from "./SettinxGallery";
-import Reveal from "./Reveal";
-import SplitText from "./SplitText";
+import Reveal from "../effects/Reveal";
+import SplitText from "../effects/SplitText";
 
 const features = [
   { icon: MousePointer2, name: "DragShot Velocity X", desc: "Tarikan mouse saat jump shot SG2 jadi lebih ringan & responsif." },
@@ -129,12 +129,12 @@ const CatalogAppSettinx = () => {
 
         {/* Preview Gallery */}
         <div className="max-w-5xl mx-auto mt-16">
-          <div className="text-center mb-8">
+          <div className="text-center mb-8 md:max-w-4xl md:mx-auto">
             <span className="section-subheading">PREVIEW TAMPILAN APLIKASI</span>
             <h3 className="text-xl md:text-2xl font-semibold tracking-tight text-[#F4F4F5] mb-2">
               Tampilan APP SettinX
             </h3>
-            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#F4F4F5]/50">
+            <p className="gallery-hint font-mono text-[11px] uppercase tracking-[0.18em] text-[#F4F4F5]/50">
               Klik foto untuk melihat lebih detail
             </p>
           </div>

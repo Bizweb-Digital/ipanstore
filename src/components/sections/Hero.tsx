@@ -2,9 +2,9 @@ import { useRef } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
-import { WA_LINK } from "./FloatingWhatsApp";
-import AnimatedCounter from "./AnimatedCounter";
-import VariableProximity from "./VariableProximity";
+import { WA_LINK } from "../FloatingWhatsApp";
+import AnimatedCounter from "../effects/AnimatedCounter";
+import VariableProximity from "../effects/VariableProximity";
 
 const Hero = () => {
   // Ref container untuk area pelacakan mouse VariableProximity — mencakup

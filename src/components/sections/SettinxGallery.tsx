@@ -46,6 +46,9 @@ const SettinxGallery = ({ compact = false }: { compact?: boolean }) => {
                 src={p.src}
                 alt={p.alt}
                 loading="lazy"
+                decoding="async"
+                width={1920}
+                height={1080}
                 className="absolute inset-0 h-full w-full object-cover"
               />
             </div>
@@ -110,6 +113,8 @@ const SettinxGallery = ({ compact = false }: { compact?: boolean }) => {
             <img
               src={SETTINX_PHOTOS[lightboxIndex].src}
               alt={SETTINX_PHOTOS[lightboxIndex].alt}
+              width={1920}
+              height={1080}
               className="w-full h-auto max-h-[85vh] object-contain rounded-lg border border-white/16"
             />
             <figcaption className="mt-4 text-center">

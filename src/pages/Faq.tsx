@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Plus, ArrowRight } from "lucide-react";
 import SEOHead from "@/components/SEOHead";
-import Layout from "@/components/Layout";
+import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { WA_LINK } from "@/components/FloatingWhatsApp";
-import PageBackground from "@/components/PageBackground";
+import PageBackground from "@/components/effects/PageBackground";
+import { breadcrumbJsonLd, faqJsonLd } from "@/lib/seo";
 
 const faqs = [
   {
@@ -57,9 +58,15 @@ const Faq = () => {
   return (
     <Layout>
       <SEOHead
-        title="FAQ IPAN STORE | Pertanyaan Optimasi PC Gaming & Boost FPS Free Fire"
-        description="Pertanyaan yang sering diajukan seputar jasa optimasi PC gaming, boost FPS Free Fire, IPAN APP SettinX, cara order, garansi, dan keamanan data di IPAN STORE."
-        keywords="FAQ optimasi PC, tanya jawab boost FPS, jasa tweak emulator Free Fire, pertanyaan IPAN APP SettinX"
+        title="FAQ: Apakah Optimasi PC Aman & Menaikkan FPS? | IPAN STORE"
+        description="Apakah optimasi PC meningkatkan FPS? Apakah jasa tweak PC aman? Berapa lama prosesnya? Apakah bisa untuk laptop low-end? Jawaban lengkap seputar jasa optimasi IPAN STORE."
+        jsonLd={[
+          faqJsonLd(faqs),
+          breadcrumbJsonLd([
+            { name: "Beranda", path: "/" },
+            { name: "FAQ", path: "/faq" },
+          ]),
+        ]}
       />
 
       {/* Section mengalir normal (tanpa ScrollStack pembungkus). */}

@@ -1,9 +1,17 @@
 import { ArrowRight, MapPin, MessageCircle, Radio, Gamepad2 } from "lucide-react";
+import { FaWhatsapp, FaDiscord } from "react-icons/fa";
 import { Button } from "@/components/ui/button";
 import SEOHead from "@/components/SEOHead";
-import Layout from "@/components/Layout";
+import Layout from "@/components/layout/Layout";
 import { WA_LINK, WA_NUMBER } from "@/components/FloatingWhatsApp";
-import PageBackground from "@/components/PageBackground";
+import PageBackground from "@/components/effects/PageBackground";
+import { breadcrumbJsonLd } from "@/lib/seo";
+
+// Official Brand Colors
+const BRAND_COLORS = {
+  whatsapp: "#25D366",
+  discord: "#5865F2",
+};
 
 const Kontak = () => {
   // Prevent form submission since there is no backend
@@ -15,8 +23,12 @@ const Kontak = () => {
   return (
     <Layout>
       <SEOHead
-        title="Kontak IPAN STORE | Konsultasi Optimasi PC Gaming"
-        description="Hubungi IPAN STORE melalui WhatsApp untuk konsultasi layanan tweaking PC gaming dan boost FPS Free Fire."
+        title="Kontak & Konsultasi Gratis Optimasi PC Gaming | IPAN STORE"
+        description="Hubungi IPAN STORE via WhatsApp untuk konsultasi gratis seputar tweaking PC gaming dan boost FPS Free Fire. Admin online 24 jam, melayani remote ke seluruh Indonesia."
+        jsonLd={breadcrumbJsonLd([
+          { name: "Beranda", path: "/" },
+          { name: "Kontak", path: "/kontak" },
+        ])}
       />
 
       {/* Section mengalir normal (tanpa ScrollStack pembungkus). */}
@@ -39,8 +51,8 @@ const Kontak = () => {
                 {/* Contact Info Cards */}
                 <div className="space-y-4">
                   <div className="gaming-card p-6 flex items-start gap-4">
-                    <div className="w-11 h-11 rounded-lg bg-[#131314] border border-white/16 flex items-center justify-center shrink-0">
-                      <MessageCircle className="w-5 h-5 text-[#94A3B8]" strokeWidth={1.75} />
+                    <div className="w-11 h-11 rounded-lg bg-[#25D366]/10 border border-[#25D366]/30 flex items-center justify-center shrink-0">
+                      <FaWhatsapp className="w-5 h-5 text-[#25D366]" />
                     </div>
                     <div>
                       <h3 className="font-semibold tracking-tight text-[#F4F4F5] mb-1">WhatsApp Fast Response</h3>
@@ -51,7 +63,7 @@ const Kontak = () => {
                         href={WA_LINK}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="font-mono text-sm text-[#94A3B8] hover:text-[#F4F4F5] transition-colors duration-200 inline-flex items-center"
+                        className="font-mono text-sm text-[#25D366] hover:text-[#20bd5a] transition-colors duration-200 inline-flex items-center"
                       >
                         +{WA_NUMBER} <ArrowRight className="ml-1.5 w-3 h-3" />
                       </a>
@@ -59,8 +71,8 @@ const Kontak = () => {
                   </div>
 
                   <div className="gaming-card p-6 flex items-start gap-4">
-                    <div className="w-11 h-11 rounded-lg bg-[#131314] border border-white/16 flex items-center justify-center shrink-0">
-                      <Radio className="w-5 h-5 text-[#94A3B8]" strokeWidth={1.75} />
+                    <div className="w-11 h-11 rounded-lg bg-[#25D366]/10 border border-[#25D366]/30 flex items-center justify-center shrink-0">
+                      <Radio className="w-5 h-5 text-[#25D366]" strokeWidth={1.75} />
                     </div>
                     <div>
                       <h3 className="font-semibold tracking-tight text-[#F4F4F5] mb-1">WhatsApp Channel</h3>
@@ -71,7 +83,7 @@ const Kontak = () => {
                         href="https://www.whatsapp.com/channel/0029Vb54vP4JkK7CBBrxGf0r"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm font-medium text-[#94A3B8] hover:text-[#F4F4F5] transition-colors duration-200 inline-flex items-center"
+                        className="text-sm font-medium text-[#25D366] hover:text-[#20bd5a] transition-colors duration-200 inline-flex items-center"
                       >
                         Join Komunitas <ArrowRight className="ml-1.5 w-3 h-3" />
                       </a>
@@ -91,8 +103,8 @@ const Kontak = () => {
                   </div>
 
                   <div className="gaming-card p-6 flex items-start gap-4">
-                    <div className="w-11 h-11 rounded-lg bg-[#131314] border border-white/16 flex items-center justify-center shrink-0">
-                      <Gamepad2 className="w-5 h-5 text-[#94A3B8]" strokeWidth={1.75} />
+                    <div className="w-11 h-11 rounded-lg bg-[#5865F2]/10 border border-[#5865F2]/30 flex items-center justify-center shrink-0">
+                      <FaDiscord className="w-5 h-5 text-[#5865F2]" />
                     </div>
                     <div>
                       <h3 className="font-semibold tracking-tight text-[#F4F4F5] mb-1">Discord Community</h3>
@@ -103,7 +115,7 @@ const Kontak = () => {
                         href="https://discord.gg/FTQVJQEAtu"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm font-medium text-[#94A3B8] hover:text-[#F4F4F5] transition-colors duration-200 inline-flex items-center"
+                        className="text-sm font-medium text-[#5865F2] hover:text-[#4752C4] transition-colors duration-200 inline-flex items-center"
                       >
                         Join Server <ArrowRight className="ml-1.5 w-3 h-3" />
                       </a>
@@ -141,8 +153,8 @@ const Kontak = () => {
                         className="gaming-input h-auto min-h-[120px] py-3.5 leading-relaxed resize-none"
                       ></textarea>
                     </div>
-                    <Button type="submit" variant="default" className="w-full mt-2" size="lg">
-                      <MessageCircle className="mr-2 h-4 w-4" />
+                    <Button type="submit" variant="default" className="w-full mt-2 bg-[#25D366] hover:bg-[#20bd5a] text-white border-none" size="lg">
+                      <FaWhatsapp className="mr-2 h-4 w-4" />
                       Lanjut ke WhatsApp
                     </Button>
                     <p className="text-center text-xs text-[#F4F4F5]/50 mt-4">

@@ -3,8 +3,8 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Check } from "lucide-react";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { ShineBorder } from "@/components/ui/shine-border";
-import Reveal from "@/components/Reveal";
-import SplitText from "@/components/SplitText";
+import Reveal from "@/components/effects/Reveal";
+import SplitText from "@/components/effects/SplitText";
 
 type Pkg = {
   name: string;

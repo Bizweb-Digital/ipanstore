@@ -1,7 +1,7 @@
 import { Cpu, Gauge, ShieldCheck } from "lucide-react";
 import { BentoCard, BentoGrid } from "@/components/ui/bento-grid";
-import Reveal from "@/components/Reveal";
-import SplitText from "@/components/SplitText";
+import Reveal from "@/components/effects/Reveal";
+import SplitText from "@/components/effects/SplitText";
 
 const features = [
   {

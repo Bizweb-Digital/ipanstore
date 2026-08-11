@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { WA_LINK } from "./FloatingWhatsApp";
-import StaggeredMenu from "./StaggeredMenu";
+import { WA_LINK } from "../FloatingWhatsApp";
+import StaggeredMenu from "../StaggeredMenu";
 import logo from "@/assets/logo.png";
 
 const links = [
@@ -62,6 +62,8 @@ const Navbar = () => {
             <img
               src={logo}
               alt="Ipan Store"
+              width={577}
+              height={433}
               className="h-10 w-auto object-contain"
             />
           </a>

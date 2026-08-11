@@ -43,7 +43,7 @@ const LoadingScreen = ({ onComplete }: { onComplete: () => void }) => {
 
       <div className="relative w-[min(420px,86vw)] text-center">
         <div className="mb-10 flex justify-center relative">
-          <img src={logo} alt="Ipan Store" className="h-16 sm:h-20 w-auto object-contain relative z-10 drop-shadow-[0_0_15px_rgba(148,163,184,0.35)]" />
+          <img src={logo} alt="Ipan Store" width={577} height={433} className="h-16 sm:h-20 w-auto object-contain relative z-10 drop-shadow-[0_0_15px_rgba(148,163,184,0.35)]" />
         </div>
 
         <div className="gaming-card p-6 border-white/5">

@@ -2,9 +2,10 @@ import { ArrowLeft, ArrowRight, Settings, Zap, HardDrive, RefreshCw } from "luci
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import SEOHead from "@/components/SEOHead";
-import Layout from "@/components/Layout";
+import Layout from "@/components/layout/Layout";
 import { WA_NUMBER } from "@/components/FloatingWhatsApp";
-import PageBackground from "@/components/PageBackground";
+import PageBackground from "@/components/effects/PageBackground";
+import { breadcrumbJsonLd, serviceJsonLd } from "@/lib/seo";
 
 const features = [
   {
@@ -48,8 +49,22 @@ const TweakingPcGaming = () => {
   return (
     <Layout>
       <SEOHead
-        title="Tweaking PC Gaming | IPAN STORE"
-        description="Layanan tweaking PC gaming untuk performa maksimal. Debloat Windows, optimasi registry, dan turunkan input lag untuk semua game."
+        title="Jasa Tweaking PC Gaming: Debloat Windows & Turunkan Input Lag | IPAN STORE"
+        description="Jasa tweaking Windows untuk gaming: debloat bloatware, optimasi registry, turunkan input lag & ping. Support Windows 10/11 untuk PC rakitan & laptop gaming (ROG, Legion, Nitro, Omen, MSI)."
+        jsonLd={[
+          serviceJsonLd({
+            name: "Tweaking PC Gaming",
+            description:
+              "Tweaking Windows 10/11 untuk gaming: registry tweaks, debloat bloatware, optimasi power plan & network adapter agar FPS naik, input lag turun, dan Windows lebih ringan. Pengerjaan remote via UltraViewer.",
+            path: "/layanan/tweaking-pc-gaming",
+            price: "50000",
+          }),
+          breadcrumbJsonLd([
+            { name: "Beranda", path: "/" },
+            { name: "Layanan", path: "/layanan" },
+            { name: "Tweaking PC Gaming", path: "/layanan/tweaking-pc-gaming" },
+          ]),
+        ]}
       />
 
       {/* Section mengalir normal (tanpa ScrollStack pembungkus). */}
@@ -107,9 +122,11 @@ const TweakingPcGaming = () => {
                 <div className="mt-12 p-5 sm:p-6 rounded-lg border border-zinc-800 bg-zinc-900/50 text-sm text-zinc-400 leading-relaxed">
                   <strong className="text-zinc-50 font-semibold">Sistem Operasi yang Didukung:</strong> Windows 10 & Windows 11.
                   Sangat direkomendasikan untuk PC Rakitan atau Laptop Gaming segala merk (ASUS ROG/TUF, Lenovo Legion, Acer Nitro, HP Omen/Victus, MSI).
+                  Estimasi pengerjaan: 30 menit – 2 jam via remote, tergantung kondisi awal PC dan paket yang dipilih.
+                  Cocok untuk semua game populer: Valorant, CS2, Dota 2, GTA V, Genshin Impact, hingga game AAA.
                 </div>
 
-                {/* CTA */}
+                {/* CTA + internal links */}
                 <div className="mt-12 flex flex-col sm:flex-row gap-4 border-t border-zinc-800 pt-8">
                   <Button asChild variant="whatsapp" size="lg" className="w-full sm:w-auto">
                     <a href={`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent("Halo min, saya mau tanya layanan Tweaking PC Gaming")}`} target="_blank" rel="noopener noreferrer">
@@ -119,6 +136,9 @@ const TweakingPcGaming = () => {
                   </Button>
                   <Button asChild variant="outline" size="lg" className="w-full sm:w-auto">
                     <Link to="/paket">Lihat Harga Paket</Link>
+                  </Button>
+                  <Button asChild variant="ghost" size="lg" className="w-full sm:w-auto text-zinc-400">
+                    <Link to="/testimoni">Lihat Bukti Testimoni</Link>
                   </Button>
                 </div>
               </article>

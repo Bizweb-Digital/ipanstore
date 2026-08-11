@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { Images } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Button } from "./ui/button";
-import DepthCarousel from "./DepthCarousel";
+import { Button } from "../ui/button";
+import DepthCarousel from "../carousel/DepthCarousel";
 import Lightbox from "yet-another-react-lightbox";
 import "yet-another-react-lightbox/styles.css";
-import Reveal from "./Reveal";
-import SplitText from "./SplitText";
+import Reveal from "../effects/Reveal";
+import SplitText from "../effects/SplitText";
 
 const testiPhotos = [
   { image: "/img/testimoni/Screenshot_2025-12-23-23-15-30-787_com.whatsapp.w4b.jpg", alt: "Testimoni 1" },

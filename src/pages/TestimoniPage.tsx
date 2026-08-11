@@ -1,48 +1,53 @@
 import { useState } from "react";
 import { Star, Images, CheckCircle2, Quote } from "lucide-react";
 import SEOHead from "@/components/SEOHead";
-import Layout from "@/components/Layout";
-import AnimatedCounter from "@/components/AnimatedCounter";
-import DepthCarousel from "@/components/DepthCarousel";
+import Layout from "@/components/layout/Layout";
+import AnimatedCounter from "@/components/effects/AnimatedCounter";
+import DepthCarousel from "@/components/carousel/DepthCarousel";
 import Lightbox from "yet-another-react-lightbox";
 import "yet-another-react-lightbox/styles.css";
 import { ShineBorder } from "@/components/ui/shine-border";
-import PageBackground from "@/components/PageBackground";
-import Reveal from "@/components/Reveal";
+import PageBackground from "@/components/effects/PageBackground";
+import Reveal from "@/components/effects/Reveal";
+import { breadcrumbJsonLd } from "@/lib/seo";
 
 type TestiPhoto = {
-  src: string;
+  /** Nama file tanpa ekstensi. */
+  id: string;
   featured?: boolean;
   customer?: string;
   badge?: string;
 };
 
+// Sumber gambar: thumbnail WebP (480px) untuk carousel, full WebP (1080px)
+// untuk lightbox. JPG asli tetap ada sebagai fallback manual bila dibutuhkan.
 const testiPhotos: TestiPhoto[] = [
-  {
-    src: "/img/testimoni/Screenshot_2025-12-23-23-15-30-787_com.whatsapp.w4b.jpg",
-    featured: true,
-    customer: "Raxzy MJ",
-    badge: "ELITE CUSTOMER",
-  },
-  { src: "/img/testimoni/Screenshot_2025-12-25-13-18-55-378_com.whatsapp.w4b.jpg" },
-  { src: "/img/testimoni/Screenshot_2025-12-28-20-32-03-375_com.whatsapp.w4b.jpg" },
-  { src: "/img/testimoni/Screenshot_2026-01-04-11-44-26-458_com.whatsapp.w4b.jpg" },
-  { src: "/img/testimoni/Screenshot_2026-01-04-20-43-26-760_com.whatsapp.w4b.jpg" },
-  { src: "/img/testimoni/Screenshot_2026-01-10-22-17-33-377_com.whatsapp.w4b.jpg" },
-  { src: "/img/testimoni/Screenshot_2026-01-15-17-58-16-040_com.whatsapp.w4b.jpg" },
-  { src: "/img/testimoni/Screenshot_2026-01-18-14-57-35-501_com.whatsapp.w4b.jpg" },
-  { src: "/img/testimoni/Screenshot_2026-02-08-13-41-09-236_com.whatsapp.w4b.jpg" },
-  { src: "/img/testimoni/Screenshot_2026-02-11-15-09-07-600_com.whatsapp.w4b.jpg" },
-  { src: "/img/testimoni/Screenshot_2026-02-17-15-20-07-341_com.whatsapp.w4b.jpg" },
-  { src: "/img/testimoni/Screenshot_2026-02-17-15-21-40-166_com.whatsapp.w4b.jpg" },
-  { src: "/img/testimoni/Screenshot_2026-03-17-17-15-10-591_com.whatsapp.w4b.jpg" },
-  { src: "/img/testimoni/Screenshot_2026-04-05-17-55-37-278_com.whatsapp.w4b.jpg" },
-  { src: "/img/testimoni/Screenshot_2026-04-07-00-00-27-950_com.whatsapp.w4b.jpg" },
-  { src: "/img/testimoni/Screenshot_2026-05-18-14-37-56-057_com.whatsapp.w4b.jpg" },
-  { src: "/img/testimoni/Screenshot_20260502_141435.jpg" },
+  { id: "Screenshot_2025-12-23-23-15-30-787_com.whatsapp.w4b", featured: true, customer: "Raxzy MJ", badge: "ELITE CUSTOMER" },
+  { id: "Screenshot_2025-12-25-13-18-55-378_com.whatsapp.w4b" },
+  { id: "Screenshot_2025-12-28-20-32-03-375_com.whatsapp.w4b" },
+  { id: "Screenshot_2026-01-04-11-44-26-458_com.whatsapp.w4b" },
+  { id: "Screenshot_2026-01-04-20-43-26-760_com.whatsapp.w4b" },
+  { id: "Screenshot_2026-01-10-22-17-33-377_com.whatsapp.w4b" },
+  { id: "Screenshot_2026-01-15-17-58-16-040_com.whatsapp.w4b" },
+  { id: "Screenshot_2026-01-18-14-57-35-501_com.whatsapp.w4b" },
+  { id: "Screenshot_2026-02-08-13-41-09-236_com.whatsapp.w4b" },
+  { id: "Screenshot_2026-02-11-15-09-07-600_com.whatsapp.w4b" },
+  { id: "Screenshot_2026-02-17-15-20-07-341_com.whatsapp.w4b" },
+  { id: "Screenshot_2026-02-17-15-21-40-166_com.whatsapp.w4b" },
+  { id: "Screenshot_2026-03-17-17-15-10-591_com.whatsapp.w4b" },
+  { id: "Screenshot_2026-04-05-17-55-37-278_com.whatsapp.w4b" },
+  { id: "Screenshot_2026-04-07-00-00-27-950_com.whatsapp.w4b" },
+  { id: "Screenshot_2026-05-18-14-37-56-057_com.whatsapp.w4b" },
+  { id: "Screenshot_20260502_141435" },
 ];
 
-const lightboxSlides = testiPhotos.map((p) => ({ src: p.src }));
+const THUMB_W = 480;
+const THUMB_H = 1067;
+
+const thumbSrc = (p: TestiPhoto) => `/img/testimoni/thumbs/${p.id}.webp`;
+const fullSrc = (p: TestiPhoto) => `/img/testimoni/${p.id}.webp`;
+
+const lightboxSlides = testiPhotos.map((p) => ({ src: fullSrc(p) }));
 const featuredPhoto = testiPhotos.find((p) => p.featured) ?? testiPhotos[0];
 
 const TestimoniPage = () => {
@@ -57,9 +62,12 @@ const TestimoniPage = () => {
   return (
     <Layout>
       <SEOHead
-        title="Galeri Testimoni Pelanggan | IPAN STORE - Jasa Optimasi PC Gaming"
-        description="Dokumentasi asli testimoni 500+ gamer yang telah merasakan peningkatan FPS, optimasi emulator, dan performa PC setelah menggunakan jasa IPAN STORE. Lihat bukti langsung dari pelanggan kami."
-        keywords="testimoni optimasi PC, review jasa boost FPS, galeri pelanggan IPAN STORE, before after optimasi PC gaming"
+        title="Testimoni & Review Jasa Optimasi PC & Boost FPS | IPAN STORE"
+        description="Bukti nyata review jasa optimasi PC dan boost FPS: 500+ gamer telah merasakan FPS naik, emulator anti force close, dan input lag hilang setelah optimasi di IPAN STORE. Rating 4.9/5."
+        jsonLd={breadcrumbJsonLd([
+          { name: "Beranda", path: "/" },
+          { name: "Testimoni", path: "/testimoni" },
+        ])}
       />
 
       {/* Section mengalir normal (tanpa ScrollStack pembungkus seluruh halaman). */}
@@ -137,7 +145,7 @@ const TestimoniPage = () => {
                     <button
                       type="button"
                       onClick={() => {
-                        const idx = testiPhotos.findIndex((p) => p.src === featuredPhoto.src);
+                        const idx = testiPhotos.findIndex((p) => p.id === featuredPhoto.id);
                         setLightboxIndex(idx >= 0 ? idx : 0);
                         setLightboxOpen(true);
                       }}
@@ -146,9 +154,12 @@ const TestimoniPage = () => {
                     >
                       <div className="aspect-[9/16] bg-[#131314] relative">
                         <img
-                          src={featuredPhoto.src}
+                          src={thumbSrc(featuredPhoto)}
                           alt={`Testimoni unggulan ${featuredPhoto.customer ?? "Raxzy MJ"} - hasil optimasi IPAN STORE`}
                           loading="eager"
+                          decoding="async"
+                          width={THUMB_W}
+                          height={THUMB_H}
                           className="absolute inset-0 h-full w-full object-cover"
                         />
                       </div>
@@ -203,7 +214,12 @@ const TestimoniPage = () => {
               {/* Depth Carousel */}
               <div className="relative w-full h-[400px] sm:h-[480px] md:h-[540px] max-w-7xl mx-auto" aria-label="Galeri foto testimoni pelanggan IPAN STORE">
                 <DepthCarousel
-                  items={testiPhotos.map((p) => ({ image: p.src, alt: `Testimoni ${p.customer ?? 'pelanggan'}` }))}
+                  items={testiPhotos.map((p) => ({
+                    image: thumbSrc(p),
+                    alt: `Testimoni ${p.customer ?? 'pelanggan'} IPAN STORE - hasil optimasi PC & boost FPS`,
+                    width: THUMB_W,
+                    height: THUMB_H,
+                  }))}
                   cardWidth={240}
                   cardHeight={420}
                   radius={16}

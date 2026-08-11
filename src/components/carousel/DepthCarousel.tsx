@@ -4,6 +4,10 @@ import gsap from 'gsap';
 interface DepthCarouselItem {
   image: string;
   alt: string;
+  /** Lebar intrinsik gambar — mencegah layout shift (CLS). */
+  width?: number;
+  /** Tinggi intrinsik gambar — mencegah layout shift (CLS). */
+  height?: number;
 }
 
 const DEFAULT_ITEMS: DepthCarouselItem[] = [
@@ -417,7 +421,16 @@ const DepthCarousel = ({
             aria-hidden={active !== i}
             onClick={() => onCardClick(i)}
           >
-            <img className="depth-carousel__img" src={item.image} alt={item.alt || ''} draggable={false} />
+            <img
+              className="depth-carousel__img"
+              src={item.image}
+              alt={item.alt || ''}
+              draggable={false}
+              width={item.width}
+              height={item.height}
+              loading={i === 0 ? 'eager' : 'lazy'}
+              decoding="async"
+            />
             <span
               className="depth-carousel__tint"
               ref={el => (overlayRefs.current[i] = el)}

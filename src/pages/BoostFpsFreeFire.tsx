@@ -2,9 +2,10 @@ import { ArrowLeft, ArrowRight, Zap, Target, Crosshair, MousePointer2 } from "lu
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import SEOHead from "@/components/SEOHead";
-import Layout from "@/components/Layout";
+import Layout from "@/components/layout/Layout";
 import { WA_NUMBER } from "@/components/FloatingWhatsApp";
-import PageBackground from "@/components/PageBackground";
+import PageBackground from "@/components/effects/PageBackground";
+import { breadcrumbJsonLd, serviceJsonLd } from "@/lib/seo";
 
 const features = [
   {
@@ -52,8 +53,22 @@ const BoostFpsFreeFire = () => {
   return (
     <Layout>
       <SEOHead
-        title="Boost FPS Free Fire | IPAN STORE"
-        description="Jasa boost FPS Free Fire di emulator PC. Atasi lag, frame drop, dan mouse delay untuk pengalaman bermain FF yang lebih kompetitif."
+        title="Jasa Boost FPS Free Fire di Emulator PC (Bluestacks/MSI) | IPAN STORE"
+        description="Jasa boost FPS Free Fire di emulator Bluestacks & MSI App Player. Atasi frame drop saat war, mouse delay, dan sensi tidak konsisten. Support PC low-end, pengerjaan remote 30-90 menit, bergaransi."
+        jsonLd={[
+          serviceJsonLd({
+            name: "Boost FPS Free Fire",
+            description:
+              "Optimasi emulator Free Fire (Bluestacks/MSI App Player) agar FPS lebih tinggi dan stabil, mengurangi input lag & mouse delay, serta setting sensi dan keybind optimal. Pengerjaan remote, cocok untuk PC low-end.",
+            path: "/layanan/boost-fps-free-fire",
+            price: "20000",
+          }),
+          breadcrumbJsonLd([
+            { name: "Beranda", path: "/" },
+            { name: "Layanan", path: "/layanan" },
+            { name: "Boost FPS Free Fire", path: "/layanan/boost-fps-free-fire" },
+          ]),
+        ]}
       />
 
       {/* Section mengalir normal (tanpa ScrollStack pembungkus). */}
@@ -108,12 +123,37 @@ const BoostFpsFreeFire = () => {
                   ))}
                 </ol>
 
+                {/* Supported hardware & hasil realistis */}
+                <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-50 mb-8 mt-16">
+                  Hasil Realistis & Hardware yang Didukung
+                </h3>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="gaming-card p-5">
+                    <h4 className="font-semibold tracking-tight text-zinc-50 mb-3">Hasil Realistis</h4>
+                    <ul className="space-y-2 text-sm text-zinc-400 leading-relaxed list-disc pl-4">
+                      <li>FPS naik 30–100% tergantung hardware (mis. 30→60 FPS, 60→90+ FPS)</li>
+                      <li>Frame drop saat war berkurang signifikan</li>
+                      <li>Mouse delay hilang, sensi konsisten 1:1</li>
+                      <li>Estimasi pengerjaan: 30–90 menit via remote</li>
+                    </ul>
+                  </div>
+                  <div className="gaming-card p-5">
+                    <h4 className="font-semibold tracking-tight text-zinc-50 mb-3">Hardware & Emulator Didukung</h4>
+                    <ul className="space-y-2 text-sm text-zinc-400 leading-relaxed list-disc pl-4">
+                      <li>Bluestacks 5/Nougat & MSI App Player (V7A terbaru)</li>
+                      <li>PC/laptop RAM 4GB–16GB (Celeron, Core i3/i5/i7, Ryzen)</li>
+                      <li>VGA integrated maupun dedicated (NVIDIA/AMD)</li>
+                      <li>Windows 10 & Windows 11</li>
+                    </ul>
+                  </div>
+                </div>
+
                 {/* Note */}
                 <div className="mt-12 p-5 sm:p-6 rounded-lg border border-zinc-800 bg-zinc-900/50 text-sm text-zinc-400 leading-relaxed">
                   <strong className="text-zinc-50 font-semibold">Catatan Penting:</strong> Hasil maksimal (seperti FPS tembus 90+) akan sangat bergantung pada hardware PC kamu (terutama Processor dan VGA). Kami membantu mengoptimalkan *potensi maksimal* dari hardware yang ada.
                 </div>
 
-                {/* CTA */}
+                {/* CTA + internal links */}
                 <div className="mt-12 flex flex-col sm:flex-row gap-4 border-t border-zinc-800 pt-8">
                   <Button asChild variant="whatsapp" size="lg" className="w-full sm:w-auto">
                     <a href={`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent("Halo min, saya mau tanya layanan Boost FPS Free Fire")}`} target="_blank" rel="noopener noreferrer">
@@ -123,6 +163,9 @@ const BoostFpsFreeFire = () => {
                   </Button>
                   <Button asChild variant="outline" size="lg" className="w-full sm:w-auto">
                     <Link to="/paket">Lihat Harga Paket</Link>
+                  </Button>
+                  <Button asChild variant="ghost" size="lg" className="w-full sm:w-auto text-zinc-400">
+                    <Link to="/testimoni">Lihat Bukti Testimoni</Link>
                   </Button>
                 </div>
               </article>

@@ -119,6 +119,20 @@
     color: #A1A1AA;
   }
 
+  /* Desktop: hint "Klik foto" harus sejajar tengah dengan galeri di bawahnya.
+     text-wrap:balance membuat <p> menyusut ke lebar konten, sehingga text-align
+     center dari parent tidak berpengaruh — paksa lebar penuh di sini. */
+  @media (min-width: 768px) {
+    .gallery-hint {
+      text-wrap: pretty;
+      width: 100%;
+      max-width: none;
+      margin-left: auto;
+      margin-right: auto;
+      text-align: center;
+    }
+  }
+
   /* Custom Scrollbar — quiet charcoal */
   ::-webkit-scrollbar {
     width: 8px;
@@ -944,6 +958,15 @@
 @layer utilities {
   .bg-size-200 {
     background-size: 200% auto;
+  }
+
+  /* Sembunyikan scrollbar tapi tetap bisa di-scroll (untuk tab horizontal di mobile) */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
 
   .animate-fade-up {

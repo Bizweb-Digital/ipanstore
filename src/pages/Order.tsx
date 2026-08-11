@@ -13,10 +13,10 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import SEOHead from "@/components/SEOHead";
-import Layout from "@/components/Layout";
+import Layout from "@/components/layout/Layout";
 import { WA_NUMBER } from "@/components/FloatingWhatsApp";
-import PageBackground from "@/components/PageBackground";
-import Reveal from "@/components/Reveal";
+import PageBackground from "@/components/effects/PageBackground";
+import Reveal from "@/components/effects/Reveal";
 import { AuroraText } from "@/components/ui/aurora-text";
 import { createCashiPayment } from "@/lib/cashi";
 
@@ -169,9 +169,8 @@ const Order = () => {
   return (
     <Layout>
       <SEOHead
-        title="Order | IPAN STORE"
+        title="Order Paket Optimasi PC Gaming | IPAN STORE"
         description="Order paket optimasi PC gaming & IPAN APP SettinX secara online. Bayar mudah via QRIS, e-Wallet, dan Virtual Account."
-        keywords="order paket optimasi, beli ipan app settinx, pembayaran qris, payment gateway"
       />
 
       {/* Header */}

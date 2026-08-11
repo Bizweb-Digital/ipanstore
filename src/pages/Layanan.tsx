@@ -3,14 +3,15 @@ import { ArrowRight, Settings, Cpu, Monitor, PenTool, Flame, Laptop2, ShieldChec
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import SEOHead from "@/components/SEOHead";
-import Layout from "@/components/Layout";
+import Layout from "@/components/layout/Layout";
 import { WA_NUMBER } from "@/components/FloatingWhatsApp";
-import AppSettinxSection from "@/components/AppSettinxSection";
-import PageBackground from "@/components/PageBackground";
-import Reveal from "@/components/Reveal";
-import ScrollStackCards from "@/components/ScrollStackCards";
-import AnimatedTabs from "@/components/AnimatedTabs";
+import AppSettinxSection from "@/components/sections/AppSettinxSection";
+import PageBackground from "@/components/effects/PageBackground";
+import Reveal from "@/components/effects/Reveal";
+import ScrollStackCards from "@/components/effects/ScrollStackCards";
+import AnimatedTabs from "@/components/effects/AnimatedTabs";
 import { AuroraText } from "@/components/ui/aurora-text";
+import { breadcrumbJsonLd } from "@/lib/seo";
 
 const services = [
   {
@@ -139,8 +140,12 @@ const Layanan = () => {
   return (
     <Layout>
       <SEOHead
-        title="Layanan IPAN STORE | Tweaking PC, Boost FPS & Optimasi Gaming"
-        description="Lihat layanan IPAN STORE mulai dari boost FPS Free Fire, tweaking PC gaming, optimasi Windows, hingga konsultasi performa device."
+        title="Layanan Optimasi PC Gaming, Tweaking Windows & Emulator | IPAN STORE"
+        description="Jasa tweaking Windows gaming, optimasi emulator Free Fire, dan optimasi PC low-end via remote. Cocok untuk PC/laptop spek pas-pasan. Proses transparan, bergaransi, konsultasi gratis."
+        jsonLd={breadcrumbJsonLd([
+          { name: "Beranda", path: "/" },
+          { name: "Layanan", path: "/layanan" },
+        ])}
       />
 
       {/* Section mengalir normal (tanpa ScrollStack pembungkus seluruh halaman). */}
@@ -162,26 +167,30 @@ const Layanan = () => {
             </AuroraText>
           </h1>
           <p className="max-w-2xl mx-auto text-zinc-400 leading-relaxed">
-            Solusi lengkap untuk segala permasalahan performa PC dan laptop kamu.
-            Pilih layanan yang paling sesuai dengan kebutuhanmu.
+            Untuk gamer yang PC/laptop-nya lag, FPS drop saat war, atau emulator berat —
+            termasuk spek low-end (RAM 4GB/8GB). Semua pengerjaan dilakukan 100% remote
+            via UltraViewer: kamu kirim spesifikasi, kami analisa dan optimasi live,
+            kamu tinggal lihat hasilnya. Bergaransi & konsultasi gratis.
           </p>
 
-          {/* Tabs — ikut bergerak saat di-scroll */}
-          <AnimatedTabs className="mt-10 flex justify-center">
-            <div className="inline-flex flex-wrap justify-center gap-1.5 p-1.5 rounded-3xl border border-white/10 bg-[#101827]">
-              {TABS.map((t) => (
-                <button
-                  key={t.key}
-                  onClick={() => setActiveTab(t.key)}
-                  className={`px-4 sm:px-6 py-2.5 rounded-full text-sm font-bold tracking-wider transition-all duration-300 ${
-                    activeTab === t.key
-                      ? "text-[#0F172A] bg-[#94A3B8] shadow-[0_0_18px_rgba(148,163,184,0.5)]"
-                      : "text-zinc-400 hover:text-white"
-                  }`}
-                >
-                  {t.label}
-                </button>
-              ))}
+          {/* Tabs — horizontal scroll di mobile agar tidak wrap & CTA tidak terdorong */}
+          <AnimatedTabs className="mt-10">
+            <div className="overflow-x-auto scrollbar-hide -mx-4 px-4">
+              <div className="flex justify-start sm:justify-center gap-1.5 p-1.5 rounded-3xl border border-white/10 bg-[#101827] w-max min-w-full sm:min-w-0 sm:w-auto sm:inline-flex mx-auto">
+                {TABS.map((t) => (
+                  <button
+                    key={t.key}
+                    onClick={() => setActiveTab(t.key)}
+                    className={`px-4 sm:px-6 py-2.5 rounded-full text-xs sm:text-sm font-bold tracking-wider whitespace-nowrap transition-all duration-300 ${
+                      activeTab === t.key
+                        ? "text-[#F4F4F5] bg-[#1a1a1a] border border-[#94A3B8]/30 shadow-[0_0_18px_rgba(148,163,184,0.3)]"
+                        : "text-zinc-500 hover:text-zinc-300"
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </AnimatedTabs>
         </Reveal>

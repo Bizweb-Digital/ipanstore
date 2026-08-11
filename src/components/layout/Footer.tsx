@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { WA_LINK } from "./FloatingWhatsApp";
+import { WA_LINK } from "../FloatingWhatsApp";
 import logo from "@/assets/logo.png";
 import { FaWhatsapp, FaDiscord, FaTiktok } from "react-icons/fa";
 
@@ -53,6 +53,8 @@ const Footer = () => {
               <img
                 src={logo}
                 alt="Ipan Store"
+                width={577}
+                height={433}
                 className="h-16 sm:h-20 w-auto object-contain"
               />
             </a>

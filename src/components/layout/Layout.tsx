@@ -2,10 +2,10 @@ import { useEffect, type ReactNode } from "react";
 import Lenis from "lenis";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
-import FloatingWhatsApp from "./FloatingWhatsApp";
-import PageTransition from "./PageTransition";
-import SplashCursor from "./SplashCursor";
-import GlobalScannerBackground from "./GlobalScannerBackground";
+import FloatingWhatsApp from "../FloatingWhatsApp";
+import PageTransition from "../effects/PageTransition";
+import SplashCursor from "../effects/SplashCursor";
+import GlobalScannerBackground from "../effects/GlobalScannerBackground";
 
 interface LayoutProps {
   children: ReactNode;
