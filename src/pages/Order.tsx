@@ -18,7 +18,7 @@ import { WA_NUMBER } from "@/components/FloatingWhatsApp";
 import PageBackground from "@/components/effects/PageBackground";
 import Reveal from "@/components/effects/Reveal";
 import { AuroraText } from "@/components/ui/aurora-text";
-import { createCashiPayment } from "@/lib/cashi";
+import { createDokuPayment } from "@/lib/doku";
 
 /* ─── Data Paket (sinkron dengan halaman Paket) ─────────────────────────── */
 type Pkg = {
@@ -137,7 +137,7 @@ const Order = () => {
     }
     setLoading(true);
     try {
-      const res = await createCashiPayment({
+      const res = await createDokuPayment({
         orderId: `IPAN-${selected.id.toUpperCase()}-${Date.now()}`,
         pkgId: selected.id,
         amount: selected.price,
@@ -149,7 +149,7 @@ const Order = () => {
       });
 
       if (res.checkoutUrl) {
-        // Redirect ke halaman pembayaran Cashi (QRIS/VA/E-Wallet).
+        // Redirect ke halaman pembayaran DOKU (QRIS/VA/E-Wallet/AllPayment).
         window.location.href = res.checkoutUrl;
         return;
       }
@@ -343,10 +343,10 @@ const Order = () => {
                   )}
                 </Button>
 
-                <p className="mt-4 flex items-start gap-2 text-[11px] text-zinc-500 leading-relaxed">
-                  <ShieldCheck className="h-3.5 w-3.5 text-[#94A3B8] mt-0.5 shrink-0" />
-                  Pembayaran diproses aman melalui payment gateway Cashi.id. Data kamu terenkripsi.
-                </p>
+        <p className="mt-4 flex items-start gap-2 text-[11px] text-zinc-500 leading-relaxed">
+          <ShieldCheck className="h-3.5 w-3.5 text-[#94A3B8] mt-0.5 shrink-0" />
+          Pembayaran diproses aman melalui payment gateway DOKU. Data kamu terenkripsi.
+        </p>
 
                 <Link
                   to="/paket"

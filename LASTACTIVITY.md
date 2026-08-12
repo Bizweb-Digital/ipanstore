@@ -7,7 +7,7 @@
 
 - **Repo**: `git@github.com-bizwebdigital:Bizweb-Digital/ipanstore.git` (branch `main`)
 - **Domain live**: `https://ipanstore.my.id` (Cloudflare Tunnel → container Docker port 5007)
-- **Update terakhir**: 11 Agustus 2026
+- **Update terakhir**: 13 Agustus 2026
 
 ---
 
@@ -17,7 +17,7 @@
 |---|---|
 | Website live `https://ipanstore.my.id/` | ✅ Live |
 | Halaman `/order` | ✅ Live & berfungsi |
-| Integrasi Cashi.id (payment link) | ✅ Terpasang |
+| Integrasi DOKU Checkout (payment gateway) | ✅ Terpasang & siap backend |
 | GitHub remote (via `github.com-bizwebdigital`) | ✅ Terhubung & authenticated |
 | Server `sever-h81m-s2ph` (`100.89.140.16`) | ✅ Akses SSH root OK, path `/project/website/padel/IpanStore/ipanstore` |
 | Deploy pipeline | ✅ `deploy.sh` = `git pull` → `docker compose down` → `docker compose up --build -d` |
@@ -124,9 +124,39 @@ src/
 - **Auto-update LASTACTIVITY.md diaktifkan** (aturan di buka file ini bagian "Cara Merawat" + `AGENTS.md`),
   jangkauan diperluas: status deploy, arsitektur file, riwayat per-sesi, masalah, checklist, cara merawat.
 
+### Sesi: Migrasi Cashi.id → DOKU Checkout (13 Agustus 2026)
+
+#### A. Riset & Implementasi Backend
+- Riset DOKU Checkout API (https://developers.doku.com/accept-payments/doku-checkout.md):
+  `POST https://api.doku.com/checkout/v1/payment`, signature HMAC-SHA256 di request header
+  (`Client-Id`, `Request-Id`, `Request-Timestamp`, `Request-Target`, `Digest`).
+- **`server/index.js`** tambah endpoint:
+  - `POST /api/doku-create-order` — generate signature, call DOKU, kembalikan `response.payment.url`.
+  - `POST /api/doku-webhook` — terima notifikasi DOKU, verifikasi signature, parse `transaction.status`.
+  - Helper: `generateDokuDigest()`, `generateDokuSignature()`, `dokuTimestamp()`. (Cashi endpoint legacy tetap ada.)
+- **`server/.env.example`** update: `DOKU_CLIENT_ID`, `DOKU_SECRET_KEY`, `DOKU_BASE_URL`,
+  `DOKU_CHECKOUT_PATH`, `DOKU_CALLBACK_URL`.
+
+#### B. Front-end
+- **`src/lib/doku.ts`** (baru) — modul integrasi DOKU: interface request/response, 3-prioritas
+  (backend → payment link statis → fallback error → WhatsApp), ekstrak `response.payment.url`.
+- **`src/pages/Order.tsx`** — ganti import `cashi.ts` → `doku.ts`, pakai `createDokuPayment()`,
+  teks footer "payment gateway Cashi.id" → "DOKU".
+- **`.env.example`** front-end — dokumentasi `VITE_BACKEND_URL` untuk DOKU (Cashi → legacy).
+
+#### C. Dokumentasi
+- **`SETUP-DOKU.md`** (baru) — panduan lengkap: dapat kredensial (Dashboard → Integrations → API Keys),
+  atur Notification URL, env backend/frontend, testing sandbox (kartu 4111...), deploy (Tailscale Funnel),
+  troubleshooting.
+- `src/lib/cashi.ts` ditinggalkan sebagai legacy reference (tidak lagi di-impor).
+
+#### D. Verifikasi
+- `npx tsc --noEmit` bersih (no errors).
+- `npx vite build` sukses (2195 modules transformed, `Order-BI8ifyMv.js` terbuild).
+- `node --check server/index.js` — syntax OK.
+
 ---
 
-## 🛠️ BAHASA & TEKNOLOGI
 
 | Area | Teknologi |
 |---|---|
@@ -156,7 +186,11 @@ src/
 ## ✅ CHECKLIST LANJUTAN
 - [ ] (Jika perlu) daftarkan key `id_ed25519` ke GitHub untuk akun `ipanappsettinx`.
 - [ ] (Opsional) Optimasi lebih lanjut: preload kritis, `fetchpriority` hero image.
-- [ ] (Opsional) Deploy backend `server/` → set `VITE_BACKEND_URL` untuk otomatisasi Cashi webhook.
+- [ ] Deploy backend `server/` ke VPS `sever-h81m-s2ph` via **Tailscale Funnel** (PM2 + funnel).
+- [ ] Setelah dapat URL Funnel, set `VITE_BACKEND_URL=https://<machine>.<tailnet>.ts.net` di `.env`.
+- [ ] Set Notification URL di Dashboard DOKU → Settings → Developer → Notifications.
+- [ ] Test order kecil (Rp 1.000) live → cek webhook diterima.
+- [ ] (Opsional) Tambah endpoint `/api/doku-cancel-order` untuk cancel order unpaid.
 
 ---
 
