@@ -20,12 +20,14 @@
 | Integrasi DOKU Checkout (payment gateway) | ✅ **Live end-to-end** (bundle live + backend + kredensial production terverifikasi 13 Agt) |
 | Backend `server/` di VPS (PM2 `ipanstore-backend`, port 5159) | ✅ Jalan & publik via **Cloudflare Tunnel** `https://api.ipanstore.my.id` (health OK, CORS OK) |
 | Kredensial DOKU **production** (`BRN-0221-...`, api.doku.com) | ✅ Terisi di `server/.env` & valid (test create order → checkout URL asli) |
+| **Email otomatis SettinX** (link Drive + invoice setelah SUCCESS) | ✅ **Live & terverifikasi** — email test terkirim, webhook→email berhasil |
 | GitHub remote (via `github.com-bizwebdigital`) | ✅ Terhubung & authenticated |
 | Server `sever-h81m-s2ph` (`100.89.140.16`) | ✅ Akses SSH root OK, path `/project/website/padel/IpanStore/ipanstore` |
 | Deploy pipeline | ✅ `deploy.sh` = `git pull` → `docker compose down` → `docker compose up --build -d` |
-| Commit/status git lokal | ✅ merge `168e4b6` (termasuk commit remote `c6c563a`/`be6b8b0` dari server) |
-| Push terakhir | ✅ `168e4b6` → GitHub (key `github.com-bizwebdigital`) |
-| Pull+deploy server | ✅ container `ipanstore` aktif, bundle `index-K4Oq3TSC.js` live |
+| Commit/status git lokal | ✅ `64e771f` (fitur email otomatis SettinX) |
+| Push terakhir | ✅ `64e771f` → GitHub (key `github.com-bizwebdigital`) |
+| Pull+deploy server | ✅ `git pull` di server sukses → backend PM2 aktif, `.env` aman |
+| Backend PM2 auto-start | ✅ `pm2 save` + systemd `pm2-root.service` enabled (auto-start saat reboot) |
 | Verifikasi live | ✅ `/` `/layanan` `/paket` `/order` `/testimoni` `/faq` `/kontak` `/sitemap.xml` → 200 |
 
 > **Catatan server**: SSH config `~/.ssh/config` dibuat di server agar `git pull` memakai
