@@ -17,7 +17,14 @@
 import express from "express";
 import cors from "cors";
 import crypto from "crypto";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+import nodemailer from "nodemailer";
 import "dotenv/config";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ORDERS_FILE = path.join(__dirname, "orders.json");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -37,6 +44,11 @@ const DOKU_BASE_URL = process.env.DOKU_BASE_URL || "https://api-sandbox.doku.com
 
 // Path endpoint DOKU Checkout (Request-Target untuk signature)
 const DOKU_CHECKOUT_PATH = process.env.DOKU_CHECKOUT_PATH || "/checkout/v1/payment";
+
+// URL webhook untuk menerima notifikasi pembayaran dari DOKU.
+// Dikirim per-transaksi via additional_info.override_notification_url,
+// sehingga tidak perlu set manual di Dashboard DOKU.
+const DOKU_NOTIFICATION_URL = process.env.DOKU_NOTIFICATION_URL || "";
 
 // URL "Back to merchant" setelah pembayaran (opsional, mis. https://ipanstore.my.id/order)
 const DOKU_CALLBACK_URL = process.env.DOKU_CALLBACK_URL || "";
@@ -69,6 +81,150 @@ function generateDokuSignature({ clientId, requestId, requestTimestamp, requestT
 // Timestamp ISO8601 UTC (tanpa milidetik, sesuai contoh DOKU)
 function dokuTimestamp() {
   return new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+}
+
+// ── Penyimpanan Order (JSON file ringan) ────────────────────────────────────
+// Menyimpan data order di server/orders.json (tidak memakai DB eksternal).
+// Tiap order: invoice_number, data pembeli, item, status, email_sent.
+const ordersStore = {
+  file: ORDERS_FILE,
+  data: {},
+  load() {
+    try {
+      if (fs.existsSync(this.file)) {
+        this.data = JSON.parse(fs.readFileSync(this.file, "utf8"));
+      }
+    } catch (e) {
+      console.warn("⚠️  Gagal baca orders.json:", e.message);
+      this.data = {};
+    }
+  },
+  save() {
+    try {
+      fs.writeFileSync(this.file, JSON.stringify(this.data, null, 2));
+    } catch (e) {
+      console.error("⚠️  Gagal tulis orders.json:", e.message);
+    }
+  },
+  get(invoice) {
+    return this.data[invoice] || null;
+  },
+  set(invoice, val) {
+    this.data[invoice] = val;
+    this.save();
+  },
+};
+ordersStore.load();
+
+// ── Email otomatis (nodemailer + SMTP Gmail / provider lain) ────────────────
+// Konfigurasi di .env:
+//   SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, MAIL_FROM
+const SMTP_HOST = process.env.SMTP_HOST || "smtp.gmail.com";
+const SMTP_PORT = Number(process.env.SMTP_PORT || 465);
+const SMTP_USER = process.env.SMTP_USER || "";
+const SMTP_PASS = process.env.SMTP_PASS || "";
+const MAIL_FROM = process.env.MAIL_FROM || `IPAN STORE <${SMTP_USER}>`;
+
+// Link Google Drive produk SettinX (dari .env, tidak di-hardcode)
+const SETTINX_DOWNLOAD_URL =
+  process.env.SETTINX_DOWNLOAD_URL ||
+  "https://drive.google.com/drive/folders/1oB2BIILhM-xrgseTw7yYSYwxurLayTvq?usp=sharing";
+
+const emailTransporter = SMTP_USER
+  ? nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: SMTP_PORT,
+      secure: SMTP_PORT === 465,
+      auth: { user: SMTP_USER, pass: SMTP_PASS },
+    })
+  : null;
+
+/** Kirim email produk SettinX + invoice. Mengembalikan {ok, error?}. */
+async function sendSettinXEmail({ to, customerName, invoiceNumber, amount, paidAt }) {
+  if (!emailTransporter) return { ok: false, error: "SMTP belum dikonfigurasi (SMTP_USER kosong)." };
+  if (!to) return { ok: false, error: "Email pembeli kosong." };
+
+  const formattedAmount = new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+  }).format(amount || 0);
+
+  const paidLabel = paidAt
+    ? new Intl.DateTimeFormat("id-ID", { dateStyle: "long", timeStyle: "short" }).format(new Date(paidAt))
+    : new Date().toLocaleString("id-ID");
+
+  const html = `
+  <div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#0f0f10;color:#e4e4e7;border-radius:12px;overflow:hidden;border:1px solid #27272a">
+    <div style="background:linear-gradient(135deg,#18181b,#3f3f46);padding:28px 32px">
+      <div style="font-size:22px;font-weight:800;letter-spacing:-0.5px">IPAN <span style="color:#a1a1aa">STORE</span></div>
+      <div style="font-size:12px;color:#a1a1aa;margin-top:2px">Payment Confirmation</div>
+    </div>
+    <div style="padding:28px 32px">
+      <p style="font-size:16px;font-weight:600;margin:0 0 4px">Halo, ${escapeHtml(customerName || "Pelanggan")} 👋</p>
+      <p style="color:#a1a1aa;font-size:14px;margin:0 0 20px">Terima kasih atas pembelian Anda. Pembayaran telah kami terima ✅</p>
+
+      <table style="width:100%;border-collapse:collapse;font-size:14px">
+        <tr>
+          <td style="padding:8px 0;color:#a1a1aa">No. Invoice</td>
+          <td style="padding:8px 0;text-align:right;font-family:monospace">${escapeHtml(invoiceNumber || "-")}</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 0;color:#a1a1aa">Produk</td>
+          <td style="padding:8px 0;text-align:right">IPAN APP SettinX V1</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 0;color:#a1a1aa">Status</td>
+          <td style="padding:8px 0;text-align:right;color:#4ade80;font-weight:600">LUNAS</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 0;color:#a1a1aa">Total Dibayar</td>
+          <td style="padding:8px 0;text-align:right;font-size:16px;font-weight:800;color:#f4f4f5">${formattedAmount}</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 0;color:#a1a1aa">Waktu</td>
+          <td style="padding:8px 0;text-align:right">${escapeHtml(paidLabel)}</td>
+        </tr>
+      </table>
+
+      <div style="background:#18181b;border:1px solid #27272a;border-radius:10px;padding:18px 20px;margin:22px 0">
+        <div style="font-weight:700;margin-bottom:6px">📦 Download IPAN APP SettinX V1</div>
+        <div style="font-size:13px;color:#a1a1aa;margin-bottom:12px">Klik tombol di bawah untuk mengunduh aplikasi (.exe) beserta tutorial penggunaannya.</div>
+        <a href="${SETTINX_DOWNLOAD_URL}" style="display:inline-block;background:#f4f4f5;color:#18181b;text-decoration:none;font-weight:700;padding:12px 24px;border-radius:8px;font-size:14px">⬇️ Download SettinX V1</a>
+      </div>
+
+      <p style="font-size:12px;color:#71717a;line-height:1.6">
+        Jika tombol tidak berfungsi, salin tautan berikut:<br/>
+        <a href="${SETTINX_DOWNLOAD_URL}" style="color:#a1a1aa;word-break:break-all">${SETTINX_DOWNLOAD_URL}</a>
+      </p>
+
+      <p style="font-size:12px;color:#71717a;margin-top:24px;border-top:1px solid #27272a;padding-top:16px">
+        Untuk bantuan &amp; aktivasi lisensi, hubungi kami via WhatsApp di website IPAN STORE.<br/>
+        © ${new Date().getFullYear()} IPAN STORE
+      </p>
+    </div>
+  </div>`;
+
+  try {
+    await emailTransporter.sendMail({
+      from: MAIL_FROM,
+      to,
+      subject: `✅ Pembayaran Diterima — Download IPAN APP SettinX V1 (${invoiceNumber || ""})`,
+      html,
+    });
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+}
+
+/** Escape HTML sederhana agar input user aman. */
+function escapeHtml(s) {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 // ── Middleware ───────────────────────────────────────────────────────────────
@@ -227,6 +383,11 @@ app.post("/api/doku-create-order", async (req, res) => {
         ...(customer_email ? { email: String(customer_email).slice(0, 128) } : {}),
         ...(customer_phone ? { phone: String(customer_phone).replace(/[^0-9]/g, "").slice(0, 16) } : {}),
       },
+      // Webhook URL dikirim per-transaksi (override) — tidak perlu set manual
+      // di Dashboard DOKU. DOKU akan POST notifikasi status ke URL ini.
+      ...(DOKU_NOTIFICATION_URL
+        ? { additional_info: { override_notification_url: DOKU_NOTIFICATION_URL } }
+        : {}),
     };
 
     const rawBody = JSON.stringify(body);
@@ -272,6 +433,21 @@ app.post("/api/doku-create-order", async (req, res) => {
       });
     }
 
+    // Simpan data order sebelum dikirim ke pembeli (untuk kirim email saat lunas)
+    ordersStore.set(invoiceNumber, {
+      invoice_number: invoiceNumber,
+      amount: Number(amount),
+      item_name: String(item_name || "IPAN STORE Product"),
+      customer_name: String(customer_name || ""),
+      customer_email: String(customer_email || ""),
+      customer_phone: String(customer_phone || ""),
+      status: "PENDING",
+      token_id: data?.response?.payment?.token_id || "",
+      created_at: new Date().toISOString(),
+      email_sent: false,
+      email_sent_at: null,
+    });
+
     console.log(`✅ DOKU order dibuat: ${invoiceNumber} | ${data?.response?.payment?.token_id || ""}`);
     return res.json({ success: true, checkout_url: paymentUrl, raw: data });
   } catch (e) {
@@ -286,7 +462,7 @@ app.post("/api/doku-create-order", async (req, res) => {
 // ── Webhook DOKU ─────────────────────────────────────────────────────────────
 // DOKU memanggil URL ini saat pembayaran berubah status (SUCCESS / FAILED / dll).
 // Verifikasi signature memakai CLIENT_ID + SECRET_KEY + Request-Target path ini.
-app.post("/api/doku-webhook", (req, res) => {
+app.post("/api/doku-webhook", async (req, res) => {
   try {
     const clientId = req.headers["client-id"];
     const requestId = req.headers["request-id"];
@@ -332,10 +508,50 @@ app.post("/api/doku-webhook", (req, res) => {
     const invoice = payload?.order?.invoice_number;
     const amount = payload?.order?.amount;
 
-    // TODO: proses order di sini — tandai lunas, kirim WA/email ke pelanggan, dsb.
     console.log(
       `✅ Webhook DOKU diterima: invoice=${invoice} status=${status} amount=${amount}`
     );
+
+    // ── Proses order saat pembayaran SUCCESS ─────────────────────────────
+    if (status === "SUCCESS") {
+      const order = ordersStore.get(invoice);
+      if (!order) {
+        // Order tidak ada di store — buat minimal dari payload webhook.
+        console.warn(`⚠️  Webhook SUCCESS untuk invoice tak dikenal: ${invoice}`);
+      } else {
+        // Tandai lunas
+        order.status = "PAID";
+        order.paid_at = new Date().toISOString();
+        order.webhook_payload = payload;
+        ordersStore.set(invoice, order);
+
+        // Kirim email otomatis HANYA untuk paket IPAN APP SettinX V1
+        const isSettinX =
+          /settinx/i.test(order.item_name || "") || /settinx/i.test(order.invoice_number || "");
+
+        if (isSettinX && order.customer_email && !order.email_sent) {
+          console.log(`📧 Mengirim email SettinX ke ${order.customer_email} (invoice ${invoice})...`);
+          const result = await sendSettinXEmail({
+            to: order.customer_email,
+            customerName: order.customer_name,
+            invoiceNumber: invoice,
+            amount: order.amount || amount,
+            paidAt: order.paid_at,
+          });
+
+          if (result.ok) {
+            order.email_sent = true;
+            order.email_sent_at = new Date().toISOString();
+            ordersStore.set(invoice, order);
+            console.log(`📧 Email SettinX TERKIRIM: ${order.customer_email} (invoice ${invoice})`);
+          } else {
+            console.error(`📧 Email SettinX GAGAL ke ${order.customer_email}: ${result.error}`);
+          }
+        } else if (isSettinX) {
+          console.warn(`⚠️  SettinX SUCCESS tapi email tidak dikirim: email_sent=${order.email_sent}, email=${order.customer_email || "KOSONG"}`);
+        }
+      }
+    }
 
     return res.json({ success: true });
   } catch (e) {

@@ -17,7 +17,9 @@
 |---|---|
 | Website live `https://ipanstore.my.id/` | ✅ Live |
 | Halaman `/order` | ✅ Live & berfungsi |
-| Integrasi DOKU Checkout (payment gateway) | ✅ Terpasang & siap backend |
+| Integrasi DOKU Checkout (payment gateway) | ✅ **Live end-to-end** (bundle live + backend + kredensial production terverifikasi 13 Agt) |
+| Backend `server/` di VPS (PM2 `ipanstore-backend`, port 5159) | ✅ Jalan & publik via **Cloudflare Tunnel** `https://api.ipanstore.my.id` (health OK, CORS OK) |
+| Kredensial DOKU **production** (`BRN-0221-...`, api.doku.com) | ✅ Terisi di `server/.env` & valid (test create order → checkout URL asli) |
 | GitHub remote (via `github.com-bizwebdigital`) | ✅ Terhubung & authenticated |
 | Server `sever-h81m-s2ph` (`100.89.140.16`) | ✅ Akses SSH root OK, path `/project/website/padel/IpanStore/ipanstore` |
 | Deploy pipeline | ✅ `deploy.sh` = `git pull` → `docker compose down` → `docker compose up --build -d` |
@@ -58,6 +60,96 @@ src/
 ---
 
 ## 📚 RIWAYAT SESI & PERUBAHAN
+
+### Sesi: Fitur Email Otomatis — Kirim Link SettinX + Invoice Setelah Pembayaran Lunas (13 Agustus 2026)
+
+**Permintaan user**: jika ada order **IPAN APP SettinX V1** yang sudah lunas, website otomatis
+mengirim email berisi link Google Drive aplikasi (.exe + tutorial) + invoice kepada pembeli.
+Keputusan: kirim **setelah pembayaran SUCCESS (webhook)**, lewat **email saja**, **hanya SettinX**.
+
+#### Perubahan `server/index.js`
+- **Penyimpanan order** (`orders.json`, JSON file ringan): store `ordersStore` (load/save/get/set)
+  menyimpan tiap order saat `POST /api/doku-create-order` (invoice_number, amount, item_name,
+  customer_name/email/phone, status PENDING, email_sent=false).
+- **Email otomatis** (`nodemailer`): transporter SMTP dari env (`SMTP_HOST/PORT/USER/PASS`,
+  `MAIL_FROM`); `sendSettinXEmail()` mengirim email HTML berisi link `SETTINX_DOWNLOAD_URL`
+  + invoice (invoice number, produk, status LUNAS, total, waktu). Escape HTML untuk input user.
+- **Webhook** `POST /api/doku-webhook` → jadi `async`; saat `transaction.status === "SUCCESS"`:
+  tandai order `PAID`, dan jika item/invoice mengandung `settinx` + ada email + belum `email_sent`
+  → kirim email; sukses → `email_sent=true` (anti-duplikat). Gagal → log error, webhook tetap
+  `{success:true}` (tidak crash), retry DOKU akan mencoba lagi.
+- **Env baru** (`server/.env` & `.env.example`): `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`,
+  `SMTP_PASS`, `SETTINX_DOWNLOAD_URL` (link Drive folder SettinX).
+- `server/package.json`: tambah `nodemailer` (dan lockfile).
+
+#### Verifikasi (test end-to-end di server)
+- `node --check` syntax OK.
+- Test lokal: webhook SUCCESS simulasi → order `PENDING→PAID`, terdeteksi SettinX, email gagal
+  graceful saat SMTP kosong (tidak crash), `email_sent` tetap false (siap retry).
+- Test sungguhan di server: `node test-email-send.cjs` → **EMAIL TERKIRIM** ke
+  `muhammadrizvandysukma@gmail.com` (messageId `50eb8598-d1ce...`).
+- Test alur penuh: seed order SettinX → webhook SUCCESS bersignature → log:
+  `📧 Email SettinX TERKIRIM: muhammadrizvandysukma@gmail.com` ; `orders.json` jadi
+  `status: PAID`, `email_sent: true`.
+
+#### Catatan penting
+- **Gmail 2-Step Verification WAJIB aktif** agar App Password berfungsi untuk SMTP. App Password
+  (16 karakter) disimpan di `server/.env` (`SMTP_PASS`), tidak pernah di-commit.
+- Backend menyimpan data di `server/orders.json` (file, bukan DB) — mudah dimigrasikan nanti.
+- **PM2**: `pm2 save` + startup systemd `pm2-root.service` enabled (auto-start saat reboot).
+
+### Sesi: Migrasi Backend ke `api.ipanstore.my.id` via Cloudflare Tunnel (13 Agustus 2026)
+
+**Masalah**: tombol "Bayar Sekarang" di PC user masih fallback ke WhatsApp, padahal di HP berhasil
+redirect ke DOKU. Diagnosis: PC user resolve `*.ts.net` ke IP Tailscale privat (`100.89.140.16`)
+yang gagal dijangkau → fetch backend gagal → fallback WA. Backend lama bergantung Tailscale Funnel
+(DNS `ts.net`), rawan masalah IPv6/DNS di perangkat pengunjung.
+
+**Solusi**: pindahkan backend ke domain sendiri `api.ipanstore.my.id` via Cloudflare Tunnel
+(IPv4+IPv6 ditangani Cloudflare dengan benar).
+
+#### Perubahan
+- **Cloudflare Tunnel** (dashboard, tunnel "Projcet Website Ipan"): tambah Public Hostname
+  `api.ipanstore.my.id` → service `http://172.17.0.1:5159` (Docker bridge host; cloudflared
+  berjalan sebagai container `cloudflare/cloudflared:latest`, jadi `localhost` tidak bisa dipakai —
+  error awal `dial tcp [::1]:5159 connection refused`). DNS CNAME otomatis dibuat Cloudflare.
+- **Frontend** `.env` lokal + server: `VITE_BACKEND_URL=https://api.ipanstore.my.id` (dulu `ts.net`).
+  Rebuild → chunk `Order-CL2W6hcf.js` (hash baru), deploy via `docker cp dist/.` ke container `ipanstore`.
+- **Backend** `server/.env`: `DOKU_NOTIFICATION_URL=https://api.ipanstore.my.id/api/doku-webhook`.
+  CORS sudah benar mengizinkan origin `https://ipanstore.my.id`.
+
+#### Verifikasi (semua dari jaringan luar)
+- `https://api.ipanstore.my.id/api/health` → HTTP 200 `{"ok":true,"service":"ipanstore-backend"}`
+- `POST /api/doku-create-order` Rp 75.000 → DOKU balas `checkout_url` asli (`checkout.doku.com/...`)
+- CORS preflight origin `https://ipanstore.my.id` → 204, `access-control-allow-origin` benar
+- Website utama `https://ipanstore.my.id/` tetap HTTP 200 selama proses
+
+#### Catatan teknis penting
+- **cloudflared di server = container Docker** (bukan binary host). Origin di tunnel ini harus pakai
+  `http://172.17.0.1:<port>` (Docker bridge), BUKAN `localhost`.
+- `Dockerfile` frontend hanya `COPY dist` (pre-built) dan `dist` ada di `.dockerignore` → deploy
+  perubahan frontend = build lokal → `scp dist` → `docker cp dist/. ipanstore:/usr/share/nginx/html/`.
+
+### Sesi: Diagnosis "Bayar masih ke WhatsApp" + Verifikasi End-to-End DOKU (13 Agustus 2026)
+
+**Pertanyaan user**: apakah belum setup katalog di dashboard DOKU penyebab tombol Bayar masih
+redirect ke WhatsApp? → **Jawaban: BUKAN.** DOKU Checkout tidak butuh katalog produk di
+dashboard; produk/harga dikirim dinamis per-transaksi (`line_items` + `amount`) dari backend.
+
+**Hasil diagnosis (semua dicek langsung, tanpa ubah kode)**:
+- Bundle live `Order-DyJI_k0G.js` di `https://ipanstore.my.id` **sudah versi DOKU** — identik
+  dengan `dist` lokal, mengandung `VITE_BACKEND_URL=https://sever-h81m-s2ph.tail23dc7f.ts.net`
+  dan endpoint `/api/doku-create-order`.
+- Backend **hidup & publik**: `GET /api/health` → 200 `{"ok":true,"service":"ipanstore-backend"}`.
+- **Test create order asli** `POST /api/doku-create-order` Rp 20.000 → DOKU balas `SUCCESS`
+  dengan checkout URL `https://checkout.doku.com/checkout-link-v2/...` (kredensial production valid).
+- CORS preflight dari origin `https://ipanstore.my.id` → 204, `Access-Control-Allow-Origin` benar.
+- Webhook: `override_notification_url` dikirim per-transaksi → **tidak perlu** set Notification URL
+  manual di dashboard DOKU.
+
+**Kesimpulan**: rantai lengkap sudah berfungsi. Test user yang masih ke WhatsApp kemungkinan
+karena browser memakai bundle cache lama (fallback WA memang by-design di `Order.tsx` bila
+`checkoutUrl` kosong) atau backend/funnel belum aktif saat itu. Solusi: hard refresh & test ulang.
 
 ### Sesi: Setup Git/GitHub, Dual Account, Optimasi SEO/Performa/Struktur (11 Agustus 2026)
 
@@ -186,11 +278,13 @@ src/
 ## ✅ CHECKLIST LANJUTAN
 - [ ] (Jika perlu) daftarkan key `id_ed25519` ke GitHub untuk akun `ipanappsettinx`.
 - [ ] (Opsional) Optimasi lebih lanjut: preload kritis, `fetchpriority` hero image.
-- [ ] Deploy backend `server/` ke VPS `sever-h81m-s2ph` via **Tailscale Funnel** (PM2 + funnel).
-- [ ] Setelah dapat URL Funnel, set `VITE_BACKEND_URL=https://<machine>.<tailnet>.ts.net` di `.env`.
-- [ ] Set Notification URL di Dashboard DOKU → Settings → Developer → Notifications.
-- [ ] Test order kecil (Rp 1.000) live → cek webhook diterima.
-- [ ] (Opsional) Tambah endpoint `/api/doku-cancel-order` untuk cancel order unpaid.
+- [x] Deploy backend `server/` ke VPS `sever-h81m-s2ph` — **via Cloudflare Tunnel** `https://api.ipanstore.my.id` (PM2 `ipanstore-backend` port 5159) — terverifikasi live 13 Agt.
+- [x] Set `VITE_BACKEND_URL=https://api.ipanstore.my.id` — sudah terbake di bundle live (`Order-CL2W6hcf.js`).
+- [x] Notification URL — **tidak perlu set manual** di Dashboard DOKU; backend kirim `override_notification_url` (`https://api.ipanstore.my.id/api/doku-webhook`) per-transaksi.
+- [x] **Test order live dari PC user** → redirect DOKU → bayar QRIS → cek `pm2 logs ipanstore-backend` untuk webhook `SUCCESS`. (Frontend sudah mengarah ke api.ipanstore.my.id)
+- [x] Email otomatis SettinX (link Drive + invoice) setelah pembayaran SUCCESS — **terverifikasi terkirim** 13 Agt.
+- [ ] (Opsional) Test bayar SettinX sungguhan (Rp 75.000) dari browser → cek email diterima pembeli.
+- [x] Endpoint `/api/doku-cancel-order` — sudah diimplementasi di `server/index.js`.
 
 ---
 
