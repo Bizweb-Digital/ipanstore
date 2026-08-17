@@ -7,7 +7,7 @@
 
 - **Repo**: `git@github.com-bizwebdigital:Bizweb-Digital/ipanstore.git` (branch `main`)
 - **Domain live**: `https://ipanstore.id` (Cloudflare Tunnel → container Docker port 5007)
-- **Update terakhir**: 17 Agustus 2026 — deploy fix flicker preview SettinX & optimasi performa ke live (commit `0645acc`, bundle `index-D4F5KOaI.js`), `debug-backend.html` dihapus dari produksi
+- **Update terakhir**: 17 Agustus 2026 — Google Search Console mengonfirmasi URL utama sudah diindeks dan sitemap sukses menemukan 8 URL; perbaikan OG image/`llms.txt` siap lokal, menunggu push/deploy
 
 ---
 
@@ -79,6 +79,30 @@ src/
 - Karena `dist` di-gitignore, deploy frontend memakai alur dokumentasi: `scp dist/*` → `/tmp/ipanstore-dist`, lalu bersihkan `/usr/share/nginx/html/*` di container `ipanstore` dan `docker cp` isi baru (agar file lama & `debug-backend.html` benar-benar terhapus).
 - Verifikasi live `https://ipanstore.id`: `/` HTTP 200 dengan bundle `index-D4F5KOaI.js`; `/layanan`, `/paket`, `/sitemap.xml` 200; `/debug-backend.html` → **404** (risiko keamanan terhapus dari produksi); `https://api.ipanstore.id/api/health` 200.
 - `LASTACTIVITY.md` diperbarui dengan status commit/push/deploy terbaru.
+
+### Sesi: Verifikasi Indexing Google Domain Baru (17 Agustus 2026)
+
+- Screenshot user menunjukkan query `site:ipanstore.id` belum mengembalikan hasil. Ini normal untuk domain baru setelah cutover dan bukan indikasi website down.
+- Verifikasi publik: halaman utama, `robots.txt`, dan `sitemap.xml` mengembalikan HTTP `200`; request dengan User-Agent Googlebot juga `200`.
+- `robots.txt` mengizinkan Googlebot dan menunjuk ke `https://ipanstore.id/sitemap.xml`; domain lama mengembalikan `301` ke domain baru.
+- Google Search Console perlu dipakai untuk menambahkan properti `ipanstore.id`, mengirim sitemap, dan meminta indexing URL utama. Waktu tampil di hasil `site:` tidak instan dan dapat memerlukan beberapa hari.
+- Temuan SEO yang masih terbuka: `/logo.png` masih `404` untuk OG image dan `/llms.txt` belum tersedia. Tidak ada perubahan source, build, test, deploy, atau commit pada sesi ini.
+
+### Sesi: Perbaikan OG Image dan `llms.txt` (17 Agustus 2026)
+
+- Referensi OG/Twitter pada `index.html` dan `DEFAULT_OG_IMAGE` di `src/lib/seo.ts` diubah dari `/logo.png` (404) ke aset valid `/img/logo.png`.
+- `public/llms.txt` ditambahkan dengan ringkasan IPAN STORE, daftar halaman penting, dan tautan sitemap untuk agentic browsing.
+- Verifikasi lokal: `npx tsc --noEmit` lulus, `npm run build` sukses, dan `npm run test` lulus (1 test).
+- Build hanya menampilkan peringatan Browserslist data lama; tidak ada error.
+- Belum push, deploy, atau verifikasi endpoint live. Setelah deploy, cek `/img/logo.png`, `/llms.txt`, dan metadata OG pada halaman utama.
+
+### Sesi: Konfirmasi Google Search Console (17 Agustus 2026)
+
+- User mengirim screenshot Search Console untuk properti `ipanstore.id`.
+- Inspeksi URL `https://ipanstore.id/` menunjukkan **URL ada di Google** dan status **Halaman diindeks**.
+- Sitemap `https://ipanstore.id/sitemap.xml` menunjukkan status **Sukses** dan **8 halaman ditemukan**.
+- Kesimpulan: konfigurasi indexing sudah berhasil. Query umum `ipanstore` belum menjamin website tampil di posisi teratas karena dipengaruhi ranking, relevansi kata kunci, dan waktu pemrosesan Google.
+- Klarifikasi: “deploy” berarti mempublikasikan perubahan kode lokal ke server live; itu terpisah dari setup Search Console dan tidak diperlukan agar sitemap yang sudah sukses tetap diproses.
 
 ### Sesi: Fix Definitif Flicker Preview SettinX + Kartu Menimpa Section Berikut (17 Agustus 2026)
 
@@ -656,8 +680,8 @@ karena browser memakai bundle cache lama (fallback WA memang by-design di `Order
 - Homepage secara lokal sudah memakai thumbnail WebP untuk carousel; gambar JPG penuh tetap dipakai saat lightbox.
 - Font Roboto Flex tetap dipertahankan untuk VariableProximity, tetapi `@import` CSS sudah dipindah ke link font utama dan range variable dipersempit.
 - Logo diperkecil dari sekitar 68 KiB menjadi sekitar 6,7 KiB; favicon baru PNG sekitar 1,3 KiB. Perubahan ini belum dideploy.
-- OG/Twitter/JSON-LD image mengarah ke `https://ipanstore.id/logo.png` yang live 404.
-- `llms.txt` belum tersedia dan SPA fallback mengembalikan HTML; Agentic Browsing gagal pada audit llms.txt.
+- OG/Twitter/JSON-LD image sudah diperbaiki lokal ke `/img/logo.png`, tetapi perubahan belum live sampai deploy berikutnya.
+- `public/llms.txt` sudah ditambahkan lokal, tetapi endpoint publik belum berubah sampai deploy berikutnya.
 - `public/debug-backend.html` live dan menunjuk Tailnet lama serta endpoint test create order; hapus dari production sebelum perubahan berikutnya.
 - Accessibility: dua StaggeredMenu aktif di DOM, duplicate ID, focusable descendant dalam `aria-hidden`, contrast rendah, dot carousel terlalu kecil, dan heading footer tidak berurutan.
 - Laporan mobile lengkap belum tersimpan di konteks sesi; rekomendasi mobile didasarkan pada source audit dan temuan desktop yang relevan lintas device.
@@ -701,12 +725,15 @@ karena browser memakai bundle cache lama (fallback WA memang by-design di `Order
 - [x] Update CORS + DOKU callback di VPS, restart PM2, deploy, dan verifikasi setelah DNS/Tunnel
   domain target aktif.
 - [ ] (Opsional) Optimasi lebih lanjut: preload kritis, `fetchpriority` hero image.
+- [x] Daftarkan properti `ipanstore.id` di Google Search Console, kirim `/sitemap.xml`, lalu request indexing URL utama; Search Console mengonfirmasi URL diindeks dan 8 URL ditemukan.
 - [x] Pendekkan `LoadingScreen` menjadi 200 ms; validasi LCP live masih perlu dilakukan setelah deploy.
 - [ ] (Ditunda) Optimasi runtime WebGL, offscreen loop, forced-reflow, canvas, dan input tanpa menghapus efek.
 - [x] Hentikan preload `animation-vendor` dan hapus QueryClientProvider/query-vendor yang tidak digunakan.
 - [x] Pertahankan Roboto Flex/VariableProximity dan pindahkan pemuatannya dari CSS `@import` ke link utama dengan range lebih sempit.
 - [x] Migrasikan `TestimoniPreview` ke thumbnail WebP; gambar penuh tetap untuk lightbox.
-- [x] Optimalkan logo dan favicon; OG image `/logo.png` yang 404 masih belum diperbaiki.
+- [x] Optimalkan logo dan favicon; perbaiki OG image dari `/logo.png` ke `/img/logo.png` (lokal, menunggu deploy).
+- [x] Tambahkan `public/llms.txt` untuk agentic browsing (lokal, menunggu deploy).
+- [ ] Push dan deploy perbaikan SEO, lalu verifikasi `/img/logo.png`, `/llms.txt`, dan metadata OG live.
 - [x] Ubah shine dan dot carousel ke animasi berbasis transform/opacity tanpa menghilangkan efek visual.
 - [x] Kunci scroll background saat preview SettinX terbuka untuk mencegah flicker fixed lightbox.
 - [x] Perbaiki feedback loop `ScrollStackCards` yang menyebabkan flicker desktop di sekitar preview SettinX.

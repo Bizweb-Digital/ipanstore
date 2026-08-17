@@ -1,0 +1,20 @@
+# IPAN STORE
+
+> Jasa optimasi PC gaming, tweaking Windows, dan boost FPS Free Fire via remote untuk pelanggan di Indonesia.
+
+## Tentang IPAN STORE
+
+IPAN STORE membantu mengurangi lag, FPS drop, input delay, dan masalah emulator melalui optimasi perangkat lunak yang aman dan bergaransi. Layanan dikerjakan secara remote dan tersedia mulai Rp 20.000.
+
+## Halaman Utama
+
+- [Beranda](https://ipanstore.id/): Ringkasan layanan dan keunggulan IPAN STORE.
+- [Layanan](https://ipanstore.id/layanan): Daftar layanan optimasi PC gaming.
+- [Paket](https://ipanstore.id/paket): Pilihan paket dan harga layanan.
+- [Testimoni](https://ipanstore.id/testimoni): Pengalaman pelanggan.
+- [FAQ](https://ipanstore.id/faq): Pertanyaan yang sering diajukan.
+- [Kontak](https://ipanstore.id/kontak): Hubungi IPAN STORE untuk konsultasi dan pemesanan.
+
+## Sitemap
+
+- https://ipanstore.id/sitemap.xml
