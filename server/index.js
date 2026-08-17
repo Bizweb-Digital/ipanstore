@@ -454,12 +454,54 @@ app.post("/api/cashi-webhook", (req, res) => {
   }
 });
 
-// ── Create Order DOKU Checkout ───────────────────────────────────────────────
+// ── Kode Promo / Diskon ─────────────────────────────────────────────────────
+// Promo di-validasi DI SERVER (bukan dipercaya dari browser) agar diskon
+// tidak bisa dipalsukan. Backend menghitung ulang diskon dari tabel promo_codes.
+async function validateAndApplyPromo(code, amount) {
+  if (!code || !supabase) return { ok: false, message: "Kode promo tidak valid." };
+  const cleanCode = String(code).trim();
+  if (!cleanCode) return { ok: false, message: "Kode promo tidak valid." };
+
+  const { data: promo, error } = await supabase
+    .from("promo_codes")
+    .select("*")
+    .ilike("code", cleanCode)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error("promo lookup error:", error.message);
+    return { ok: false, message: "Gagal memeriksa kode promo." };
+  }
+  if (!promo) return { ok: false, message: "Kode promo tidak ditemukan." };
+  if (!promo.is_active) return { ok: false, message: "Kode promo tidak aktif." };
+  if (promo.expires_at && new Date(promo.expires_at) < new Date()) {
+    return { ok: false, message: "Kode promo sudah kedaluwarsa." };
+  }
+  if (promo.max_uses != null && Number(promo.used_count) >= Number(promo.max_uses)) {
+    return { ok: false, message: "Kode promo sudah mencapai batas pemakaian." };
+  }
+
+  const price = Number(amount);
+  const raw = promo.type === "percent" ? Math.round((price * Number(promo.value)) / 100) : Math.round(Number(promo.value));
+  const discount = Math.min(Math.max(raw, 0), price);
+  const total = Math.max(price - discount, 1);
+
+  // Catat pemakaian promo (dicegah agar tidak dipakai berlebihan).
+  await supabase
+    .from("promo_codes")
+    .update({ used_count: Number(promo.used_count) + 1 })
+    .eq("id", promo.id);
+
+  return { ok: true, promo_code: promo.code, discount_amount: discount, amount: total };
+}
+
+// ── Create Order ─────────────────────────────────────────────────────────────
 // Front-end memanggil endpoint ini. Server menandatangani request dengan
 // SECRET_KEY lalu meneruskan ke DOKU. Mengembalikan response.payment.url.
 app.post("/api/doku-create-order", async (req, res) => {
   try {
-    const { amount, order_id, customer_name, customer_email, customer_phone, item_name } =
+    const { amount, order_id, customer_name, customer_email, customer_phone, item_name, promo_code } =
       req.body || {};
 
     if (!amount || !order_id) {
@@ -470,6 +512,20 @@ app.post("/api/doku-create-order", async (req, res) => {
         success: false,
         message: "Server belum dikonfigurasi (DOKU_CLIENT_ID / DOKU_SECRET_KEY kosong).",
       });
+    }
+
+    // Validasi kode promo di server (authoritative) sebelum diteruskan ke DOKU.
+    let finalAmount = Number(amount);
+    let discountAmount = 0;
+    let appliedPromo = null;
+    if (promo_code) {
+      const promo = await validateAndApplyPromo(promo_code, amount);
+      if (!promo.ok) {
+        return res.status(400).json({ success: false, message: promo.message });
+      }
+      finalAmount = promo.amount;
+      discountAmount = promo.discount_amount;
+      appliedPromo = promo.promo_code;
     }
 
     // Invoice number DOKU: hanya alfanumerik (hindari simbol — beberapa channel menolaknya).
@@ -483,7 +539,7 @@ app.post("/api/doku-create-order", async (req, res) => {
     // hampir semua channel (VA, QRIS, e-Wallet, Alfamart, dsb).
     const body = {
       order: {
-        amount: Number(amount),
+        amount: finalAmount,
         invoice_number: invoiceNumber,
         currency: "IDR",
         ...(DOKU_CALLBACK_URL ? { callback_url: DOKU_CALLBACK_URL, auto_redirect: true } : {}),
@@ -492,7 +548,7 @@ app.post("/api/doku-create-order", async (req, res) => {
             id: invoiceNumber,
             name: String(item_name || "IPAN STORE Product").slice(0, 255),
             quantity: 1,
-            price: Number(amount),
+            price: finalAmount,
           },
         ],
       },
@@ -560,10 +616,12 @@ app.post("/api/doku-create-order", async (req, res) => {
       customer_name: String(customer_name || ""),
       customer_email: String(customer_email || ""),
       customer_phone: String(customer_phone || ""),
-      amount: Number(amount),
+      amount: finalAmount,
       status: "PENDING",
       doku_transaction_id: data?.response?.payment?.token_id || "",
       created_at: new Date().toISOString(),
+      promo_code: appliedPromo,
+      discount_amount: discountAmount,
     };
 
     await resolveServiceId(item_name).then(async (serviceId) => {

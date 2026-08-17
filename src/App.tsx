@@ -5,8 +5,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import LoadingScreen from "./components/LoadingScreen";
 import PageSkeleton from "./components/PageSkeleton";
-import { AuthProvider } from "./hooks/useAdminAuth";
-import ProtectedRoute from "./components/admin/ProtectedRoute";
 import Index from "./pages/Index";
 
 // Route-level code splitting — halaman selain homepage di-load on-demand.
@@ -22,14 +20,8 @@ const Faq = lazy(() => import("./pages/Faq"));
 const Kontak = lazy(() => import("./pages/Kontak"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
-// Admin pages - lazy loaded
-const AdminLogin = lazy(() => import("./pages/admin/Login"));
-const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
-const AdminOrders = lazy(() => import("./pages/admin/Orders"));
-const AdminServices = lazy(() => import("./pages/admin/Services"));
-const AdminTestimonials = lazy(() => import("./pages/admin/Testimonials"));
-const AdminFaqs = lazy(() => import("./pages/admin/Faqs"));
-const AdminReports = lazy(() => import("./pages/admin/Reports"));
+// Keep auth, Supabase, and the admin bundle out of the public homepage.
+const AdminRoutes = lazy(() => import("./pages/admin/AdminRoutes"));
 
 const App = () => {
   const [loading, setLoading] = useState(true);
@@ -43,10 +35,9 @@ const App = () => {
       <Toaster />
       <Sonner />
       {loading && <LoadingScreen onComplete={handleLoadingComplete} />}
-      <AuthProvider>
-        <BrowserRouter>
-          <Suspense fallback={<PageSkeleton />}>
-            <Routes>
+      <BrowserRouter>
+        <Suspense fallback={<PageSkeleton />}>
+          <Routes>
               {/* Public routes */}
               <Route path="/" element={<Index />} />
               <Route path="/layanan" element={<Layanan />} />
@@ -58,21 +49,14 @@ const App = () => {
               <Route path="/faq" element={<Faq />} />
               <Route path="/kontak" element={<Kontak />} />
               
-              {/* Admin routes - protected */}
-              <Route path="/admin/login" element={<AdminLogin />} />
-              <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
-              <Route path="/admin/orders" element={<ProtectedRoute><AdminOrders /></ProtectedRoute>} />
-              <Route path="/admin/services" element={<ProtectedRoute><AdminServices /></ProtectedRoute>} />
-              <Route path="/admin/testimonials" element={<ProtectedRoute><AdminTestimonials /></ProtectedRoute>} />
-              <Route path="/admin/faqs" element={<ProtectedRoute><AdminFaqs /></ProtectedRoute>} />
-              <Route path="/admin/reports" element={<ProtectedRoute><AdminReports /></ProtectedRoute>} />
+              {/* Admin routes are isolated so public pages do not initialize auth. */}
+              <Route path="/admin/*" element={<AdminRoutes />} />
               
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
-      </AuthProvider>
+          </Routes>
+        </Suspense>
+      </BrowserRouter>
     </TooltipProvider>
   );
 };

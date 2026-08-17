@@ -17,11 +17,13 @@ import ScrollStackCards from "@/components/effects/ScrollStackCards";
 import AnimatedTabs from "@/components/effects/AnimatedTabs";
 import { AuroraText } from "@/components/ui/aurora-text";
 import { breadcrumbJsonLd } from "@/lib/seo";
+import { useActiveServices } from "@/hooks/useActiveServices";
+import { ActiveService } from "@/lib/services";
 
-/* ─── Paket Data ─── */
+/* ─── Paket Data (fallback statis — diganti data Supabase saat tersedia) ─── */
 type Pkg = {
   id: string;
-  category: "Optimize" | "SET PC" | "Anti Cheat";
+  category: "Optimize" | "SET PC" | "Anti Cheat" | "APP SETTINX";
   name: string;
   price: string;
   features: string[];
@@ -29,8 +31,7 @@ type Pkg = {
   highlight?: string;
 };
 
-
-const packages: Pkg[] = [
+const STATIC_PACKAGES: Pkg[] = [
   {
     id: "set-pc",
     category: "SET PC",
@@ -194,6 +195,20 @@ const Paket = () => {
   const { ref: tableRef, revealed: tableRevealed } = useScrollReveal<HTMLDivElement>();
   const [activeTab, setActiveTab] = useState<TabKey>("Optimize");
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Paket dari tabel services Supabase (dikelola admin) dengan fallback statis.
+  const { services: dbServices, fromDb } = useActiveServices(STATIC_PACKAGES as ActiveService[]);
+  const packages: Pkg[] = fromDb
+    ? dbServices.map((s) => ({
+        id: s.id,
+        category: s.category,
+        name: s.name,
+        price: s.priceLabel,
+        features: s.features,
+        popular: Boolean(s.highlight),
+        highlight: s.highlight,
+      }))
+    : STATIC_PACKAGES;
 
   // Drag-to-scroll: tabel perbandingan bisa digeser kiri-kanan dengan
   // drag (mouse) & momentum swipe (touch) — jadi mudah digeser di HP.

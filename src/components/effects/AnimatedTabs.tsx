@@ -1,8 +1,4 @@
 import { useEffect, useRef, type ReactNode } from "react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-
-gsap.registerPlugin(ScrollTrigger);
 
 interface AnimatedTabsProps {
   children: ReactNode;
@@ -12,11 +8,7 @@ interface AnimatedTabsProps {
 /**
  * AnimatedTabs — container tab (Optimize / Set PC / Anti Cheat / App SettinX)
  * yang masuk dari bawah dengan fade, lalu bergerak parallax halus mengikuti
- * scroll, TANPA kedipan/getaran.
- *
- * Satu elemen, satu tween: reveal dan parallax digabung dalam satu
- * timeline GSAP sehingga tidak ada dua tween yang saling menimpa transform
- * elemen yang sama (penyebab kedipan/jump).
+ * scroll, TANPA ticker ScrollTrigger global yang tetap hidup saat idle.
  */
 const AnimatedTabs = ({ children, className = "" }: AnimatedTabsProps) => {
   const ref = useRef<HTMLDivElement>(null);
@@ -25,30 +17,45 @@ const AnimatedTabs = ({ children, className = "" }: AnimatedTabsProps) => {
     const el = ref.current;
     if (!el) return;
 
-    const ctx = gsap.context(() => {
-      // Timeline gabungan: reveal fade-in dari bawah, lalu parallax halus.
-      // Satu tween menulis transform, tidak ada konflik antar-tween.
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: el,
-          start: "top 92%",
-          end: "bottom top",
-          scrub: 0.6,
-        },
-      });
+    let visible = false;
+    let raf: number | null = null;
 
-      tl.fromTo(
-        el,
-        { opacity: 0, y: 28 },
-        { opacity: 1, y: 0, duration: 0.7, ease: "power3.out" }
-      ).to(el, { y: -14, ease: "none" }, 0);
-    }, el);
+    const clamp = (value: number) => Math.max(0, Math.min(1, value));
+    const update = () => {
+      raf = null;
+      if (!visible) return;
+      const rect = el.getBoundingClientRect();
+      const progress = clamp((window.innerHeight - rect.top) / (window.innerHeight + rect.height));
+      const y = 28 - progress * 42;
+      el.style.opacity = String(clamp(progress * 2.5));
+      el.style.transform = `translate3d(0, ${Math.round(y * 10) / 10}px, 0)`;
+    };
+    const schedule = () => {
+      if (raf === null) raf = requestAnimationFrame(update);
+    };
+    const observer = new IntersectionObserver(([entry]) => {
+      visible = entry.isIntersecting;
+      if (visible) schedule();
+      else if (raf !== null) {
+        cancelAnimationFrame(raf);
+        raf = null;
+      }
+    }, { rootMargin: "120px 0px" });
 
-    return () => ctx.revert();
+    observer.observe(el);
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule, { passive: true });
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
+      if (raf !== null) cancelAnimationFrame(raf);
+    };
   }, []);
 
   return (
-    <div ref={ref} className={className} style={{ willChange: "opacity, transform" }}>
+      <div ref={ref} className={className} style={{ willChange: "auto" }}>
       {children}
     </div>
   );

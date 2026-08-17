@@ -164,6 +164,9 @@ const ElectricBorder: React.FC<ElectricBorderProps> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    const frameInterval = 1000 / 18;
+
     const octaves = 10;
     const lacunarity = 1.6;
     const gain = 0.7;
@@ -173,33 +176,66 @@ const ElectricBorder: React.FC<ElectricBorderProps> = ({
     const displacement = 60;
     const borderOffset = 60;
 
+    let sampleCount = 0;
+    let geometryPoints: { x: number; y: number }[] = [];
+
     const updateSize = () => {
       const rect = container.getBoundingClientRect();
       const width = rect.width + borderOffset * 2;
       const height = rect.height + borderOffset * 2;
 
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.25);
       canvas.width = width * dpr;
       canvas.height = height * dpr;
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.scale(dpr, dpr);
 
       return { width, height };
     };
 
     let { width, height } = updateSize();
-    let lastDpr = Math.min(window.devicePixelRatio || 1, 2);
+    const rebuildGeometry = () => {
+      const left = borderOffset;
+      const top = borderOffset;
+      const borderWidth = width - 2 * borderOffset;
+      const borderHeight = height - 2 * borderOffset;
+      const maxRadius = Math.min(borderWidth, borderHeight) / 2;
+      const radius = Math.min(borderRadius, maxRadius);
+      const approximatePerimeter = 2 * (borderWidth + borderHeight) + 2 * Math.PI * radius;
+
+      sampleCount = Math.min(Math.floor(approximatePerimeter / 2), 420);
+      geometryPoints = Array.from({ length: sampleCount + 1 }, (_, i) =>
+        getRoundedRectPoint(i / sampleCount, left, top, borderWidth, borderHeight, radius)
+      );
+    };
+    rebuildGeometry();
+    let lastDpr = Math.min(window.devicePixelRatio || 1, 1.25);
+    let isVisible = true;
+    let isPageVisible = !document.hidden;
+    let isScrolling = false;
+    let menuOpen = false;
+    let scrollIdleTimer: number | null = null;
+    let lastRenderTime = 0;
 
     const drawElectricBorder = (currentTime: number) => {
-      if (!canvas || !ctx) return;
+      animationRef.current = null;
+      if (!canvas || !ctx || !isVisible || !isPageVisible || isScrolling || menuOpen) return;
+      if (reducedMotion && lastRenderTime > 0) return;
+      if (!reducedMotion && currentTime - lastRenderTime < frameInterval) {
+        animationRef.current = requestAnimationFrame(drawElectricBorder);
+        return;
+      }
+      lastRenderTime = currentTime;
 
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.25);
       if (dpr !== lastDpr) {
         lastDpr = dpr;
         const newSize = updateSize();
         width = newSize.width;
         height = newSize.height;
+        rebuildGeometry();
       }
 
       const deltaTime = (currentTime - lastFrameTimeRef.current) / 1000;
@@ -216,22 +252,13 @@ const ElectricBorder: React.FC<ElectricBorderProps> = ({
       ctx.lineJoin = 'round';
 
       const scale = displacement;
-      const left = borderOffset;
-      const top = borderOffset;
-      const borderWidth = width - 2 * borderOffset;
-      const borderHeight = height - 2 * borderOffset;
-      const maxRadius = Math.min(borderWidth, borderHeight) / 2;
-      const radius = Math.min(borderRadius, maxRadius);
-
-      const approximatePerimeter = 2 * (borderWidth + borderHeight) + 2 * Math.PI * radius;
-      const sampleCount = Math.floor(approximatePerimeter / 2);
 
       ctx.beginPath();
 
       for (let i = 0; i <= sampleCount; i++) {
         const progress = i / sampleCount;
 
-        const point = getRoundedRectPoint(progress, left, top, borderWidth, borderHeight, radius);
+        const point = geometryPoints[i];
 
         const xNoise = octavedNoise(
           progress * 8,
@@ -269,23 +296,71 @@ const ElectricBorder: React.FC<ElectricBorderProps> = ({
       ctx.closePath();
       ctx.stroke();
 
-      animationRef.current = requestAnimationFrame(drawElectricBorder);
+      if (!reducedMotion) animationRef.current = requestAnimationFrame(drawElectricBorder);
     };
 
     const resizeObserver = new ResizeObserver(() => {
       const newSize = updateSize();
       width = newSize.width;
       height = newSize.height;
+      rebuildGeometry();
     });
     resizeObserver.observe(container);
 
-    animationRef.current = requestAnimationFrame(drawElectricBorder);
+    const tryStart = () => {
+      if (isVisible && isPageVisible && !isScrolling && !menuOpen && animationRef.current === null) {
+        lastFrameTimeRef.current = performance.now();
+        animationRef.current = requestAnimationFrame(drawElectricBorder);
+      }
+    };
+    const tryStop = () => {
+      if (animationRef.current !== null) {
+        cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
+      }
+    };
+    const onScroll = () => {
+      isScrolling = true;
+      tryStop();
+      if (scrollIdleTimer !== null) window.clearTimeout(scrollIdleTimer);
+      scrollIdleTimer = window.setTimeout(() => {
+        isScrolling = false;
+        tryStart();
+      }, 140);
+    };
+    const onMenuState = (event: Event) => {
+      menuOpen = Boolean((event as CustomEvent<{ open?: boolean }>).detail?.open);
+      if (menuOpen) tryStop();
+      else tryStart();
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    document.addEventListener('ipan:menu-state', onMenuState);
+    const intersectionObserver = new IntersectionObserver(([entry]) => {
+      isVisible = entry.isIntersecting;
+      if (isVisible) tryStart();
+      else tryStop();
+    });
+    intersectionObserver.observe(container);
+
+    const onVisibilityChange = () => {
+      isPageVisible = !document.hidden;
+      if (isPageVisible) tryStart();
+      else tryStop();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    // Render one frame for reduced-motion users, otherwise start the capped loop.
+    if (reducedMotion) drawElectricBorder(performance.now());
+    else tryStart();
 
     return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
+      tryStop();
+      if (scrollIdleTimer !== null) window.clearTimeout(scrollIdleTimer);
       resizeObserver.disconnect();
+      intersectionObserver.disconnect();
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      document.removeEventListener('ipan:menu-state', onMenuState);
+      window.removeEventListener('scroll', onScroll);
     };
   }, [color, speed, chaos, borderRadius, octavedNoise, getRoundedRectPoint]);
 

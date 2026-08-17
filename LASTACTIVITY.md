@@ -7,7 +7,7 @@
 
 - **Repo**: `git@github.com-bizwebdigital:Bizweb-Digital/ipanstore.git` (branch `main`)
 - **Domain live**: `https://ipanstore.id` (Cloudflare Tunnel → container Docker port 5007)
-- **Update terakhir**: 18 Agustus 2026 — **DEPLOY ADMIN PANEL LIVE**: commit `f127463` (admin panel lengkap + Supabase) & `f98b6b5` (polyfill WebSocket Node 20); frontend bundle `index-CSAjFWKB.js` live; backend PM2 jalan dengan Supabase aktif; API health 200; RLS terverifikasi
+- **Update terakhir**: 18 Agustus 2026 — optimasi lanjutan CPU interaksi carousel dan Staggered Menu selesai; efek latar dijeda selama interaksi agar tidak berebut frame; **belum commit/push/deploy**
 
 ---
 
@@ -32,6 +32,7 @@
 | Server `sever-h81m-s2ph` (`100.89.140.16`) | ✅ Akses SSH root OK, path `/project/website/padel/IpanStore/ipanstore` |
 | Deploy pipeline | ✅ `deploy.sh` = `git pull` → `docker compose down` → `docker compose up --build -d` |
 | Commit/status git lokal | ✅ `f98b6b5` (polyfill WebSocket Node 20 untuk supabase-js) di atas `f127463` (admin panel lengkap) |
+| Fitur 8 poin (CSV, notes, filter tanggal, audit, promo, testimoni submit, realtime Orders, grafik Dashboard) | ⚠️ **Selesai lokal 18 Agt, belum commit/deploy** — SQL migrasi sudah dijalankan user; tetap menunggu konfirmasi commit/deploy |
 | Push terakhir | ✅ `f127463..f98b6b5` → GitHub (key `github.com-bizwebdigital`) |
 | Pull+deploy server | ✅ `git pull` fast-forward `f98b6b5`; `npm install` server; PM2 restart; `dist` di-scp + `docker cp` (bundle `index-CSAjFWKB.js` live) |
 | Backend PM2 + Supabase | ✅ `server/.env` VPS diisi `SUPABASE_URL`+`SUPABASE_SERVICE_ROLE_KEY`; warning "belum diisi" hilang; health 200; RLS orders menolak anon (401) ✅ |
@@ -74,6 +75,170 @@ src/
 ---
 
 ## 📚 RIWAYAT SESI & PERUBAHAN
+
+### Sesi: Optimasi Lanjutan CPU Saat Carousel dan Menu Aktif (18 Agustus 2026)
+
+- **Masalah**: CPU naik dari sekitar 11% menjadi 25% saat drag carousel testimoni atau membuka Staggered Menu.
+- **Carousel**: drag pointer tetap memakai physics/output yang sama, tetapi pointer move dikumpulkan ke satu rAF per frame. `SplashCursor` tidak lagi memproses input di area carousel/lightbox, sehingga fluid WebGL tidak berjalan bersamaan dengan drag/navigasi foto.
+- **Lightbox**: autoplay carousel homepage tetap berhenti selama lightbox terbuka agar tombol navigasi foto tidak berbagi frame dengan autoplay latar.
+- **Staggered Menu**: source resmi React Bits kembali diverifikasi. Timeline visual tidak diubah. State `open` redundan di parent Navbar dihapus agar toggle tidak memicu re-render parent yang tidak diperlukan.
+- **Interaksi menu**: event state internal menjeda scheduler SplashCursor, Scanner, dan ElectricBorder selama entrance/close menu. Scheduler kembali aktif setelah close tween selesai; source visual/timeline menu tetap sama.
+- **Verifikasi**: `npx tsc --noEmit`, `npm run build`, `npm run test`, ESLint targeted, dan `git diff --check` berhasil.
+- **Belum dilakukan**: commit, push, pull, deploy, dan pengukuran CPU langsung pada Brave user.
+
+### Sesi: Optimasi Smooth Drag Carousel dan Staggered Menu React Bits (18 Agustus 2026)
+
+- **Riset Staggered Menu**: source resmi React Bits `StaggeredMenu.jsx/.css` diverifikasi. Timeline lokal tetap memakai pre-layer stagger `0.07`, panel `0.65s power4.out`, item label `stagger 0.1`, numbering, socials, icon rotation, dan text cycle yang sama. Perbedaan lokal hanya integrasi routing, tema IPAN, callback item, dan cleanup.
+- **DepthCarousel drag**: pointer move sekarang dikoaleskan ke satu `requestAnimationFrame` per frame; event berfrekuensi tinggi tidak lagi memanggil layout/DOM write berkali-kali dalam frame yang sama. Drag physics, proyeksi velocity, transform, tilt, depth, blur, dan easing tetap sama.
+- **DepthCarousel/lightbox**: autoplay preview berstatus `false` ketika lightbox terbuka dan otomatis resume setelah ditutup, sehingga animasi latar tidak berebut frame dengan tombol navigasi foto.
+- **Staggered Menu compositor**: `will-change: transform` hanya diberikan sementara pada panel/pre-layer aktif, social links hanya saat entrance, lalu dibersihkan. Durasi, easing, stagger, dan bentuk menu tidak diubah.
+- **Verifikasi**: `npx tsc --noEmit`, `npm run build`, `npm run test`, ESLint targeted untuk carousel/testimoni/menu, dan `git diff --check` berhasil.
+- **Belum dilakukan**: commit, push, pull, deploy, dan browser smoke test langsung di Brave user.
+
+### Sesi: Optimasi CPU Efek Tanpa Mengubah Visual (18 Agustus 2026)
+
+- **Batasan**: user meminta tidak menghilangkan, mengurangi, atau mengubah source/visual efek React Bits dan custom; optimasi dibatasi pada scheduler, lifecycle, style write, compositor hint, dan input listener.
+- **DepthCarousel**: style hanya ditulis ketika nilainya berubah; `will-change` hanya aktif untuk kartu yang terlihat; autoplay berhenti saat carousel offscreen dan resume saat kembali mendekati viewport.
+- **ElectricBorder**: titik geometri rounded-rectangle dicache saat resize, sehingga perhitungan titik statis tidak diulang di setiap frame. Noise, sample count, parameter, dan output visual tetap sama.
+- **Input effects**: listener touch/mouse yang tidak memanggil `preventDefault()` dibuat passive agar browser tidak menunggu JavaScript sebelum memproses input.
+- **Verifikasi**: `npx tsc --noEmit`, `npm run build`, `npm run test`, dan `git diff --check` berhasil. Lint targeted tetap memiliki error pre-existing pada source SplashCursor/Scanner (prefer-const, any, empty catch).
+- **Belum dilakukan**: commit, push, pull, deploy, dan pengukuran CPU browser fisik.
+
+### Sesi: Perbaikan Wheel Vertikal Carousel Testimoni (18 Agustus 2026)
+
+- **Bug**: wheel vertikal di area kosong kiri/kanan foto testimoni menggeser posisi foto secara horizontal dan mencegah page scroll.
+- **Akar masalah**: `DepthCarousel.tsx` selalu memanggil `preventDefault()` dan memakai `deltaY` sebagai input carousel, walaupun gesture berasal dari wheel atas/bawah.
+- **Fix**: handler sekarang hanya mencegat gesture yang dominan horizontal (`deltaX`). Wheel vertikal (`deltaY`) langsung diteruskan ke browser sehingga halaman scroll normal.
+- **Efek dipertahankan**: drag pointer, tombol/indicator, animasi GSAP, autoplay, dan horizontal trackpad swipe tetap bekerja.
+- **Verifikasi**: `npx tsc --noEmit`, `npm run build`, `npm run test`, `npx eslint src/components/carousel/DepthCarousel.tsx`, dan `git diff --check` berhasil.
+- **Belum dilakukan**: commit, push, pull, deploy, dan browser smoke test fisik.
+
+### Sesi: Perbandingan Source React Bits, Live, dan Stabilitas Menu (18 Agustus 2026)
+
+- **Perbandingan source**: React Bits terbaru mengonfirmasi nama efek `ScrollStack` dan `Staggered Menu`. Timeline menu lokal mempertahankan layer warna, panel, stagger label, numbering, socials, icon, dan text cycle dari source asli.
+- **Perbandingan live**: bundle live `index-CSAjFWKB.js` masih memakai ScrollStack lama yang membaca `getBoundingClientRect()` setiap frame, menjalankan loop berkelanjutan, dan menulis opacity. Implementasi lokal mempertahankan bentuk `translateY + scale` tetapi memakai koordinat layout cache, satu rAF saat scroll/transisi, dan berhenti saat settle/offscreen untuk mencegah feedback-loop, flicker, dan low FPS.
+- **Perubahan lokal**: `StaggeredMenu.tsx` sekarang membunuh seluruh timeline/tween GSAP saat unmount agar route change tidak meninggalkan animasi yang mengakses node lama. Tidak mengubah durasi, easing, atau stagger visual.
+- **Verifikasi**: `npx tsc --noEmit`, `npm run build`, `npm run test`, `npx eslint src/components/StaggeredMenu.tsx`, dan `git diff --check` berhasil. Build menghasilkan chunk lazy StaggeredMenu sekitar 8.05 kB.
+- **Belum dilakukan**: commit, push, pull, deploy, atau verifikasi browser fisik; Chromium tidak tersedia di environment.
+
+### Sesi: Audit & Fix Lag Desktop Tanpa Menghapus Efek (18 Agustus 2026)
+
+- **Temuan Git/deploy**: `HEAD` lokal dan `origin/main` sama-sama `41b78de`; perubahan 8 poin fitur masih uncommitted lokal. Live masih menyajikan bundle `index-CSAjFWKB.js` dari deploy admin sebelumnya. Riwayat memang mencatat commit admin `f127463` + polyfill `f98b6b5` pernah dipush/deploy, tetapi commit tersebut tidak mengubah file efek global.
+- **Akar lag desktop**: SplashCursor fluid WebGL memakai buffer/resolusi tinggi dan 20 pressure pass; Scanner global adalah WebGL full-screen kedua; ElectricBorder memiliki loop canvas 2D kontinu; ScrollStackCards membaca layout setiap frame; VariableProximity memiliki rAF kontinu dan pembacaan geometry saat input. Desktop lebih berat karena viewport/pixel ratio dan pointer mouse lebih aktif; mobile tidak menjadi pembanding yang setara.
+- **Perubahan lokal, efek dipertahankan**: SplashCursor tetap aktif dengan resolusi/DPR/pressure adaptif, frame rate dibatasi dan berhenti saat tab hidden; Scanner tetap aktif dengan DPR/frame rate adaptif dan pause reduced-motion/hidden; ScrollStackCards memakai cache koordinat layout dan loop berhenti saat settle; VariableProximity menjadi event-driven; ElectricBorder memakai DPR/frame rate adaptif, cap sample, dan pause offscreen/hidden. `DepthCarousel` tetap dipertahankan.
+- **Tambahan jalur awal publik**: route admin dipindahkan ke `src/pages/admin/AdminRoutes.tsx` dan dimuat lazy dari `App.tsx`, sehingga AuthProvider/Supabase tidak diinisialisasi di homepage. Build memisahkan Supabase menjadi chunk lazy sekitar `220.73 kB`; chunk entry utama turun dari sekitar `619.80 kB` menjadi sekitar `394.76 kB`.
+- **Supabase**: user mengonfirmasi migrasi sudah dijalankan dan empat tabel realtime muncul. Tidak ada perubahan SQL pada sesi ini.
+- **Verifikasi**: `npx tsc --noEmit`, `npm run build`, `npm run test`, `git diff --check`, dan HTTP local Vite `200` berhasil. Browser smoke test tidak tersedia karena Chromium/Chrome tidak terpasang di environment.
+- **Belum dilakukan**: commit, push, pull, deploy, atau perubahan realtime frontend untuk update tanpa refresh.
+
+### Sesi: Fix Lanjutan Lag Saat Idle di Localhost (18 Agustus 2026)
+
+- **Masalah lanjutan**: setelah pembatasan resolusi/frame rate, localhost masih patah-patah. Penyebab yang tersisa adalah simulasi SplashCursor dan render Scanner tetap berjalan terus meskipun pointer diam, ditambah loop rAF Lenis yang terus dijadwalkan walaupun tidak sedang smooth-scroll.
+- **Fix lokal**: SplashCursor dan Scanner kini tetap merender frame awal, lalu menghentikan loop berat setelah sekitar 900 ms tanpa pointer/touch; pointer/touch membangunkan efek kembali. Lenis kini hanya menjadwalkan rAF saat menerima virtual scroll atau masih dalam proses scrolling. Efek visual tidak dihapus.
+- **Verifikasi**: `npx tsc --noEmit`, `npm run build`, `npm run test`, `git diff --check`, dan HTTP local Vite `200` berhasil.
+- **Belum dilakukan**: commit, push, pull, deploy, dan browser automation (Chrome tidak tersedia di environment).
+
+### Sesi: Audit Seluruh Frontend & Fix Desktop Smooth-Scroll (18 Agustus 2026)
+
+- **Audit lintas route**: seluruh halaman publik menggunakan `Layout`, sehingga bug scheduler Lenis memengaruhi `/`, `/layanan`, `/paket`, `/order`, `/testimoni`, `/faq`, `/kontak`, `/layanan/boost-fps-free-fire`, dan `/layanan/tweaking-pc-gaming`. Halaman dengan tambahan loop scroll adalah `/`, `/layanan`, dan `/paket` melalui `ScrollStackCards`; carousel/testimoni memakai tween terbatas, bukan loop scroll penuh.
+- **Akar masalah terkonfirmasi dari kode**: pada scheduler Lenis sebelumnya, `lenis.raf()` memancarkan event `scroll`; listener `wake()` melihat slot rAF kosong lalu menjadwalkan frame baru, kemudian scheduler yang sama menjadwalkan frame berikutnya lagi. Akibatnya desktop smooth-wheel dapat memiliki dua rantai rAF saat scrolling. Mobile tidak mengalami jalur ini karena memakai native touch scroll.
+- **Fix**: scheduler `Layout.tsx` sekarang mempertahankan ID frame aktif selama callback berjalan, sehingga event internal Lenis tidak dapat membuat rantai rAF kedua. Frame berikutnya hanya dijadwalkan satu kali jika Lenis masih scrolling.
+- **Efek/animasi dipertahankan**: SplashCursor, Scanner, ScrollStackCards, VariableProximity, ElectricBorder, DepthCarousel, GSAP reveal/parallax, marquee, dan menu tetap ada.
+- **Verifikasi**: `npx tsc --noEmit`, `npm run build`, `npm run test`, `git diff --check`, dan HTTP local Vite `200` berhasil. Browser automation tetap tidak tersedia karena Chrome tidak terpasang.
+- **Belum dilakukan**: commit, push, pull, deploy, dan perubahan Supabase.
+
+### Sesi: Profiling Mendalam & Finalisasi Performa Semua Frontend (18 Agustus 2026)
+
+- **Profiling nyata**: Chromium headless dipasang lokal untuk mengukur rAF, kerja callback, draw WebGL/canvas, error, dan scroll pada desktop `1440x900` serta mobile `390x844`. Sebelum fix lanjutan, homepage desktop saat scroll tercatat sekitar 394 callback rAF dan 11 canvas stroke dalam sesi uji; setelah perbaikan terakhir menjadi 49 rAF, 3,9 ms callback work, 0 WebGL draw, 0 canvas stroke, dan 0 error. Mobile akhir: 62 rAF, 1 ms callback work, 0 draw, 0 stroke, 0 error.
+- **Temuan lintas route**: semua route publik lolos smoke profiling tanpa error. `/layanan` dan `/paket` memiliki tambahan ScrollStack/AnimatedTabs; route lain hanya membawa layout/global effects dan Lenis.
+- **Perubahan final tanpa menghapus efek**:
+  - Desktop wheel memakai native scroll; Lenis tetap dipakai untuk state/event dan programmatic behavior, tetapi tidak menjalankan pipeline smooth-scroll JS.
+  - SplashCursor, Scanner, ElectricBorder, dan DepthCarousel dipause saat scroll; frame terakhir tetap terlihat dan animasi kembali setelah scroll selesai/ketika berinteraksi.
+  - `SplitText` dipindah dari GSAP/ScrollTrigger ke CSS + IntersectionObserver; animasi stagger tetap ada tanpa ticker global.
+  - `AnimatedTabs` dipindah dari ScrollTrigger scrub ke rAF yang hanya aktif saat elemen terlihat dan scroll terjadi.
+  - `StaggeredMenu` dan `DepthCarousel` dibuat lazy; carousel testimoni ditunda sampai mendekati viewport.
+  - `ScrollStackCards` hanya memakai `will-change` selama transisi; `background-attachment: fixed` dihapus untuk mencegah repaint desktop.
+- **Hasil build**: entry frontend turun menjadi sekitar `329.33 kB`; `StaggeredMenu` dan `DepthCarousel` menjadi chunk terpisah. `npx tsc --noEmit`, `npm run build`, `npm run test`, `git diff --check`, dan HTTP local `200` berhasil.
+- **Belum dilakukan**: commit, push, pull, deploy, dan verifikasi pada browser fisik user.
+
+### Sesi: Optimasi Cursor & Scroll Low-Cost (18 Agustus 2026)
+
+- **Masalah yang ditangani**: gerakan cursor mengaktifkan simulasi `SplashCursor` full-screen dengan banyak shader pass; scroll harus tetap ringan di seluruh route.
+- **Perubahan lokal**: kualitas internal fluid diturunkan tanpa menghapus efek (`SIM_RESOLUTION=48`, `DYE_RESOLUTION=320`, `PRESSURE_ITERATIONS=2`, DPR 1, frame interaktif 15 fps, splat force 2200); Scanner dibatasi DPR/frame rate; VariableProximity memakai cache center huruf; seluruh efek berat pause saat scroll; ScrollStack tetap memakai satu rAF ringan.
+- **Hasil profiling desktop**: WebGL draw saat cursor bergerak turun dari `3.620` menjadi `938`, callback work turun dari `528,7 ms` menjadi `90,9 ms`; scroll menghasilkan `0` WebGL draw dan sekitar `4,8 ms` callback work.
+- **Efek dipertahankan**: SplashCursor, Scanner, VariableProximity, ScrollStackCards, ElectricBorder, DepthCarousel, menu, marquee, dan animasi reveal tetap tersedia.
+- **Verifikasi**: `npx tsc --noEmit`, `npm run build`, `npm run test`, `git diff --check`, dan HTTP local Vite `200` berhasil.
+- **Belum dilakukan**: commit, push, pull, deploy, dan perubahan Supabase.
+
+### Sesi: Pulihkan SplashCursor & ScrollStack Baseline (18 Agustus 2026)
+
+- **SplashCursor**: algoritma shader/fluid asli tetap dipakai; kualitas internal desktop dibuat seimbang (`SIM_RESOLUTION=48`, `DYE_RESOLUTION=320`, `PRESSURE_ITERATIONS=2`, 24 fps interaktif, DPR 1) agar pointer tetap responsif. Click splat dikurangi multiplier warnanya dari 10 menjadi 2.5 agar palette slate tidak menghasilkan flash putih.
+- **ScrollStackCards**: efek yang digunakan adalah React Bits **ScrollStack**. Perilaku visual dikembalikan ke baseline: hanya `translateY` + `scale`, tanpa opacity fade dan z-index tambahan. Cache koordinat layout serta satu rAF tetap dipertahankan agar tidak mengembalikan feedback-loop/flicker lama.
+- **Profiling**: cursor desktop setelah fix tercatat sekitar `1.346` WebGL draw dan `98,9 ms` callback work pada sesi gerak pointer; scrolling `/paket` menghasilkan `0` WebGL draw dan sekitar `14,3 ms` work, dengan transform stack aktif pada kartu.
+- **Verifikasi**: `npx tsc --noEmit`, `npm run build`, `npm run test`, `git diff --check`, dan HTTP local Vite `200` berhasil.
+- **Belum dilakukan**: commit, push, pull, deploy, dan perubahan Supabase.
+
+### Sesi: Verifikasi ScrollStack & Staggered Menu React Bits (18 Agustus 2026)
+
+- **ScrollStack**: nama efek kartu dikonfirmasi sebagai React Bits `ScrollStack`. Implementasi lokal dikembalikan ke perilaku baseline `translateY + scale`; cache layout dan satu rAF dipertahankan sebagai optimasi internal tanpa mengubah bentuk animasinya.
+- **Menu**: efek pada tombol `Menu +` dikonfirmasi sebagai React Bits `Staggered Menu`. Panel terbuka melalui timeline stagger asli, item menu bernomor dan social links tampil, transform panel mencapai posisi terbuka, dan tidak ada page error.
+- **Interaksi**: `SplashCursor` tidak lagi memproses `mousedown/mousemove` pada button, link, input, atau panel menu, sehingga animasi Staggered Menu tidak berebut GPU dengan fluid splat.
+- **Profiling/verifikasi**: scroll `/paket` menghasilkan transform stack aktif tanpa opacity/z-index tambahan; klik Menu menghasilkan panel opacity `1`, transform terbuka, tanpa error. `npx tsc --noEmit`, `npm run build`, `npm run test`, `git diff --check`, dan HTTP local `200` berhasil.
+- **Belum dilakukan**: commit, push, pull, deploy, dan perubahan Supabase.
+
+### Sesi: Implementasi 8 Poin Fitur Admin + Integrasi Frontend (18 Agustus 2026)
+
+**Permintaan user**: implementasikan 8 poin riset (CSV export, catatan admin tersimpan, filter tanggal Orders, audit log, promo/diskon, moderasi testimoni publik + submit, realtime Orders, grafik tambahan Dashboard), integrasikan admin panel (Orders/Services/Testimonials/FAQs) ke frontend agar perubahan langsung tampil, Dashboard realtime, sediakan SQL untuk tugas manual Supabase, pastikan semua tombol berfungsi, TANPA menggunakan skill apa pun.
+
+- **Helper bersama baru**: `src/lib/admin/csv.ts` (export CSV), `src/lib/services.ts` (parse `<li>`, derive kategori, format rupiah, fetch layanan aktif), `src/hooks/useActiveServices.ts` (DB-driven + fallback), `src/hooks/useAuditLog.ts` (tulis + baca `admin_audit_log`), `src/lib/admin/promo.ts` (lookup/apply kode promo).
+- **SQL migrasi baru**: `supabase_migration_v2.sql` — tabel `promo_codes` (+RLS), kolom `promo_code`/`discount_amount` di `orders`, policy `public_can_submit_testimonial` (anon insert `is_approved=false`), daftarkan `orders/services/testimonials/faqs` ke `supabase_realtime`. **WAJIB dijalankan user di Supabase SQL Editor** sebelum fitur promo/testimoni-submit/realtime aktif.
+- **Backend `server/index.js`**: `POST /api/doku-create-order` sekarang menerima `promo_code` dan memvalidasi ulang DI SERVER (lookup `promo_codes`, cek aktif/kedaluwarsa/batas pakai, hitung diskon, increment `used_count`, pakai jumlah final utk DOKU + simpan `promo_code`/`discount_amount` di orders). `node --check` OK.
+- **Halaman admin**:
+  - `Orders.tsx`: + Export CSV, filter rentang tanggal (`dateFrom`/`dateTo`), simpan catatan admin (debounce 800 ms, indikator "Menyimpan..."), **realtime `postgres_changes`** auto-refresh, audit log `order.status.update`, tampil kode promo/diskon di detail.
+  - `Services.tsx` / `Testimonials.tsx` / `Faqs.tsx`: + Export CSV + audit log (create/update/delete); Testimonials + tombol setujui/batalkan cepat.
+  - `Dashboard.tsx`: + **PieChart porsi revenue per layanan**, kartu **AOV**, **konversi PAID+COMPLETED**, **total pendapatan semua waktu** (realtime sudah ada).
+  - Halaman baru: `AuditLog.tsx` (`/admin/audit`) & `Promos.tsx` (`/admin/promos`, CRUD promo + toggle aktif + export CSV). Route & nav sidebar diperbarui di `App.tsx` + `AdminLayout.tsx`.
+- **Integrasi frontend**:
+  - `Paket.tsx` & `Order.tsx`: paket kini **diambil dari tabel `services` Supabase** (harga/features dari DB) dengan fallback statis bila gagal/kosong → tambah/edit layanan di admin langsung tampil di website.
+  - `Order.tsx`: + **input kode promo** (cek diskon real-time, tampil potongan & total bayar baru; kode diteruskan ke backend utk validasi final).
+  - `TestimoniPage.tsx`: + grid **review dari Supabase** (hanya `is_approved=true`) + **form submit testimoni publik** (insert `is_approved=false`, menunggu moderasi admin).
+- **Tipe DB** `src/lib/admin/supabase.ts`: + `promo_codes` dan kolom promo di `orders` (row/Insert/Update).
+- **Verifikasi**: `npx tsc --noEmit` EXIT 0, `npm run build` sukses, `npm run test` 1 passed, `node --check server/index.js` OK.
+- **Belum commit/push/deploy** (aturan wajib #2 — menunggu konfirmasi user). Fitur promo/realtime/testimoni-submit menunggu user menjalankan `supabase_migration_v2.sql`.
+
+### Sesi: Pangkas Skill + Aturan "JANGAN Auto-Load Skill" (18 Agustus 2026)
+
+**Permintaan user**: hapus skill yang tidak dibutuhkan untuk project ini; pastikan AI tidak otomatis memakai skill hanya dari trigger prompt. Contoh gaya prompt yang diinginkan: "saya ingin ... tanpa menggunakan skill/skills" → AI tidak boleh load skill apa pun.
+
+- **Skill yang dipertahankan (19)** di `C:\Users\WINDOWS KERJA\.agents\skills`:
+  `gsap-core`, `gsap-react`, `gsap-scrolltrigger`, `gsap-timeline`, `gsap-plugins`,
+  `gsap-performance`, `gsap-utils`, `gsap-frameworks`, `agent-browser`, `ponytail`,
+  `ponytail-audit`, `ponytail-debt`, `ponytail-gain`, `ponytail-help`, `ponytail-review`,
+  `humanizer`, `systematic-debugging`, `seo-audit`, `impeccable`.
+- **Skill lain (98) dipindahkan ke backup** (bukan dihapus permanen):
+  - `C:\Users\WINDOWS KERJA\.agents\skills_backup` (85 skill)
+  - `C:\Users\WINDOWS KERJA\.config\opencode\skills_backup` (13 skill)
+  Folder `...\config\opencode\skills` kini kosong. Karena backup di luar `skills.paths`, skill tsb tidak lagi terdaftar di opencode.
+- **Aturan ditambahkan di `AGENTS.md` aturan wajib #6**: JANGAN auto-load skill hanya karena prompt mengandung kata mirip deskripsi skill; skill hanya dipakai jika user menyebut nama skill eksplisit (atau `/nama-skill`); jika user bilang "tanpa skill" atau instruksi biasa, kerjakan langsung dengan alat dasar (read/edit/bash/build).
+- **File proyek yang berubah di sesi ini**: `AGENTS.md` (+ aturan #6), `LASTACTIVITY.md`.
+- Dashboard realtime (`src/pages/admin/Dashboard.tsx`) masih **lokal & belum di-commit** (menunggu konfirmasi dari sesi sebelumnya).
+
+### Sesi: Redesign Dashboard + Realtime Charts (18 Agustus 2026)
+
+**Permintaan user**: urus dashboard (realtime diagram, perbaiki UI/UX, jangan AI slop), hemat token, jangan pakai skill overpower; dan WAJIB catat aturan konfirmasi sebelum git/deploy.
+
+- **Aturan baru dicatat di `AGENTS.md`** (aturan wajib #2): JANGAN commit/push/pull/deploy/restart PM2 tanpa konfirmasi eksplisit user di awal. Kerjakan & verifikasi lokal dulu, lalu tanyakan.
+- **`src/pages/admin/Dashboard.tsx` ditulis ulang total** (Recharts, sudah ter-install):
+  - KPI revenue: Hari Ini / 7 Hari / Bulan Ini / Total Order
+  - KPI status order: Pending / Paid / Completed / Refunded
+  - **Area chart revenue 14 hari** (dari `paid_at || created_at`)
+  - **Bar chart distribusi status** (vertikal, warna per status)
+  - **Top layanan (revenue)** dengan progress bar
+  - **Order terbaru** (6) dengan link ke `/admin/orders`
+  - **Realtime live**: Supabase `postgres_changes` pada tabel `orders` → auto-refetch + indikator "Live" (ping hijau) saat ada perubahan; fallback ke fetch manual saat subscribe gagal.
+- Verifikasi lokal: `npx tsc --noEmit` EXIT 0, `npm run build` sukses.
+- **Catatan performa**: chunk Dashboard naik ke ~393 kB karena recharts masuk ke bundle dashboard (dulu ~6 kB). Ini trade-off agar chart realtime; bisa dioptimasi dengan code-split manualChunks bila perlu.
+- **Belum commit/push/deploy** (menunggu konfirmasi user sesuai aturan baru).
 
 ### Sesi: Deploy Admin Panel Live + Fix WebSocket Node 20 (18 Agustus 2026)
 
@@ -934,9 +1099,17 @@ karena browser memakai bundle cache lama (fallback WA memang by-design di `Order
 
 ## 🔴 MASALAH & CATATAN
 
+- **CPU saat interaksi**: optimasi konkurensi sudah diterapkan lokal. Angka CPU aktual di Brave user perlu diuji ulang setelah HMR/reload; environment ini tidak menyediakan browser Chromium untuk profiling langsung.
+- **Smoothness carousel/menu**: optimasi drag, lightbox background, dan compositor sudah selesai lokal. Pengukuran frame/CPU langsung di Brave user masih diperlukan untuk memastikan hasil pada hardware user.
+- **CPU efek**: optimasi tambahan sudah diterapkan lokal tanpa mengubah parameter/visual. Pengukuran CPU numerik di Brave user belum bisa dilakukan dari environment ini karena Chromium tidak tersedia; perlu dibandingkan setelah reload dev server.
+- **Wheel carousel testimoni**: sudah diperbaiki lokal. `DepthCarousel` hanya menangani wheel horizontal; wheel vertikal diteruskan ke page scroll. Perlu verifikasi langsung di Brave user setelah dev server reload.
+- **Source live belum sama dengan optimasi lokal**: live masih menyajikan ScrollStack lama dari bundle `index-CSAjFWKB.js`; source itu bukan target yang aman untuk disalin mentah karena `getBoundingClientRect()` feedback-loop dan loop rAF kontinu. Deploy perubahan lokal tetap menunggu konfirmasi user.
+- **Staggered Menu**: efek asli React Bits sudah dipertahankan. Cleanup tween saat unmount sudah ditambahkan lokal; pengujian interaksi browser fisik masih tertunda karena Chromium tidak tersedia.
+- **Fitur baru 8 poin selesai lokal (18 Agt 2026) tapi BELUM LIVE**: CSV export, filter tanggal, notes tersimpan, audit log, kode promo, moderasi + submit testimoni, realtime Orders, grafik Dashboard. Sebelum deploy, user WAJIB menjalankan `supabase_migration_v2.sql` di Supabase SQL Editor (tabel `promo_codes`, kolom `orders.promo_code/discount_amount`, policy insert testimoni publik, realtime publication) — tanpa itu halaman Promos error & submit testimoni/realtime tidak jalan.
 - **Admin Panel Phase 3 selesai lokal (24 Jan 2025)**: semua file admin (7 halaman, layout, hooks, Supabase client), migrasi backend `server/index.js` ke Supabase (saveOrder/getOrder/updateOrder/resolveServiceId), migration SQL, dan seed data 7 paket sudah dibuat & diverifikasi (tsc/build/test lulus). **Sudah commit/push/deploy 18 Agt 2026** (`f127463`+`f98b6b5`, live di `ipanstore.id`). Prasyarat tersisa: buat admin user di Supabase Auth + tabel `admin_users` (panduan `ADMIN_SETUP_GUIDE.md`).
 - Domain dan API baru sudah live; `ipanstore.my.id` sudah redirect 301 dan route API lama sudah dihapus.
-- Performance blocker utama tetap: dua WebGL effect global, banyak animation loop, dan forced reflow. `LoadingScreen`, preload animation, query provider, font waterfall, aset carousel, logo, favicon, dan animasi non-composited sudah dioptimasi secara lokal; belum dideploy.
+- Performance blocker utama sudah ditangani secara lokal tanpa menghapus efek: global WebGL/canvas idle-aware dan pause saat scroll, Lenis tidak lagi menjalankan smooth-scroll JavaScript desktop, GSAP/ScrollTrigger tidak lagi aktif untuk SplitText/AnimatedTabs idle, dan efek berat dibuat lazy. Perubahan performa belum dideploy.
+- Live masih memakai bundle `index-CSAjFWKB.js`; verifikasi runtime live baru dapat dilakukan setelah ada persetujuan deploy.
 - Lighthouse desktop terakhir: Performance 56 dengan TBT 22.910 ms. FCP/LCP/CLS sudah baik sehingga fokus pertama harus main-thread dan efek visual.
 - Homepage secara lokal sudah memakai thumbnail WebP untuk carousel; gambar JPG penuh tetap dipakai saat lightbox.
 - Font Roboto Flex tetap dipertahankan untuk VariableProximity, tetapi `@import` CSS sudah dipindah ke link font utama dan range variable dipersempit.
@@ -973,11 +1146,15 @@ karena browser memakai bundle cache lama (fallback WA memang by-design di `Order
 ---
 
 ## ✅ CHECKLIST LANJUTAN
-- [x] Commit + push admin panel Phase 3 (`f127463`) — sukses 18 Agt.
-- [x] Deploy frontend admin panel ke live (bundle `index-CSAjFWKB.js` live).
-- [x] Deploy backend Supabase ke VPS + `npm install` + isi `SUPABASE_*` di `server/.env` + PM2 restart (health 200).
-- [x] Fix crash supabase-js di Node 20 (polyfill WebSocket `ws`) — commit `f98b6b5`, terverifikasi live.
-- [x] Verifikasi RLS: `services` anon 200 (7 paket), `orders` anon 401 (ditolak).
+- [x] Implementasi 8 poin fitur admin + integrasi frontend (CSV, notes, filter tanggal, audit log, promo, testimoni submit, realtime Orders, grafik Dashboard) — selesai lokal & terverifikasi (tsc/build/test).
+- [x] Buat `supabase_migration_v2.sql` (promo_codes, kolom promo orders, RLS testimoni publik, realtime publication).
+- [x] Backend `doku-create-order` validasi kode promo server-authoritative.
+- [x] **User menjalankan `supabase_migration_v2.sql` di Supabase SQL Editor**; tabel `orders/services/testimonials/faqs` muncul di publication realtime.
+- [ ] (Menunggu konfirmasi user) Commit + push + deploy semua fitur baru ke live.
+- [x] Tulis ulang `Dashboard.tsx` — KPI + area chart revenue 14 hari + bar chart status + top layanan + order terbaru + realtime live.
+- [x] Catat aturan wajib konfirmasi git/deploy di `AGENTS.md` (aturan #2).
+- [x] Verifikasi lokal: tsc EXIT 0, build sukses.
+- [ ] (Menunggu konfirmasi user) Commit + push + deploy dashboard baru ke live.
 - [ ] Buat user admin di Supabase Auth (email + password) agar login `/admin/login` bisa diuji end-to-end.
 - [ ] Test login admin live → cek Dashboard/Orders/Services/Testimonials/Faqs/Reports di production.
 - [ ] Migrasi data `server/orders.json` lama (jika ada order historis) via `server/migrations/migrate-json-to-supabase.js`.
@@ -997,7 +1174,23 @@ karena browser memakai bundle cache lama (fallback WA memang by-design di `Order
 - [ ] (Opsional) Optimasi lebih lanjut: preload kritis, `fetchpriority` hero image.
 - [x] Daftarkan properti `ipanstore.id` di Google Search Console, kirim `/sitemap.xml`, lalu request indexing URL utama; Search Console mengonfirmasi URL diindeks dan 8 URL ditemukan.
 - [x] Pendekkan `LoadingScreen` menjadi 200 ms; validasi LCP live masih perlu dilakukan setelah deploy.
-- [ ] (Ditunda) Optimasi runtime WebGL, offscreen loop, forced-reflow, canvas, dan input tanpa menghapus efek.
+- [x] Optimasi runtime WebGL, offscreen loop, forced-reflow, canvas, dan input tanpa menghapus efek — selesai lokal, menunggu verifikasi live setelah deploy.
+- [x] Audit seluruh route frontend dan perbaiki duplikasi rAF Lenis pada desktop smooth-scroll — efek tetap dipertahankan.
+- [x] Profiling Chromium desktop/mobile dan optimasi final scroll, ticker, canvas, lazy effect, serta native desktop wheel — tanpa menghapus efek.
+- [x] Bandingkan source React Bits dan bundle live untuk ScrollStack/Staggered Menu; pertahankan visual asli sambil menolak loop ScrollStack live yang berisiko flicker/low FPS.
+- [x] Tambahkan cleanup semua tween GSAP Staggered Menu saat unmount tanpa mengubah stagger, duration, atau easing.
+- [x] Perbaiki `DepthCarousel` agar wheel vertikal menggulir halaman dan hanya wheel horizontal yang mengubah slide.
+- [x] Optimalkan style write dan `will-change` DepthCarousel tanpa mengubah output visual.
+- [x] Hentikan autoplay DepthCarousel saat offscreen dan resume saat kembali terlihat.
+- [x] Cache geometri statis ElectricBorder saat resize tanpa mengubah noise/parameter animasi.
+- [x] Tandai listener input non-blocking sebagai passive pada efek yang tidak memanggil `preventDefault()`.
+- [x] Riset source resmi React Bits Staggered Menu dan pertahankan timeline visual aslinya.
+- [x] Coalesce pointer drag DepthCarousel ke satu rAF per frame tanpa mengubah physics/output.
+- [x] Pause autoplay DepthCarousel saat lightbox terbuka dan resume setelah lightbox ditutup.
+- [x] Terapkan `will-change` Staggered Menu hanya selama animasi aktif.
+- [x] Hentikan konkurensi SplashCursor pada area carousel dan lightbox saat pointer/drag aktif.
+- [x] Hapus re-render parent Navbar yang redundan saat Staggered Menu dibuka/ditutup.
+- [x] Jeda SplashCursor, Scanner, dan ElectricBorder selama timeline Staggered Menu aktif, lalu resume setelah close selesai.
 - [x] Hentikan preload `animation-vendor` dan hapus QueryClientProvider/query-vendor yang tidak digunakan.
 - [x] Pertahankan Roboto Flex/VariableProximity dan pindahkan pemuatannya dari CSS `@import` ke link utama dengan range lebih sempit.
 - [x] Migrasikan `TestimoniPreview` ke thumbnail WebP; gambar penuh tetap untuk lightbox.

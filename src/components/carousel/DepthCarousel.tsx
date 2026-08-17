@@ -97,6 +97,8 @@ const DepthCarousel = ({
     moved: boolean;
     id: number;
   } | null>(null);
+  const dragFrameRef = useRef<number | null>(null);
+  const pendingPointerXRef = useRef<number | null>(null);
   const wheelTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoTimerRef = useRef<number | null>(null);
   const reducedRef = useRef(false);
@@ -163,14 +165,27 @@ const DepthCarousel = ({
       const blurPx = cfg.blur > 0 ? Math.min(cfg.blur, (back / Math.max(1, cfg.visibleCards)) * cfg.blur) : 0;
       const zi = Math.round(2000 - d * 20);
 
-      el.style.transform = `translate(-50%, -50%) scale(${sc}) translateX(${tx.toFixed(2)}px) translateZ(${tz.toFixed(2)}px) rotateY(${ry.toFixed(3)}deg)`;
-      el.style.opacity = opacity.toFixed(3);
-      el.style.filter = `brightness(${brightness.toFixed(3)}) blur(${blurPx.toFixed(2)}px)`;
-      el.style.zIndex = String(zi);
-      el.style.pointerEvents = shown && opacity > 0.05 ? 'auto' : 'none';
+      const transform = `translate(-50%, -50%) scale(${sc}) translateX(${tx.toFixed(2)}px) translateZ(${tz.toFixed(2)}px) rotateY(${ry.toFixed(3)}deg)`;
+      const opacityValue = opacity.toFixed(3);
+      const filter = `brightness(${brightness.toFixed(3)}) blur(${blurPx.toFixed(2)}px)`;
+      const zIndex = String(zi);
+      const pointerEvents = shown && opacity > 0.05 ? 'auto' : 'none';
+
+      // Avoid needless style writes during GSAP updates. The visual output is
+      // unchanged, but unchanged cards stay off the main-thread style path.
+      if (el.style.transform !== transform) el.style.transform = transform;
+      if (el.style.opacity !== opacityValue) el.style.opacity = opacityValue;
+      if (el.style.filter !== filter) el.style.filter = filter;
+      if (el.style.zIndex !== zIndex) el.style.zIndex = zIndex;
+      if (el.style.pointerEvents !== pointerEvents) el.style.pointerEvents = pointerEvents;
+      const willChange = shown ? 'transform, opacity, filter' : 'auto';
+      if (el.style.willChange !== willChange) el.style.willChange = willChange;
 
       const ov = overlayRefs.current[i];
-      if (ov) ov.style.opacity = clamp(back * cfg.falloff * 1.25, 0, 0.86).toFixed(3);
+      if (ov) {
+        const overlayOpacity = clamp(back * cfg.falloff * 1.25, 0, 0.86).toFixed(3);
+        if (ov.style.opacity !== overlayOpacity) ov.style.opacity = overlayOpacity;
+      }
     }
   }, []);
 
@@ -248,9 +263,14 @@ const DepthCarousel = ({
     const onWheel = (e: WheelEvent) => {
       const cfg = cfgRef.current as { count: number; cardWidth: number };
       if (cfg.count < 2) return;
+
+      // Vertical wheel belongs to the page. Only a predominantly horizontal
+      // trackpad gesture is allowed to change the carousel position.
+      if (Math.abs(e.deltaY) >= Math.abs(e.deltaX) || Math.abs(e.deltaX) < 1) return;
+
       e.preventDefault();
       tweenRef.current?.kill();
-      const raw = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      const raw = e.deltaX;
       const delta = e.deltaMode === 1 ? raw * 24 : raw;
       const step = clamp(delta / (cfg.cardWidth * 0.9), -0.6, 0.6);
       posRef.current += step;
@@ -268,6 +288,9 @@ const DepthCarousel = ({
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     const cfg = cfgRef.current as { count: number };
     if (cfg.count < 2) return;
+    if (dragFrameRef.current !== null) cancelAnimationFrame(dragFrameRef.current);
+    dragFrameRef.current = null;
+    pendingPointerXRef.current = null;
     tweenRef.current?.kill();
     dragRef.current = {
       x: e.clientX,
@@ -280,30 +303,52 @@ const DepthCarousel = ({
     };
   }, []);
 
+  const processDragMove = useCallback((clientX: number) => {
+    const drag = dragRef.current;
+    if (!drag) return;
+    const cfg = cfgRef.current as { cardWidth: number };
+    const stepPx = Math.max(cfg.cardWidth * 0.55 * scaleRef.current, 40);
+    const dx = clientX - drag.x;
+    if (!drag.moved && Math.abs(dx) > 4) {
+      drag.moved = true;
+      rootRef.current?.setPointerCapture(drag.id);
+    }
+    if (!drag.moved) return;
+    const now = performance.now();
+    const dt = Math.max(now - drag.lastT, 1);
+    drag.v = (clientX - drag.lastX) / dt;
+    drag.lastX = clientX;
+    drag.lastT = now;
+    posRef.current = drag.startPos - dx / stepPx;
+    layout(posRef.current);
+  }, [layout]);
+
+  const flushDragMove = useCallback(() => {
+    if (dragFrameRef.current !== null) cancelAnimationFrame(dragFrameRef.current);
+    dragFrameRef.current = null;
+    const clientX = pendingPointerXRef.current;
+    pendingPointerXRef.current = null;
+    if (clientX !== null) processDragMove(clientX);
+  }, [processDragMove]);
+
   const onPointerMove = useCallback(
     (e: React.PointerEvent) => {
-      const drag = dragRef.current;
-      if (!drag) return;
-      const cfg = cfgRef.current as { cardWidth: number };
-      const stepPx = Math.max(cfg.cardWidth * 0.55 * scaleRef.current, 40);
-      const dx = e.clientX - drag.x;
-      if (!drag.moved && Math.abs(dx) > 4) {
-        drag.moved = true;
-        rootRef.current?.setPointerCapture(drag.id);
+      if (!dragRef.current) return;
+      pendingPointerXRef.current = e.clientX;
+      if (dragFrameRef.current === null) {
+        dragFrameRef.current = requestAnimationFrame(() => {
+          dragFrameRef.current = null;
+          const clientX = pendingPointerXRef.current;
+          pendingPointerXRef.current = null;
+          if (clientX !== null) processDragMove(clientX);
+        });
       }
-      if (!drag.moved) return;
-      const now = performance.now();
-      const dt = Math.max(now - drag.lastT, 1);
-      drag.v = (e.clientX - drag.lastX) / dt;
-      drag.lastX = e.clientX;
-      drag.lastT = now;
-      posRef.current = drag.startPos - dx / stepPx;
-      layout(posRef.current);
     },
-    [layout]
+    [processDragMove]
   );
 
   const onPointerEnd = useCallback(() => {
+    flushDragMove();
     const drag = dragRef.current;
     if (!drag) return;
     dragRef.current = null;
@@ -312,7 +357,7 @@ const DepthCarousel = ({
     const stepPx = Math.max(cfg.cardWidth * 0.55 * scaleRef.current, 40);
     const projected = posRef.current - (drag.v * 180) / stepPx;
     setFocus(Math.round(projected), true);
-  }, [setFocus]);
+  }, [flushDragMove, setFocus]);
 
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -342,15 +387,19 @@ const DepthCarousel = ({
     const root = rootRef.current;
     let hovered = false;
     let focused = false;
+    let scrolling = false;
+    let isVisible = true;
+    let scrollTimer: number | null = null;
     const stop = () => {
       if (autoTimerRef.current) clearInterval(autoTimerRef.current);
       autoTimerRef.current = null;
     };
     const start = () => {
       stop();
+      if (!isVisible) return;
       autoTimerRef.current = window.setInterval(
         () => {
-          if (!hovered && !focused) navigateBy(1);
+          if (!hovered && !focused && !scrolling) navigateBy(1);
         },
         Math.max(cfgRef.current.autoplayDelay as number, 600)
       );
@@ -367,17 +416,42 @@ const DepthCarousel = ({
     const onFocusOut = () => {
       focused = false;
     };
+    const onScroll = () => {
+      scrolling = true;
+      tweenRef.current?.kill();
+      stop();
+      if (scrollTimer !== null) window.clearTimeout(scrollTimer);
+      scrollTimer = window.setTimeout(() => {
+        scrolling = false;
+        start();
+      }, 180);
+    };
     root?.addEventListener('mouseenter', onEnter);
     root?.addEventListener('mouseleave', onLeave);
     root?.addEventListener('focusin', onFocusIn);
     root?.addEventListener('focusout', onFocusOut);
+    window.addEventListener('scroll', onScroll, { passive: true });
+
+    const visibilityObserver = new IntersectionObserver(([entry]) => {
+      isVisible = entry.isIntersecting;
+      if (!isVisible) {
+        stop();
+        tweenRef.current?.kill();
+      } else if (!hovered && !focused && !scrolling) {
+        start();
+      }
+    }, { rootMargin: '200px 0px' });
+    visibilityObserver.observe(root);
     start();
     return () => {
       stop();
+      if (scrollTimer !== null) window.clearTimeout(scrollTimer);
+      visibilityObserver.disconnect();
       root?.removeEventListener('mouseenter', onEnter);
       root?.removeEventListener('mouseleave', onLeave);
       root?.removeEventListener('focusin', onFocusIn);
       root?.removeEventListener('focusout', onFocusOut);
+      window.removeEventListener('scroll', onScroll);
     };
   }, [autoplay, autoplayDelay, count, navigateBy]);
 
@@ -387,6 +461,7 @@ const DepthCarousel = ({
 
   useEffect(
     () => () => {
+      if (dragFrameRef.current !== null) cancelAnimationFrame(dragFrameRef.current);
       tweenRef.current?.kill();
       if (wheelTimerRef.current) clearTimeout(wheelTimerRef.current);
       if (autoTimerRef.current) clearInterval(autoTimerRef.current);

@@ -24,12 +24,16 @@ export interface Order {
   webhook_payload: Record<string, any> | null;
   email_sent: boolean;
   email_sent_at: string | null;
+  promo_code: string | null;
+  discount_amount: number;
   services?: { name: string | null; slug: string | null } | null;
 }
 
 export function useOrders(filters?: {
   status?: string;
   search?: string;
+  dateFrom?: string;
+  dateTo?: string;
   sortBy?: 'created_at' | 'amount' | 'invoice_number';
   sortOrder?: 'asc' | 'desc';
   limit?: number;
@@ -65,6 +69,14 @@ export function useOrders(filters?: {
           `invoice_number.ilike.%${f.search}%,customer_name.ilike.%${f.search}%`
         );
       }
+      if (f?.dateFrom) {
+        query = query.gte('created_at', f.dateFrom);
+      }
+      if (f?.dateTo) {
+        // dateTo dianggap inklusif → batas akhir hari (23:59:59.999).
+        const end = f.dateTo.length <= 10 ? `${f.dateTo}T23:59:59.999Z` : f.dateTo;
+        query = query.lte('created_at', end);
+      }
 
       // Sorting
       const sortBy = f?.sortBy || 'created_at';
@@ -95,6 +107,8 @@ export function useOrders(filters?: {
   }, [
     filters?.status,
     filters?.search,
+    filters?.dateFrom,
+    filters?.dateTo,
     filters?.sortBy,
     filters?.sortOrder,
     filters?.limit,

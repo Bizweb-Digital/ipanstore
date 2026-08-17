@@ -60,14 +60,19 @@ function SplashCursor({
       this.color = [0, 0, 0];
     }
 
+    const pixelRatio = 1;
+    const frameInterval = 1000 / 24;
+
+    // Keep the fluid effect, but avoid allocating desktop-sized simulation
+    // buffers that are disproportionate to the decorative canvas.
     let config = {
-      SIM_RESOLUTION,
-      DYE_RESOLUTION,
+      SIM_RESOLUTION: Math.min(SIM_RESOLUTION, 48),
+      DYE_RESOLUTION: Math.min(DYE_RESOLUTION, 320),
       CAPTURE_RESOLUTION,
       DENSITY_DISSIPATION,
       VELOCITY_DISSIPATION,
       PRESSURE,
-      PRESSURE_ITERATIONS,
+      PRESSURE_ITERATIONS: Math.min(PRESSURE_ITERATIONS, 2),
       CURL,
       SPLAT_RADIUS,
       SPLAT_FORCE,
@@ -705,8 +710,44 @@ function SplashCursor({
     let lastUpdateTime = Date.now();
     let colorUpdateTimer = 0.0;
 
-    function updateFrame() {
-      if (!isActive) return;
+    let pageVisible = !document.hidden;
+    let lastFrameTime = 0;
+    let interactionActive = false;
+    let isScrolling = false;
+    let menuOpen = false;
+    let idleTimer: number | null = null;
+    let scrollIdleTimer: number | null = null;
+
+    const stopAnimation = () => {
+      if (animationFrameId.current !== null) {
+        cancelAnimationFrame(animationFrameId.current);
+        animationFrameId.current = null;
+      }
+    };
+
+    const wakeAnimation = () => {
+      if (isScrolling || menuOpen) return;
+      interactionActive = true;
+      if (idleTimer !== null) window.clearTimeout(idleTimer);
+      idleTimer = window.setTimeout(() => {
+        interactionActive = false;
+        stopAnimation();
+      }, 900);
+
+      if (pageVisible && animationFrameId.current === null) {
+        lastUpdateTime = Date.now();
+        animationFrameId.current = requestAnimationFrame(updateFrame);
+      }
+    };
+
+    function updateFrame(timestamp: number) {
+      animationFrameId.current = null;
+      if (!isActive || !pageVisible || !interactionActive) return;
+      if (timestamp - lastFrameTime < frameInterval) {
+        animationFrameId.current = requestAnimationFrame(updateFrame);
+        return;
+      }
+      lastFrameTime = timestamp;
       const dt = calcDeltaTime();
       if (resizeCanvas()) initFramebuffers();
       updateColors(dt);
@@ -841,9 +882,11 @@ function SplashCursor({
 
     function clickSplat(pointer) {
       const color = generateColor();
-      color.r *= 10.0;
-      color.g *= 10.0;
-      color.b *= 10.0;
+      // Keep click splats visible without the white flash from the original
+      // multiplier when using the slate palette.
+      color.r *= 2.5;
+      color.g *= 2.5;
+      color.b *= 2.5;
       let dx = 10 * (Math.random() - 0.5);
       let dy = 30 * (Math.random() - 0.5);
       splat(pointer.texcoordX, pointer.texcoordY, dx, dy, color);
@@ -991,7 +1034,6 @@ function SplashCursor({
     }
 
     function scaleByPixelRatio(input) {
-      const pixelRatio = window.devicePixelRatio || 1;
       return Math.floor(input * pixelRatio);
     }
 
@@ -1006,7 +1048,13 @@ function SplashCursor({
     }
 
     // Named event handlers for proper cleanup
+    const ignoredTargets = 'button, a, input, textarea, select, [role="button"], .staggered-menu-panel, .staggered-menu-header, .depth-carousel, .yarl__root, .yarl__container';
     function handleMouseDown(e) {
+      const target = e.target as Element | null;
+      if (target?.closest(ignoredTargets)) {
+        return;
+      }
+      wakeAnimation();
       let pointer = pointers[0];
       let posX = scaleByPixelRatio(e.clientX);
       let posY = scaleByPixelRatio(e.clientY);
@@ -1016,6 +1064,11 @@ function SplashCursor({
 
     let firstMouseMoveHandled = false;
     function handleMouseMove(e) {
+      const target = e.target as Element | null;
+      if (target?.closest(ignoredTargets)) {
+        return;
+      }
+      wakeAnimation();
       let pointer = pointers[0];
       let posX = scaleByPixelRatio(e.clientX);
       let posY = scaleByPixelRatio(e.clientY);
@@ -1029,6 +1082,7 @@ function SplashCursor({
     }
 
     function handleTouchStart(e) {
+      wakeAnimation();
       const touches = e.targetTouches;
       let pointer = pointers[0];
       for (let i = 0; i < touches.length; i++) {
@@ -1039,6 +1093,7 @@ function SplashCursor({
     }
 
     function handleTouchMove(e) {
+      wakeAnimation();
       const touches = e.targetTouches;
       let pointer = pointers[0];
       for (let i = 0; i < touches.length; i++) {
@@ -1059,21 +1114,46 @@ function SplashCursor({
     // Add event listeners
     window.addEventListener('mousedown', handleMouseDown);
     window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('touchstart', handleTouchStart);
-    window.addEventListener('touchmove', handleTouchMove, false);
-    window.addEventListener('touchend', handleTouchEnd);
+    window.addEventListener('touchstart', handleTouchStart, { passive: true });
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
+    window.addEventListener('touchend', handleTouchEnd, { passive: true });
 
-    updateFrame();
+    const handleVisibilityChange = () => {
+      pageVisible = !document.hidden;
+      if (!pageVisible) stopAnimation();
+      if (pageVisible && isActive && interactionActive && animationFrameId.current === null) {
+        lastUpdateTime = Date.now();
+        animationFrameId.current = requestAnimationFrame(updateFrame);
+      }
+    };
+    const handleScroll = () => {
+      isScrolling = true;
+      stopAnimation();
+      if (scrollIdleTimer !== null) window.clearTimeout(scrollIdleTimer);
+      scrollIdleTimer = window.setTimeout(() => {
+        isScrolling = false;
+      }, 140);
+    };
+    const handleMenuState = (event: Event) => {
+      menuOpen = Boolean((event as CustomEvent<{ open?: boolean }>).detail?.open);
+      if (menuOpen) {
+        interactionActive = false;
+        stopAnimation();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener('ipan:menu-state', handleMenuState);
+    window.addEventListener('scroll', handleScroll, { passive: true });
 
     // Cleanup function
     return () => {
       isActive = false;
+      if (idleTimer !== null) window.clearTimeout(idleTimer);
+      if (scrollIdleTimer !== null) window.clearTimeout(scrollIdleTimer);
 
       // Cancel animation frame
-      if (animationFrameId.current) {
-        cancelAnimationFrame(animationFrameId.current);
-        animationFrameId.current = null;
-      }
+      stopAnimation();
 
       // Remove event listeners
       window.removeEventListener('mousedown', handleMouseDown);
@@ -1081,6 +1161,9 @@ function SplashCursor({
       window.removeEventListener('touchstart', handleTouchStart);
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('touchend', handleTouchEnd);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener('ipan:menu-state', handleMenuState);
+      window.removeEventListener('scroll', handleScroll);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

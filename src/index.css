@@ -77,7 +77,6 @@
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     /* Ultra-subtle ambient depth — no grid noise */
     background-image: radial-gradient(ellipse 80% 40% at 50% -10%, rgba(148, 163, 184, 0.03), transparent 70%);
-    background-attachment: fixed;
     overflow-x: hidden;
     line-height: 1.7;
     min-height: 100vh;
@@ -368,7 +367,7 @@
     box-shadow:
       0 30px 60px -20px rgba(0, 0, 0, 0.65),
       0 8px 20px -10px rgba(0, 0, 0, 0.5);
-    will-change: transform, opacity, filter;
+    will-change: auto;
     cursor: pointer;
     transform: translate(-50%, -50%);
   }
@@ -1039,6 +1038,26 @@
 .scroll-reveal-stagger.revealed > * {
   opacity: 1;
   transform: translateY(0);
+}
+
+.split-text-unit {
+  display: inline-block;
+  opacity: 0;
+  transform: translate3d(0, 24px, 0);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.split-text-visible .split-text-unit {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .split-text-unit {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
 }
 
 @keyframes fade-up {

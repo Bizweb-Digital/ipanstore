@@ -1,9 +1,4 @@
-import { useEffect, useRef } from "react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { SplitText as GSAPSplitText } from "gsap/SplitText";
-
-gsap.registerPlugin(ScrollTrigger, GSAPSplitText);
+import { useEffect, useRef, useState } from "react";
 
 interface SplitTextProps {
   text: string;
@@ -23,9 +18,9 @@ interface SplitTextProps {
 }
 
 /**
- * SplitText — animasi teks saat elemen masuk viewport (reactbits).
- * Versi ini memakai gsap + ScrollTrigger + SplitText yang sudah ada di
- * package gsap (tanpa dependensi tambahan @gsap/react).
+ * SplitText — animasi teks saat elemen masuk viewport.
+ * Animasi memakai CSS + IntersectionObserver agar tidak menyalakan ticker
+ * GSAP global untuk animasi sekali jalan.
  *
  * Perbaikan penting:
  * - Default split per KATA, bukan per huruf → heading tidak pernah patah di
@@ -45,78 +40,43 @@ const SplitText = ({
   textAlign = "center",
 }: SplitTextProps) => {
   const ref = useRef<HTMLElement>(null);
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
     if (!el || !text) return;
 
-    let split: GSAPSplitText | null = null;
-    let st: ScrollTrigger | null = null;
-
-    try {
-      split = new GSAPSplitText(el, {
-        type: splitType,
-        charsClass: "split-char",
-        wordsClass: "split-word",
-        linesClass: "split-line",
-        reduceWhiteSpace: false,
-      });
-
-      const targets: Element[] =
-        splitType.includes("words") && split.words.length
-          ? split.words
-          : splitType.includes("chars") && split.chars?.length
-            ? split.chars
-            : split.lines?.length
-              ? split.lines
-              : split.words || split.chars || [];
-
-      // Pastikan teks terlihat (tidak pernah menghilang permanen).
-      gsap.set(targets, { opacity: 1, y: 0 });
-
-      st = ScrollTrigger.create({
-        trigger: el,
-        start: `top ${(1 - threshold) * 100}%`,
-        once: true,
-        onEnter: () => {
-          gsap.fromTo(
-            targets,
-            { opacity: 0, y: 24 },
-            {
-              opacity: 1,
-              y: 0,
-              duration,
-              ease,
-              stagger: delay / 1000,
-              force3D: true,
-              overwrite: true,
-            }
-          );
-        },
-      });
-    } catch (_err) {
-      if (el) el.style.opacity = "1";
-    }
-
-    return () => {
-      st?.kill();
-      try {
-        split?.revert();
-      } catch (_err) {
-        /* noop */
-      }
-    };
-  }, [text, delay, duration, ease, splitType, threshold]);
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+      setVisible(true);
+      observer.disconnect();
+    }, { threshold });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [threshold]);
 
   const Tag = (tag || "h2") as React.ElementType;
+  const units = splitType === "chars" ? Array.from(text) : text.split(" ");
 
   return (
     <Tag
       ref={ref}
-      className={className}
+      className={`${className} split-text${visible ? " split-text-visible" : ""}`.trim()}
       style={{ textAlign, wordWrap: "break-word", overflowWrap: "break-word" }}
     >
-      {text}
+      {units.map((unit, index) => (
+        <span
+          key={`${unit}-${index}`}
+          className="split-text-unit"
+          style={{ transitionDelay: `${index * delay}ms` }}
+        >
+          {unit}
+        </span>
+      )).reduce<React.ReactNode[]>((result, unit, index) => {
+        result.push(unit);
+        if (splitType !== "chars" && index < units.length - 1) result.push(" ");
+        return result;
+      }, [])}
     </Tag>
   );
 };

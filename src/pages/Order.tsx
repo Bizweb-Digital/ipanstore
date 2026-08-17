@@ -10,6 +10,7 @@ import {
   CreditCard,
   ChevronLeft,
   Loader2,
+  BadgePercent,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import SEOHead from "@/components/SEOHead";
@@ -19,6 +20,9 @@ import PageBackground from "@/components/effects/PageBackground";
 import Reveal from "@/components/effects/Reveal";
 import { AuroraText } from "@/components/ui/aurora-text";
 import { createDokuPayment } from "@/lib/doku";
+import { useActiveServices } from "@/hooks/useActiveServices";
+import { ActiveService } from "@/lib/services";
+import { lookupPromoCode, applyPromo, PromoCode } from "@/lib/admin/promo";
 
 /* ─── Data Paket (sinkron dengan halaman Paket) ─────────────────────────── */
 type Pkg = {
@@ -31,7 +35,7 @@ type Pkg = {
   features: string[];
 };
 
-const packages: Pkg[] = [
+const STATIC_PACKAGES: Pkg[] = [
   {
     id: "set-pc",
     category: "SET PC",
@@ -115,6 +119,20 @@ const Order = () => {
   const [searchParams] = useSearchParams();
   const preselect = searchParams.get("paket");
 
+  // Paket dari tabel services Supabase (dikelola admin) dengan fallback statis.
+  const { services: dbServices, fromDb } = useActiveServices(STATIC_PACKAGES as ActiveService[]);
+  const packages: Pkg[] = fromDb
+    ? dbServices.map((s) => ({
+        id: s.id,
+        category: s.category,
+        name: s.name,
+        price: s.price,
+        priceLabel: s.priceLabel,
+        highlight: s.highlight,
+        features: s.features,
+      }))
+    : STATIC_PACKAGES;
+
   const [selectedId, setSelectedId] = useState<string>(
     packages.some((p) => p.id === preselect) ? (preselect as string) : packages[0].id
   );
@@ -124,10 +142,45 @@ const Order = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // ── Kode Promo ────────────────────────────────────────────────────────────
+  const [promoInput, setPromoInput] = useState("");
+  const [promoApplied, setPromoApplied] = useState<{ code: string; discount: number; total: number } | null>(null);
+  const [promoMsg, setPromoMsg] = useState<string | null>(null);
+  const [checkingPromo, setCheckingPromo] = useState(false);
+
   const selected = useMemo(
     () => packages.find((p) => p.id === selectedId) ?? packages[0],
-    [selectedId]
+    [selectedId, packages]
   );
+
+  const handleApplyPromo = async () => {
+    setPromoMsg(null);
+    setPromoApplied(null);
+    const code = promoInput.trim();
+    if (!code) {
+      setPromoMsg("Masukkan kode promo.");
+      return;
+    }
+    setCheckingPromo(true);
+    try {
+      const promo = await lookupPromoCode(code);
+      if (!promo) {
+        setPromoMsg("Kode promo tidak ditemukan atau tidak aktif.");
+        return;
+      }
+      const result = applyPromo(selected.price, promo);
+      if (!result.ok) {
+        setPromoMsg(result.message);
+        return;
+      }
+      setPromoApplied({ code: promo.code, discount: result.discount, total: result.total });
+      setPromoMsg(`Kode ${promo.code} berlaku! Anda hemat Rp ${result.discount.toLocaleString("id-ID")}.`);
+    } catch {
+      setPromoMsg("Gagal memeriksa kode promo. Coba lagi.");
+    } finally {
+      setCheckingPromo(false);
+    }
+  };
 
   const handleCheckout = async () => {
     setError(null);
@@ -146,6 +199,7 @@ const Order = () => {
         customerPhone: wa.trim(),
         itemName: `IPAN STORE - ${selected.name}`,
         description: `Pembelian paket ${selected.name} (${selected.priceLabel})`,
+        promoCode: promoApplied?.code,
       });
 
       if (res.checkoutUrl) {
@@ -291,16 +345,66 @@ const Order = () => {
                   </div>
                 </div>
 
+                {/* Kode Promo */}
+                <div className="rounded-xl border border-white/16 bg-[#131314]/60 p-4 mb-4">
+                  <label className="block text-xs font-medium text-zinc-400 mb-2">
+                    Kode Promo (opsional)
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      value={promoInput}
+                      onChange={(e) => {
+                        setPromoInput(e.target.value.toUpperCase());
+                        setPromoMsg(null);
+                        setPromoApplied(null);
+                      }}
+                      placeholder="misal: HEMAT10"
+                      className="flex-1 rounded-lg bg-[#131314] border border-white/16 px-3 py-2 text-sm text-[#F4F4F5] placeholder:text-zinc-600 focus:outline-none focus:border-[#94A3B8]/60"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleApplyPromo}
+                      disabled={checkingPromo || !promoInput.trim()}
+                      className="shrink-0"
+                    >
+                      {checkingPromo ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <BadgePercent className="h-4 w-4" />
+                      )}
+                      <span className="ml-1.5">Pakai</span>
+                    </Button>
+                  </div>
+                  {promoMsg && (
+                    <p
+                      className={`mt-2 text-[11px] ${
+                        promoApplied ? "text-green-400" : "text-red-400"
+                      }`}
+                    >
+                      {promoMsg}
+                    </p>
+                  )}
+                </div>
+
                 {/* Ringkasan */}
                 <div className="rounded-xl border border-white/16 bg-[#131314]/60 p-4 mb-6">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-sm text-zinc-400">Paket</span>
                     <span className="text-sm font-medium text-[#F4F4F5]">{selected.name}</span>
                   </div>
+                  {promoApplied && (
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm text-zinc-400">Diskon ({promoApplied.code})</span>
+                      <span className="text-sm font-medium text-green-400">
+                        -{formatRupiah(promoApplied.discount)}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-zinc-400">Total Bayar</span>
                     <span className="font-mono text-xl font-bold text-[#F4F4F5]">
-                      {formatRupiah(selected.price)}
+                      {formatRupiah(promoApplied ? promoApplied.total : selected.price)}
                     </span>
                   </div>
                 </div>

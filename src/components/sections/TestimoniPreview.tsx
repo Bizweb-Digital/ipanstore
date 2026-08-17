@@ -1,8 +1,7 @@
-import { useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Images } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "../ui/button";
-import DepthCarousel from "../carousel/DepthCarousel";
 import Lightbox from "yet-another-react-lightbox";
 import "yet-another-react-lightbox/styles.css";
 import Reveal from "../effects/Reveal";
@@ -21,6 +20,31 @@ const testiPhotos = [
 ];
 
 const lightboxSlides = testiPhotos.map((p) => ({ src: p.full }));
+const DepthCarousel = lazy(() => import("../carousel/DepthCarousel"));
+
+const DeferredDepthCarousel = (props: React.ComponentProps<typeof DepthCarousel>) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setReady(true);
+        observer.disconnect();
+      }
+    }, { rootMargin: "500px" });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={ref} className="h-full">
+      {ready ? <Suspense fallback={null}><DepthCarousel {...props} /></Suspense> : null}
+    </div>
+  );
+};
 
 const TestimoniPreview = () => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -51,7 +75,7 @@ const TestimoniPreview = () => {
 
       {/* Depth Carousel Gallery */}
       <div className="relative w-full h-[380px] sm:h-[460px] md:h-[520px] mb-10">
-        <DepthCarousel
+        <DeferredDepthCarousel
           items={testiPhotos}
           cardWidth={230}
           cardHeight={400}
@@ -65,7 +89,7 @@ const TestimoniPreview = () => {
           falloff={0.2}
           blur={4}
           duration={600}
-          autoplay={true}
+          autoplay={!lightboxOpen}
           autoplayDelay={3500}
           loop={true}
           showControls={false}

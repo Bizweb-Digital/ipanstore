@@ -33,15 +33,19 @@ import {
   Loader2,
   DollarSign,
   Tag,
+  Download,
 } from 'lucide-react';
 import { useServices, Service } from '@/hooks/useServices';
 import { toast } from 'react-hot-toast';
+import { exportToCsv } from '@/lib/admin/csv';
+import { useAuditLogger } from '@/hooks/useAuditLog';
 
 export default function AdminServices() {
   const [search, setSearch] = useState('');
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const logAudit = useAuditLogger();
 
   const { services, loading, error, refetch, deleteService, updateService } = useServices();
   // Keep the page renderable even if a failed request returns no data.
@@ -54,6 +58,21 @@ export default function AdminServices() {
           s.description.toLowerCase().includes(search.toLowerCase())
       )
     : displayServices;
+
+  const exportCsv = () => {
+    exportToCsv(
+      `services_${new Date().toISOString().slice(0, 10)}.csv`,
+      [
+        { header: 'Nama', value: (r) => r.name },
+        { header: 'Slug', value: (r) => r.slug },
+        { header: 'Harga', value: (r) => r.price },
+        { header: 'Aktif', value: (r) => (r.is_active ? 'Ya' : 'Tidak') },
+        { header: 'Deskripsi', value: (r) => r.description },
+        { header: 'Dibuat', value: (r) => r.created_at },
+      ],
+      filteredServices as unknown as Record<string, unknown>[]
+    );
+  };
 
   const handleOpenEdit = (service: Service) => {
     setEditingService(service);
@@ -92,6 +111,12 @@ export default function AdminServices() {
 
       if (result.error) throw result.error;
 
+      await logAudit(
+        editingService.id ? 'service.update' : 'service.create',
+        editingService.id || null,
+        { name: editingService.name, slug: editingService.slug, price: editingService.price }
+      );
+
       toast.success(editingService.id ? 'Layanan berhasil diperbarui' : 'Layanan berhasil dibuat');
       handleCloseDialog();
       await refetch();
@@ -110,6 +135,7 @@ export default function AdminServices() {
 
     try {
       await deleteService(id);
+      await logAudit('service.delete', id);
       toast.success('Layanan berhasil dihapus');
       await refetch();
     } catch (error: unknown) {
@@ -138,10 +164,16 @@ export default function AdminServices() {
               Kelola layanan dan paket IPAN STORE
             </p>
           </div>
+          <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={exportCsv} disabled={filteredServices.length === 0}>
+            <Download className="w-4 h-4 mr-2" />
+            Export CSV
+          </Button>
           <Button onClick={handleOpenCreate}>
             <Plus className="w-4 h-4 mr-2" />
             Tambah Layanan
           </Button>
+        </div>
         </div>
 
         {/* Search & Stats */}

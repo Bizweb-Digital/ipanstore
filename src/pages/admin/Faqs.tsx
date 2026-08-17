@@ -22,9 +22,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { HelpCircle, Plus, Search, Edit, Trash2, CheckCircle2, XCircle } from 'lucide-react';
+import { HelpCircle, Plus, Search, Edit, Trash2, CheckCircle2, XCircle, Download } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { supabase } from '@/lib/admin/supabase';
+import { exportToCsv } from '@/lib/admin/csv';
+import { useAuditLogger } from '@/hooks/useAuditLog';
 
 export interface FAQ {
   id: string;
@@ -44,6 +46,7 @@ export default function AdminFaqs() {
   const [editing, setEditing] = useState<FAQ | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const logAudit = useAuditLogger();
 
   const fetchFaqs = async () => {
     try {
@@ -75,6 +78,20 @@ export default function AdminFaqs() {
           faq.answer.toLowerCase().includes(search.toLowerCase())
       )
     : faqs;
+
+  const exportCsv = () => {
+    exportToCsv(
+      `faqs_${new Date().toISOString().slice(0, 10)}.csv`,
+      [
+        { header: 'Pertanyaan', value: (r) => r.question },
+        { header: 'Jawaban', value: (r) => r.answer },
+        { header: 'Urutan', value: (r) => r.sort_order },
+        { header: 'Aktif', value: (r) => (r.is_active ? 'Ya' : 'Tidak') },
+        { header: 'Dibuat', value: (r) => r.created_at },
+      ],
+      filteredFaqs as unknown as Record<string, unknown>[]
+    );
+  };
 
   const handleOpenEdit = (faq: FAQ) => {
     setEditing(faq);
@@ -117,6 +134,12 @@ export default function AdminFaqs() {
 
       if (error) throw error;
 
+      await logAudit(
+        editing.id ? 'faq.update' : 'faq.create',
+        editing.id || null,
+        { question: editing.question, is_active: editing.is_active }
+      );
+
       toast.success(editing.id ? 'FAQ berhasil diperbarui' : 'FAQ berhasil dibuat');
       handleCloseDialog();
       await fetchFaqs();
@@ -136,6 +159,7 @@ export default function AdminFaqs() {
     try {
       const { error } = await supabase.from('faqs').delete().eq('id', id);
       if (error) throw error;
+      await logAudit('faq.delete', id);
       toast.success('FAQ berhasil dihapus');
       await fetchFaqs();
     } catch (error: any) {
@@ -162,10 +186,16 @@ export default function AdminFaqs() {
             <h1 className="text-3xl font-bold font-display">FAQs</h1>
             <p className="text-muted-foreground mt-1">Kelola pertanyaan yang sering ditanyakan</p>
           </div>
+          <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={exportCsv} disabled={filteredFaqs.length === 0}>
+            <Download className="w-4 h-4 mr-2" />
+            Export CSV
+          </Button>
           <Button onClick={handleOpenCreate}>
             <Plus className="w-4 h-4 mr-2" />
             Tambah FAQ
           </Button>
+        </div>
         </div>
 
         {/* Search & Stats */}

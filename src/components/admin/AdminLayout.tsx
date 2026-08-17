@@ -14,6 +14,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Store,
+  ScrollText,
+  BadgePercent,
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -45,6 +47,16 @@ const navigationItems = [
     path: '/admin/faqs',
     label: 'FAQs',
     icon: HelpCircle,
+  },
+  {
+    path: '/admin/promos',
+    label: 'Promos',
+    icon: BadgePercent,
+  },
+  {
+    path: '/admin/audit',
+    label: 'Audit Log',
+    icon: ScrollText,
   },
   {
     path: '/admin/reports',

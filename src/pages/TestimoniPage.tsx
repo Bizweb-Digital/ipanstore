@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Star, Images, CheckCircle2, Quote } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Star, Images, CheckCircle2, Quote, Send, Loader2, MessageSquarePlus } from "lucide-react";
 import SEOHead from "@/components/SEOHead";
 import Layout from "@/components/layout/Layout";
 import AnimatedCounter from "@/components/effects/AnimatedCounter";
@@ -10,6 +10,15 @@ import { ShineBorder } from "@/components/ui/shine-border";
 import PageBackground from "@/components/effects/PageBackground";
 import Reveal from "@/components/effects/Reveal";
 import { breadcrumbJsonLd } from "@/lib/seo";
+import { supabase } from "@/lib/admin/supabase";
+
+interface Review {
+  id: string;
+  name: string;
+  rating: number;
+  message: string;
+  created_at: string;
+}
 
 type TestiPhoto = {
   /** Nama file tanpa ekstensi. */
@@ -53,6 +62,72 @@ const featuredPhoto = testiPhotos.find((p) => p.featured) ?? testiPhotos[0];
 const TestimoniPage = () => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+
+  // ── Review dari Supabase (yang sudah disetujui admin) ─────────────────────
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from("testimonials")
+          .select("id, name, rating, message, created_at")
+          .eq("is_approved", true)
+          .order("created_at", { ascending: false })
+          .limit(12);
+        if (!error && mounted) {
+          setReviews((data as Review[]) || []);
+        }
+      } catch {
+        // Senyap — halaman tetap tampil walau fetch gagal.
+      } finally {
+        if (mounted) setReviewsLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // ── Form submit testimoni publik (perlu moderasi admin) ───────────────────
+  const [form, setForm] = useState({ name: "", message: "", rating: 5 });
+  const [submitting, setSubmitting] = useState(false);
+  const [submitMsg, setSubmitMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitMsg(null);
+    if (!form.name.trim() || !form.message.trim()) {
+      setSubmitMsg({ ok: false, text: "Nama dan pesan wajib diisi." });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.from("testimonials").insert({
+        name: form.name.trim(),
+        rating: form.rating,
+        message: form.message.trim(),
+        is_approved: false,
+      });
+      if (error) throw error;
+      setSubmitMsg({
+        ok: true,
+        text: "Terima kasih! Testimoni kamu terkirim dan akan tampil setelah ditinjau admin.",
+      });
+      setForm({ name: "", message: "", rating: 5 });
+    } catch (err: any) {
+      setSubmitMsg({
+        ok: false,
+        text: err?.message?.includes("permission") || err?.message?.includes("policy")
+          ? "Fitur kirim testimoni sedang dikonfigurasi. Silakan hubungi kami via WhatsApp."
+          : "Gagal mengirim testimoni. Silakan coba lagi.",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const openLightbox = (index: number) => {
     setLightboxIndex(index);
@@ -247,6 +322,139 @@ const TestimoniPage = () => {
               </div>
             </div>
           </section>
+
+      {/* Review dari pelanggan (Supabase) */}
+      {!reviewsLoading && reviews.length > 0 && (
+        <section className="relative py-16 md:py-20">
+          <PageBackground opacity={0.12} />
+          <div className="container mx-auto px-4 relative z-10">
+            <div className="max-w-3xl mx-auto text-center mb-12">
+              <span className="section-subheading">REVIEW CUSTOMER</span>
+              <h2 className="h2-clamp font-bold tracking-tight text-[#F4F4F5] mb-4">
+                Apa Kata Mereka
+              </h2>
+            </div>
+            <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto">
+              {reviews.map((r) => (
+                <div key={r.id} className="gaming-card p-6 flex flex-col animate-fade-up">
+                  <div className="flex items-center gap-0.5 mb-3">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star
+                        key={i}
+                        className={`h-4 w-4 ${i < r.rating ? "fill-zinc-300 text-[#94A3B8]" : "text-zinc-700"}`}
+                      />
+                    ))}
+                  </div>
+                  <p className="flex-1 text-sm text-zinc-400 leading-relaxed mb-4">
+                    "{r.message}"
+                  </p>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="w-7 h-7 rounded-full bg-[#1a1a1a] border border-white/16 flex items-center justify-center text-[11px] font-bold text-[#94A3B8]">
+                        {r.name.charAt(0).toUpperCase()}
+                      </span>
+                      <span className="text-sm font-medium text-[#F4F4F5]">{r.name}</span>
+                    </div>
+                    <span className="gaming-badge">Verified</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Form kirim testimoni */}
+      <section className="relative py-16 md:py-20">
+        <PageBackground opacity={0.12} />
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="max-w-2xl mx-auto gaming-card p-6 md:p-10">
+            <div className="flex items-center gap-3 mb-6">
+              <MessageSquarePlus className="h-6 w-6 text-[#94A3B8]" />
+              <h2 className="text-xl font-bold tracking-tight text-[#F4F4F5]">
+                Kirim Testimoni Kamu
+              </h2>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Rating */}
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-2">Rating Kamu</label>
+                <div className="flex items-center gap-1">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setForm({ ...form, rating: n })}
+                      aria-label={`Rating ${n}`}
+                      className="p-1 -m-1"
+                    >
+                      <Star
+                        className={`h-7 w-7 transition-colors ${
+                          n <= form.rating ? "fill-zinc-300 text-[#94A3B8]" : "text-zinc-700"
+                        }`}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1.5">Nama *</label>
+                <input
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder="Nama kamu"
+                  className="w-full rounded-lg bg-[#131314] border border-white/16 px-4 py-2.5 text-sm text-[#F4F4F5] placeholder:text-zinc-600 focus:outline-none focus:border-[#94A3B8]/60"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1.5">Pesan Testimoni *</label>
+                <textarea
+                  value={form.message}
+                  onChange={(e) => setForm({ ...form, message: e.target.value })}
+                  placeholder="Ceritakan pengalaman kamu setelah optimasi di IPAN STORE..."
+                  rows={4}
+                  className="w-full rounded-lg bg-[#131314] border border-white/16 px-4 py-2.5 text-sm text-[#F4F4F5] placeholder:text-zinc-600 focus:outline-none focus:border-[#94A3B8]/60 resize-none"
+                />
+              </div>
+
+              {submitMsg && (
+                <p
+                  className={`text-xs rounded-lg px-3 py-2 ${
+                    submitMsg.ok
+                      ? "text-green-400 bg-green-500/10 border border-green-500/30"
+                      : "text-red-400 bg-red-500/10 border border-red-500/30"
+                  }`}
+                >
+                  {submitMsg.text}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-[#F4F4F5] text-zinc-900 font-semibold px-6 py-3 text-sm hover:bg-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" /> Mengirim...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4" /> Kirim Testimoni
+                  </>
+                )}
+              </button>
+
+              <p className="text-[11px] text-zinc-500 text-center">
+                Testimoni akan tampil di halaman ini setelah ditinjau oleh admin.
+              </p>
+            </form>
+          </div>
+        </div>
+      </section>
 
       {/* Lightbox - klik foto untuk buka full-size */}
       <Lightbox

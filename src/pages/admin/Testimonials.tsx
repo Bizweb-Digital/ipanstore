@@ -22,9 +22,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { MessageSquare, Plus, Search, Edit, Trash2, Eye, XCircle } from 'lucide-react';
+import { MessageSquare, Plus, Search, Edit, Trash2, Eye, XCircle, Download, CheckCircle2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { supabase } from '@/lib/admin/supabase';
+import { exportToCsv } from '@/lib/admin/csv';
+import { useAuditLogger } from '@/hooks/useAuditLog';
 
 export interface Testimonial {
   id: string;
@@ -46,6 +48,7 @@ export default function AdminTestimonials() {
   const [editing, setEditing] = useState<Testimonial | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const logAudit = useAuditLogger();
 
   const fetchTestimonials = async () => {
     try {
@@ -76,6 +79,38 @@ export default function AdminTestimonials() {
         t.message.toLowerCase().includes(search.toLowerCase())
       )
     : testimonials;
+
+  const exportCsv = () => {
+    exportToCsv(
+      `testimonials_${new Date().toISOString().slice(0, 10)}.csv`,
+      [
+        { header: 'Nama', value: (r) => r.name },
+        { header: 'Rating', value: (r) => r.rating },
+        { header: 'Pesan', value: (r) => r.message },
+        { header: 'Disetujui', value: (r) => (r.is_approved ? 'Ya' : 'Belum') },
+        { header: 'Dibuat', value: (r) => r.created_at },
+      ],
+      filteredTestimonials as unknown as Record<string, unknown>[]
+    );
+  };
+
+  const handleToggleApproved = async (testimonial: Testimonial) => {
+    try {
+      const { error } = await supabase
+        .from('testimonials')
+        .update({ is_approved: !testimonial.is_approved })
+        .eq('id', testimonial.id);
+      if (error) throw error;
+      await logAudit('testimonial.approval', testimonial.id, {
+        is_approved: !testimonial.is_approved,
+      });
+      toast.success(testimonial.is_approved ? 'Testimoni tidak ditampilkan' : 'Testimoni disetujui');
+      await fetchTestimonials();
+    } catch (error: any) {
+      console.error('Failed to toggle approval:', error);
+      toast.error(error.message || 'Gagal mengubah status persetujuan');
+    }
+  };
 
   const handleOpenEdit = (testimonial: Testimonial) => {
     setEditing(testimonial);
@@ -121,6 +156,12 @@ export default function AdminTestimonials() {
 
       if (error) throw error;
 
+      await logAudit(
+        editing.id ? 'testimonial.update' : 'testimonial.create',
+        editing.id || null,
+        { name: editing.name, rating: editing.rating, is_approved: editing.is_approved }
+      );
+
       toast.success(editing.id ? 'Testimoni berhasil diperbarui' : 'Testimoni berhasil dibuat');
       handleCloseDialog();
       await fetchTestimonials();
@@ -140,6 +181,7 @@ export default function AdminTestimonials() {
     try {
       const { error } = await supabase.from('testimonials').delete().eq('id', id);
       if (error) throw error;
+      await logAudit('testimonial.delete', id);
       toast.success('Testimonial berhasil dihapus');
       await fetchTestimonials();
     } catch (error: any) {
@@ -166,10 +208,16 @@ export default function AdminTestimonials() {
             <h1 className="text-3xl font-bold font-display">Testimonials</h1>
             <p className="text-muted-foreground mt-1">Kelola testimoni customer</p>
           </div>
+          <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={exportCsv} disabled={filteredTestimonials.length === 0}>
+            <Download className="w-4 h-4 mr-2" />
+            Export CSV
+          </Button>
           <Button onClick={handleOpenCreate}>
             <Plus className="w-4 h-4 mr-2" />
             Tambah Testimoni
           </Button>
+        </div>
         </div>
 
         {/* Search & Stats */}
@@ -288,6 +336,15 @@ export default function AdminTestimonials() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleToggleApproved(testimonial)}
+                              className={testimonial.is_approved ? 'text-yellow-500' : 'text-green-500'}
+                              title={testimonial.is_approved ? 'Batalkan persetujuan' : 'Setujui testimoni'}
+                            >
+                              <CheckCircle2 className="w-4 h-4" />
+                            </Button>
                             <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(testimonial)}>
                               <Edit className="w-4 h-4" />
                             </Button>

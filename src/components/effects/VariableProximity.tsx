@@ -1,29 +1,28 @@
-import { forwardRef, useMemo, useRef, useEffect, type RefObject, type CSSProperties } from 'react';
+import { forwardRef, useMemo, useRef, useEffect, useCallback, type RefObject, type CSSProperties } from 'react';
 import { motion } from 'motion/react';
 
-function useAnimationFrame(callback: () => void) {
-  useEffect(() => {
-    let frameId: number;
-    const loop = () => {
-      callback();
-      frameId = requestAnimationFrame(loop);
-    };
-    frameId = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(frameId);
-  }, [callback]);
-}
-
-function useMousePositionRef(containerRef?: RefObject<HTMLElement | null>) {
+function useMousePositionRef(
+  containerRef: RefObject<HTMLElement | null> | undefined,
+  onMove?: () => void
+) {
   const positionRef = useRef({ x: 0, y: 0 });
+  const rectRef = useRef<DOMRect | null>(null);
 
   useEffect(() => {
+    const container = containerRef?.current;
+    const updateRect = () => {
+      rectRef.current = container?.getBoundingClientRect() ?? null;
+    };
+    updateRect();
+
     const updatePosition = (x: number, y: number) => {
-      if (containerRef?.current) {
-        const rect = containerRef.current.getBoundingClientRect();
+      const rect = rectRef.current;
+      if (rect) {
         positionRef.current = { x: x - rect.left, y: y - rect.top };
       } else {
         positionRef.current = { x, y };
       }
+      onMove?.();
     };
 
     const handleMouseMove = (ev: MouseEvent) => updatePosition(ev.clientX, ev.clientY);
@@ -33,12 +32,16 @@ function useMousePositionRef(containerRef?: RefObject<HTMLElement | null>) {
     };
 
     window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('touchmove', handleTouchMove);
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
+    const resizeObserver = container ? new ResizeObserver(updateRect) : null;
+    resizeObserver?.observe(container);
+
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('touchmove', handleTouchMove);
+      resizeObserver?.disconnect();
     };
-  }, [containerRef]);
+  }, [containerRef, onMove]);
 
   return positionRef;
 }
@@ -70,9 +73,32 @@ const VariableProximity = forwardRef<HTMLSpanElement, VariableProximityProps>((p
   } = props;
 
   const letterRefs = useRef<(HTMLSpanElement | null)[]>([]);
+  const letterCentersRef = useRef<{ x: number; y: number }[]>([]);
+  const geometryDirtyRef = useRef(true);
   const interpolatedSettingsRef = useRef<string[]>([]);
-  const mousePositionRef = useMousePositionRef(containerRef);
   const lastPositionRef = useRef<{ x: number | null; y: number | null }>({ x: null, y: null });
+  const frameRef = useRef<number | null>(null);
+  const updateLettersRef = useRef<() => void>(() => undefined);
+
+  const scheduleFrame = useCallback(() => {
+    if (frameRef.current !== null) return;
+    frameRef.current = requestAnimationFrame(() => {
+      frameRef.current = null;
+      updateLettersRef.current();
+    });
+  }, []);
+
+  const mousePositionRef = useMousePositionRef(containerRef, scheduleFrame);
+
+  useEffect(() => {
+    const container = containerRef?.current;
+    if (!container) return;
+    const observer = new ResizeObserver(() => {
+      geometryDirtyRef.current = true;
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [containerRef]);
 
   const parsedSettings = useMemo(() => {
     const parseSettings = (settingsStr: string) =>
@@ -112,7 +138,7 @@ const VariableProximity = forwardRef<HTMLSpanElement, VariableProximityProps>((p
     }
   };
 
-  useAnimationFrame(() => {
+  updateLettersRef.current = () => {
     if (!containerRef?.current) return;
     const containerRect = containerRef.current.getBoundingClientRect();
     const { x, y } = mousePositionRef.current;
@@ -121,22 +147,34 @@ const VariableProximity = forwardRef<HTMLSpanElement, VariableProximityProps>((p
     }
     lastPositionRef.current = { x, y };
 
+    if (geometryDirtyRef.current || letterCentersRef.current.length !== letterRefs.current.length) {
+      letterCentersRef.current = letterRefs.current.map((letterRef) => {
+        if (!letterRef) return { x: 0, y: 0 };
+        const rect = letterRef.getBoundingClientRect();
+        return {
+          x: rect.left + rect.width / 2 - containerRect.left,
+          y: rect.top + rect.height / 2 - containerRect.top,
+        };
+      });
+      geometryDirtyRef.current = false;
+    }
+
     letterRefs.current.forEach((letterRef, index) => {
       if (!letterRef) return;
-
-      const rect = letterRef.getBoundingClientRect();
-      const letterCenterX = rect.left + rect.width / 2 - containerRect.left;
-      const letterCenterY = rect.top + rect.height / 2 - containerRect.top;
+      const center = letterCentersRef.current[index];
+      if (!center) return;
 
       const distance = calculateDistance(
         mousePositionRef.current.x,
         mousePositionRef.current.y,
-        letterCenterX,
-        letterCenterY
+        center.x,
+        center.y
       );
 
       if (distance >= radius) {
-        letterRef.style.fontVariationSettings = fromFontVariationSettings;
+        if (letterRef.style.fontVariationSettings !== fromFontVariationSettings) {
+          letterRef.style.fontVariationSettings = fromFontVariationSettings;
+        }
         return;
       }
 
@@ -149,9 +187,15 @@ const VariableProximity = forwardRef<HTMLSpanElement, VariableProximityProps>((p
         .join(', ');
 
       interpolatedSettingsRef.current[index] = newSettings;
-      letterRef.style.fontVariationSettings = newSettings;
+      if (letterRef.style.fontVariationSettings !== newSettings) {
+        letterRef.style.fontVariationSettings = newSettings;
+      }
     });
-  });
+  };
+
+  useEffect(() => () => {
+    if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+  }, []);
 
   const words = label.split(' ');
   let letterIndex = 0;

@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { lazy, Suspense, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { WA_LINK } from "../FloatingWhatsApp";
-import StaggeredMenu from "../StaggeredMenu";
 import logo from "@/assets/logo.png";
+
+const StaggeredMenu = lazy(() => import("../StaggeredMenu"));
 
 const links = [
   { to: "/", label: "Beranda" },
@@ -24,8 +25,6 @@ const socialLinks = [
 
 const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
-  const [open, setOpen] = useState(false);
-  const location = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -35,14 +34,8 @@ const Navbar = () => {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Close mobile menu on route change
-  useEffect(() => {
-    setOpen(false);
-  }, [location.pathname]);
-
   const handleMenuItemClick = (link: string) => {
     navigate(link);
-    setOpen(false);
   };
 
   return (
@@ -77,7 +70,7 @@ const Navbar = () => {
             </Button>
 
             {/* Staggered menu trigger — desktop */}
-            <StaggeredMenu
+            <Suspense fallback={null}><StaggeredMenu
               position="right"
               className="sm-desktop"
               colors={['#1a1a1a', '#2d2d2d', '#404045']}
@@ -96,17 +89,15 @@ const Navbar = () => {
               changeMenuColorOnOpen={false}
               isFixed={true}
               closeOnClickAway={true}
-              onMenuOpen={() => setOpen(true)}
-              onMenuClose={() => setOpen(false)}
               onItemClick={handleMenuItemClick}
-            />
+            /></Suspense>
           </div>
         </div>
       </nav>
 
       {/* Mobile Navbar with Staggered Menu */}
       <div className="lg:hidden">
-        <StaggeredMenu
+        <Suspense fallback={null}><StaggeredMenu
           onLogoClick={() => { window.location.href = "/"; }}
           position="right"
           colors={['#1a1a1a', '#2d2d2d', '#404045']}
@@ -125,10 +116,8 @@ const Navbar = () => {
           changeMenuColorOnOpen={false}
           isFixed={true}
           closeOnClickAway={true}
-          onMenuOpen={() => setOpen(true)}
-          onMenuClose={() => setOpen(false)}
           onItemClick={handleMenuItemClick}
-        />
+        /></Suspense>
       </div>
     </>
   );

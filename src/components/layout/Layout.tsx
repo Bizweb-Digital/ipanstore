@@ -32,27 +32,54 @@ const Layout = ({ children }: LayoutProps) => {
     const lenis = new Lenis({
       duration: 1.1,
       easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-      // Desktop: smooth wheel aktif.
-      smoothWheel: !isTouch,
+      // Native wheel scroll avoids a second JavaScript scroll pipeline on
+      // desktop. Lenis still tracks scroll state for stack effects.
+      smoothWheel: false,
       wheelMultiplier: 1,
       // Mobile: biarkan browser handle touch scroll (native) → natural,
       // tidak terlalu cepat, dan halus. Lenis hanya membaca posisi scroll.
       touchMultiplier: 1,
-      syncTouch: !isTouch ? true : false,
+      syncTouch: false,
       syncTouchLerp: 0.075,
       infinite: false
     });
 
     w.__lenis = lenis;
 
+    let pageVisible = !document.hidden;
     const raf = (time: number) => {
+      if (!pageVisible) {
+        w.__lenisRaf = undefined;
+        return;
+      }
       lenis.raf(time);
-      w.__lenisRaf = requestAnimationFrame(raf);
+      if (lenis.isSmooth) {
+        w.__lenisRaf = requestAnimationFrame(raf);
+      } else {
+        w.__lenisRaf = undefined;
+      }
     };
-    w.__lenisRaf = requestAnimationFrame(raf);
+    const wake = () => {
+      if (pageVisible && !w.__lenisRaf) w.__lenisRaf = requestAnimationFrame(raf);
+    };
+    const stopWhenHidden = () => {
+      pageVisible = !document.hidden;
+      if (!pageVisible && w.__lenisRaf) {
+        cancelAnimationFrame(w.__lenisRaf);
+        w.__lenisRaf = undefined;
+      } else if (pageVisible && lenis.isSmooth) {
+        wake();
+      }
+    };
+    const offVirtualScroll = lenis.on("virtual-scroll", wake);
+    const offScroll = lenis.on("scroll", wake);
+    document.addEventListener("visibilitychange", stopWhenHidden);
 
     return () => {
       if (w.__lenisRaf) cancelAnimationFrame(w.__lenisRaf);
+      offVirtualScroll();
+      offScroll();
+      document.removeEventListener("visibilitychange", stopWhenHidden);
       lenis.destroy();
       w.__lenis = undefined;
       w.__lenisRaf = undefined;
@@ -71,8 +98,12 @@ const Layout = ({ children }: LayoutProps) => {
       <SplashCursor
         COLOR="#94A3B8"
         RAINBOW_MODE={false}
+        SIM_RESOLUTION={48}
+        DYE_RESOLUTION={320}
+        PRESSURE_ITERATIONS={2}
+        SHADING={false}
         SPLAT_RADIUS={0.15}
-        SPLAT_FORCE={4000}
+        SPLAT_FORCE={2200}
         DENSITY_DISSIPATION={4}
         VELOCITY_DISSIPATION={2.5}
         CURL={2}

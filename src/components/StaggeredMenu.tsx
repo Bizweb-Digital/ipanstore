@@ -1,4 +1,4 @@
-import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 
 interface StaggeredMenuItem {
@@ -32,6 +32,12 @@ interface StaggeredMenuProps {
   onItemClick?: (link: string) => void;
   onLogoClick?: () => void;
 }
+
+const MENU_STATE_EVENT = 'ipan:menu-state';
+
+const publishMenuState = (open: boolean) => {
+  document.dispatchEvent(new CustomEvent(MENU_STATE_EVENT, { detail: { open } }));
+};
 
 export const StaggeredMenu = ({
   position = 'right',
@@ -73,6 +79,17 @@ export const StaggeredMenu = ({
   const toggleBtnRef = useRef<HTMLButtonElement>(null);
   const busyRef = useRef(false);
   const itemEntranceTweenRef = useRef<gsap.core.Tween | null>(null);
+
+  useEffect(() => {
+    return () => {
+      openTlRef.current?.kill();
+      closeTweenRef.current?.kill();
+      spinTweenRef.current?.kill();
+      textCycleAnimRef.current?.kill();
+      colorTweenRef.current?.kill();
+      if (openRef.current) publishMenuState(false);
+    };
+  }, []);
 
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
@@ -124,6 +141,8 @@ export const StaggeredMenu = ({
     const offscreen = position === 'left' ? -100 : 100;
     const layerStates = layers.map(el => ({ el, start: offscreen }));
     const panelStart = offscreen;
+    const animatedShell = [...layers, panel];
+    gsap.set(animatedShell, { willChange: 'transform' });
 
     if (itemEls.length) {
       gsap.set(itemEls, { yPercent: 140, rotate: 10 });
@@ -135,7 +154,7 @@ export const StaggeredMenu = ({
       gsap.set(socialTitle, { opacity: 0 });
     }
     if (socialLinks.length) {
-      gsap.set(socialLinks, { y: 25, opacity: 0 });
+      gsap.set(socialLinks, { y: 25, opacity: 0, willChange: 'transform, opacity' });
     }
 
     const tl = gsap.timeline({ paused: true });
@@ -204,7 +223,7 @@ export const StaggeredMenu = ({
             ease: 'power3.out',
             stagger: { each: 0.08, from: 'start' },
             onComplete: () => {
-              gsap.set(socialLinks, { clearProps: 'opacity' });
+              gsap.set(socialLinks, { clearProps: 'opacity,willChange' });
             }
           },
           socialsStart + 0.04
@@ -237,7 +256,10 @@ export const StaggeredMenu = ({
 
     const panel = panelRef.current;
     const layers = preLayerElsRef.current;
-    if (!panel) return;
+    if (!panel) {
+      publishMenuState(false);
+      return;
+    }
 
     const all = [...layers, panel];
     closeTweenRef.current?.kill();
@@ -260,6 +282,8 @@ export const StaggeredMenu = ({
         const socialLinks = Array.from(panel.querySelectorAll('.sm-socials-link')) as HTMLElement[];
         if (socialTitle) gsap.set(socialTitle, { opacity: 0 });
         if (socialLinks.length) gsap.set(socialLinks, { y: 25, opacity: 0 });
+        gsap.set([...layers, panel, ...socialLinks], { clearProps: 'willChange' });
+        publishMenuState(false);
         busyRef.current = false;
       }
     });
@@ -340,6 +364,7 @@ export const StaggeredMenu = ({
     openRef.current = target;
     setOpen(target);
     if (target) {
+      publishMenuState(true);
       onMenuOpen?.();
       playOpen();
     } else {
@@ -398,7 +423,7 @@ export const StaggeredMenu = ({
       <div ref={preLayersRef} className="sm-prelayers" aria-hidden="true">
         {(() => {
           const raw = colors && colors.length ? colors.slice(0, 4) : ['#1e1e22', '#35353c'];
-          let arr = [...raw];
+          const arr = [...raw];
           if (arr.length >= 3) {
             const mid = Math.floor(arr.length / 2);
             arr.splice(mid, 1);

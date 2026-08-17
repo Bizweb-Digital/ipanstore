@@ -57,6 +57,8 @@ export interface DokuPaymentRequest {
   customerPhone?: string;
   itemName: string;
   description?: string;
+  /** Kode promo (opsional) — divalidasi ulang oleh backend. */
+  promoCode?: string;
 }
 
 export interface DokuPaymentResponse {
@@ -122,6 +124,7 @@ export async function createDokuPayment(
           customer_phone: req.customerPhone,
           item_name: req.itemName,
           description: req.description,
+          promo_code: req.promoCode,
         }),
       });
       const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;

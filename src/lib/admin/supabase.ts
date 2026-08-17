@@ -93,6 +93,8 @@ export type Database = {
           webhook_payload: Record<string, unknown> | null;
           email_sent: boolean;
           email_sent_at: string | null;
+          promo_code: string | null;
+          discount_amount: number;
         };
         Insert: {
           id?: string;
@@ -113,6 +115,8 @@ export type Database = {
           webhook_payload?: Record<string, unknown> | null;
           email_sent?: boolean;
           email_sent_at?: string | null;
+          promo_code?: string | null;
+          discount_amount?: number;
         };
         Update: {
           id?: string;
@@ -133,6 +137,46 @@ export type Database = {
           webhook_payload?: Record<string, unknown> | null;
           email_sent?: boolean;
           email_sent_at?: string | null;
+          promo_code?: string | null;
+          discount_amount?: number;
+        };
+      };
+      promo_codes: {
+        row: {
+          id: string;
+          code: string;
+          type: 'percent' | 'fixed';
+          value: number;
+          max_uses: number | null;
+          used_count: number;
+          is_active: boolean;
+          expires_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          code: string;
+          type?: 'percent' | 'fixed';
+          value?: number;
+          max_uses?: number | null;
+          used_count?: number;
+          is_active?: boolean;
+          expires_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          code?: string;
+          type?: 'percent' | 'fixed';
+          value?: number;
+          max_uses?: number | null;
+          used_count?: number;
+          is_active?: boolean;
+          expires_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
         };
       };
       services: {

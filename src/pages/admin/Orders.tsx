@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -38,12 +38,17 @@ import {
   Globe,
   Calendar,
   User,
+  Download,
+  Save,
+  BadgePercent,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { toast } from 'react-hot-toast';
 import { supabase } from '@/lib/admin/supabase';
 import { Order, useOrders } from '@/hooks/useOrders';
+import { exportToCsv } from '@/lib/admin/csv';
+import { useAuditLogger } from '@/hooks/useAuditLog';
 
 const STATUS_OPTIONS = [
   { value: 'ALL', label: 'Semua Status' },
@@ -65,16 +70,22 @@ const ITEMS_PER_PAGE = 10;
 export default function AdminOrders() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [sortBy, setSortBy] = useState('created_at');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [page, setPage] = useState(1);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showDetail, setShowDetail] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
+  const [savingNotes, setSavingNotes] = useState<string | null>(null);
+  const logAudit = useAuditLogger();
 
   const { orders, total, loading, error, refetch } = useOrders({
     status: statusFilter === 'ALL' ? undefined : statusFilter,
     search,
+    dateFrom: dateFrom || undefined,
+    dateTo: dateTo || undefined,
     sortBy: sortBy as 'created_at' | 'amount' | 'invoice_number',
     sortOrder,
     limit: ITEMS_PER_PAGE,
@@ -85,7 +96,79 @@ export default function AdminOrders() {
 
   useEffect(() => {
     setPage(1);
-  }, [statusFilter, search, sortBy, sortOrder]);
+  }, [statusFilter, search, dateFrom, dateTo, sortBy, sortOrder]);
+
+  // ── Realtime: order baru / status berubah → refresh otomatis ──────────────
+  useEffect(() => {
+    const channel = supabase
+      .channel('admin-orders-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        () => {
+          refetch();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refetch]);
+
+  // ── Simpan catatan admin (debounce 800ms) ─────────────────────────────────
+  const notesTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveNotes = useCallback(
+    async (orderId: string, notes: string) => {
+      setSavingNotes(orderId);
+      try {
+        const { error } = await supabase
+          .from('orders')
+          .update({ notes })
+          .eq('id', orderId);
+        if (error) throw error;
+        toast.success('Catatan disimpan');
+      } catch (err: any) {
+        console.error('Failed to save notes:', err);
+        toast.error('Gagal menyimpan catatan');
+      } finally {
+        setSavingNotes(null);
+      }
+    },
+    []
+  );
+
+  const handleNotesChange = (order: Order, value: string) => {
+    const updated = { ...order, notes: value };
+    setSelectedOrder(updated);
+    if (notesTimer.current) clearTimeout(notesTimer.current);
+    notesTimer.current = setTimeout(() => {
+      saveNotes(order.id, value);
+    }, 800);
+  };
+
+  // ── Export CSV (hanya data yang sedang difilter) ───────────────────────────
+  const exportCsv = () => {
+    exportToCsv(
+      `orders_${format(new Date(), 'yyyy-MM-dd')}.csv`,
+      [
+        { header: 'Invoice', value: (r) => r.invoice_number },
+        { header: 'Customer', value: (r) => r.customer_name },
+        { header: 'Email', value: (r) => r.customer_email },
+        { header: 'Phone', value: (r) => r.customer_phone },
+        { header: 'Layanan', value: (r) => (r.services as any)?.name },
+        { header: 'Amount', value: (r) => r.amount },
+        { header: 'Discount', value: (r) => r.discount_amount },
+        { header: 'Promo', value: (r) => r.promo_code },
+        { header: 'Status', value: (r) => r.status },
+        { header: 'Tanggal', value: (r) => r.created_at },
+        { header: 'Bayar', value: (r) => r.paid_at },
+        { header: 'Channel', value: (r) => r.doku_payment_channel },
+      ],
+      orders as unknown as Record<string, unknown>[]
+    );
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -137,13 +220,20 @@ export default function AdminOrders() {
   const handleStatusUpdate = async (orderId: string, newStatus: string) => {
     try {
       setUpdatingStatus(orderId);
+      const patch: Record<string, unknown> = { status: newStatus };
+      if (newStatus === 'PAID') patch.paid_at = new Date().toISOString();
+      if (newStatus === 'COMPLETED') patch.completed_at = new Date().toISOString();
+      if (newStatus === 'REFUNDED') patch.refunded_at = new Date().toISOString();
+
       const { error } = await supabase
         .from('orders')
-        .update({ status: newStatus })
+        .update(patch)
         .eq('id', orderId);
 
       if (error) throw error;
-      
+
+      await logAudit('order.status.update', orderId, { status: newStatus });
+
       // Refresh orders
       await refetch();
       
@@ -175,15 +265,26 @@ export default function AdminOrders() {
               Kelola riwayat penjualan dan status order
             </p>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refetch()}
-            disabled={loading}
-          >
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportCsv}
+              disabled={orders.length === 0}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export CSV
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              disabled={loading}
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
         </div>
 
         {/* Filters & Search */}
@@ -249,6 +350,37 @@ export default function AdminOrders() {
                   >
                     {sortOrder === 'asc' ? '↑' : '↓'}
                   </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+              {/* Date From */}
+              <div className="space-y-2">
+                <Label htmlFor="dateFrom">Dari Tanggal</Label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="dateFrom"
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              {/* Date To */}
+              <div className="space-y-2">
+                <Label htmlFor="dateTo">Sampai Tanggal</Label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="dateTo"
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    className="pl-10"
+                  />
                 </div>
               </div>
             </div>
@@ -537,18 +669,44 @@ export default function AdminOrders() {
                   </div>
                 )}
 
+                {/* Promo / Diskon */}
+                {(selectedOrder.promo_code || (selectedOrder.discount_amount ?? 0) > 0) && (
+                  <div className="p-4 rounded-lg bg-white/5 border border-white/10">
+                    <h3 className="font-semibold mb-3 flex items-center gap-2">
+                      <BadgePercent className="w-4 h-4" />
+                      Kode Promo
+                    </h3>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Kode</span>
+                        <span className="font-mono text-xs">{selectedOrder.promo_code || '-'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Diskon</span>
+                        <span className="text-green-400 font-semibold">
+                          -{formatCurrency(selectedOrder.discount_amount || 0)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Admin Notes */}
                 <div className="p-4 rounded-lg bg-white/5 border border-white/10">
-                  <h3 className="font-semibold mb-3">Catatan Admin</h3>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold">Catatan Admin</h3>
+                    {savingNotes === selectedOrder.id && (
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Save className="w-3 h-3" />
+                        Menyimpan...
+                      </span>
+                    )}
+                  </div>
                   <textarea
                     className="w-full h-24 px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                    placeholder="Tambah catatan untuk order ini..."
+                    placeholder="Tambah catatan untuk order ini... (otomatis tersimpan)"
                     value={selectedOrder.notes || ''}
-                    onChange={(e) => {
-                      // Update notes in real-time
-                      // Note: This is a simplified implementation
-                      // In production, you'd want to debounce this
-                    }}
+                    onChange={(e) => handleNotesChange(selectedOrder, e.target.value)}
                   />
                 </div>
 

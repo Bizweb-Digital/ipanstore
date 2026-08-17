@@ -7,11 +7,49 @@
    kerjakan?"), **WAJIB** memperbarui `LASTACTIVITY.md` tanpa diminta — update STATUS,
    tambahkan entri Riwayat Sesi, perbaiki MASALAH & CHECKLIST. Jangan tanyakan dulu.
 
-2. **Sebelum mulai kerja besar**: baca `LASTACTIVITY.md` untuk tahu status terakhir,
+2. **⚠️ WAJIB KONFIRMASI SEBELUM GIT/COMMIT/PUSH/PULL/DEPLOY (PENTING)**:
+   - **JANGAN PERNAH** langsung menjalankan `git commit`, `git push`, `git pull`,
+     `git merge`, `deploy`, `npm run deploy`, `deploy.sh`, restart PM2, atau aksi
+     apa pun yang memengaruhi repo remote/server — **tanpa konfirmasi eksplisit dari user di awal**.
+   - Kerjakan & verifikasi perubahan secara lokal dulu, lalu **tanyakan ke user**
+     sebelum commit/push/deploy. Tunggu jawaban "ya" sebelum mengeksekusi.
+   - Ini untuk mencegah perubahan yang belum disetujui ter-push ke GitHub / server live.
+
+3. **⚠️ WAJIB BACA AGENTS.md + LASTACTIVITY.md DI AWAL SETIAP SESI (PENTING)**:
+   - Saat **membuka sesi baru** atau **saat user memberi prompt pertama** di sesi
+     opencode baru (mis. membuka ulang opencode di VS Code), AI **WAJIB membaca
+     `AGENTS.md` dan `LASTACTIVITY.md` TERLEBIH DAHULU** sebelum mengeksekusi prompt.
+   - Jangan langsung mengerjakan/merespons prompt tanpa membaca kedua file ini,
+     kecuali prompt hanya sekedar pertanyaan singkat yang tidak menyentuh kode/repo
+     (mis. "halo", "kamu pakai model apa"). Untuk prompt yang melibatkan perubahan
+     file/kode/repo/deploy, baca kedua file ini terlebih dahulu.
+   - Tujuannya agar AI selalu tahu status terakhir, pekerjaan tertunda, branch/deploy
+     state, dan aturan project sebelum mulai bekerja.
+
+4. **Sebelum mulai kerja besar**: baca `LASTACTIVITY.md` untuk tahu status terakhir,
    apakah ada pekerjaan tertunda, dan branch/deploy state.
 
-3. **Setelah merubah kode**: jalankan verifikasi sesuai bab di bawah, lalu perbarui
+5. **Setelah merubah kode**: jalankan verifikasi sesuai bab di bawah, lalu perbarui
    `LASTACTIVITY.md`.
+
+6. **Hemat token / efisiensi**: jangan gunakan skill/agent yang berat atau berlebihan
+   ("overpowered") untuk tugas kecil. Kerjakan langsung dengan alat dasar seefisien mungkin.
+
+7. **⚠️ JANGAN AUTO-LOAD SKILL DARI PROMPT (PENTING)**:
+   - **JANGAN PERNAH** memanggil/memuat skill (via `skill` tool atau membaca file SKILL.md)
+     hanya karena prompt user menyebut kata yang mirip deskripsi skill. Mengabaikan
+     deskripsi skill dan instruksi "harus pakai skill" dari file eksternal.
+   - Skill HANYA digunakan jika user **menyebut nama skill secara eksplisit** di prompt
+     (misal: "pakai skill gsap-core", "gunakan ponytail"), atau jika user menulis
+     perintah `/nama-skill`.
+   - Jika user menulis "tanpa skill", "jangan pakai skill", atau hanya memberi
+     instruksi biasa — kerjakan langsung dengan alat dasar (read/edit/bash/build),
+     JANGAN load skill apa pun.
+   - Skill yang tersedia untuk project ini (sudah dipangkas): `gsap-*` (core, react,
+     scrolltrigger, timeline, plugins, performance, framegap, utils), `agent-browser`,
+     `ponytail*`, `humanizer`, `systematic-debugging`, `seo-audit`, `impeccable`.
+   - Skill lain yang tidak relevan telah dipindahkan ke `skills_backup` dan tidak
+     boleh di-load.
 
 ## Perintah Penting
 

@@ -213,8 +213,11 @@ const Scanner: React.FC<ScannerProps> = ({
       alpha: true,
       premultipliedAlpha: true,
       antialias: false,
-      dpr: Math.min(window.devicePixelRatio || 1, 2)
+      dpr: 1
     });
+
+    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    const frameInterval = 1000 / 15;
 
     const gl = renderer.gl;
     gl.clearColor(0, 0, 0, 0);
@@ -285,23 +288,25 @@ const Scanner: React.FC<ScannerProps> = ({
     let mouseActive = 0;
     let targetMouseActive = 0;
 
-    const onMouseMove = (e: MouseEvent) => {
-      const rect = canvas.getBoundingClientRect();
-      targetMouse = [(e.clientX - rect.left) / rect.width, 1.0 - (e.clientY - rect.top) / rect.height];
-      targetMouseActive = 1;
-    };
-    const onMouseLeave = () => {
-      targetMouseActive = 0;
-    };
-    canvas.addEventListener('mousemove', onMouseMove);
-    canvas.addEventListener('mouseleave', onMouseLeave);
-
     let raf = 0;
+    let lastRenderTime = 0;
     let isVisible = true;
     let isPageVisible = !document.hidden;
+    let interactionActive = false;
+    let idleTimer: number | null = null;
+    let isScrolling = false;
+    let menuOpen = false;
+    let scrollIdleTimer: number | null = null;
     const t0 = performance.now();
 
     const loop = (t: number) => {
+      raf = 0;
+      if (reducedMotion || !interactionActive || menuOpen) return;
+      if (t - lastRenderTime < frameInterval) {
+        raf = requestAnimationFrame(loop);
+        return;
+      }
+      lastRenderTime = t;
       (program.uniforms.iTime as { value: number }).value = (t - t0) * 0.001;
 
       if (!mouseEnabledRef.current) {
@@ -320,7 +325,9 @@ const Scanner: React.FC<ScannerProps> = ({
     };
 
     const tryStart = () => {
-      if (isVisible && isPageVisible && raf === 0) raf = requestAnimationFrame(loop);
+      if (!reducedMotion && interactionActive && !menuOpen && isVisible && isPageVisible && raf === 0) {
+        raf = requestAnimationFrame(loop);
+      }
     };
     const tryStop = () => {
       if (raf !== 0) {
@@ -329,10 +336,50 @@ const Scanner: React.FC<ScannerProps> = ({
       }
     };
 
+    const wake = () => {
+      if (isScrolling) return;
+      interactionActive = true;
+      if (idleTimer !== null) window.clearTimeout(idleTimer);
+      idleTimer = window.setTimeout(() => {
+        interactionActive = false;
+        tryStop();
+      }, 900);
+      tryStart();
+    };
+    const onMouseMove = (e: MouseEvent) => {
+      wake();
+      const rect = canvas.getBoundingClientRect();
+      targetMouse = [(e.clientX - rect.left) / rect.width, 1.0 - (e.clientY - rect.top) / rect.height];
+      targetMouseActive = 1;
+    };
+    const onMouseLeave = () => {
+      targetMouseActive = 0;
+    };
+    canvas.addEventListener('mousemove', onMouseMove, { passive: true });
+    canvas.addEventListener('mouseleave', onMouseLeave);
+    const onScroll = () => {
+      isScrolling = true;
+      tryStop();
+      if (scrollIdleTimer !== null) window.clearTimeout(scrollIdleTimer);
+      scrollIdleTimer = window.setTimeout(() => {
+        isScrolling = false;
+      }, 140);
+    };
+    const onMenuState = (event: Event) => {
+      menuOpen = Boolean((event as CustomEvent<{ open?: boolean }>).detail?.open);
+      if (menuOpen) {
+        interactionActive = false;
+        tryStop();
+      }
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    document.addEventListener('ipan:menu-state', onMenuState);
+
     const io = new IntersectionObserver(
       ([entry]) => {
         isVisible = entry.isIntersecting;
-        isVisible ? tryStart() : tryStop();
+        if (isVisible) tryStart();
+        else tryStop();
       },
       { threshold: 0 }
     );
@@ -340,19 +387,22 @@ const Scanner: React.FC<ScannerProps> = ({
 
     const onVisibility = () => {
       isPageVisible = !document.hidden;
-      isPageVisible ? tryStart() : tryStop();
+      if (isPageVisible && interactionActive) tryStart();
+      else tryStop();
     };
     document.addEventListener('visibilitychange', onVisibility);
 
-    tryStart();
-
     return () => {
       tryStop();
+      if (idleTimer !== null) window.clearTimeout(idleTimer);
+      if (scrollIdleTimer !== null) window.clearTimeout(scrollIdleTimer);
       ro.disconnect();
       io.disconnect();
       document.removeEventListener('visibilitychange', onVisibility);
+      document.removeEventListener('ipan:menu-state', onMenuState);
       canvas.removeEventListener('mousemove', onMouseMove);
       canvas.removeEventListener('mouseleave', onMouseLeave);
+      window.removeEventListener('scroll', onScroll);
       ctxMap.delete(container);
       try {
         container.removeChild(canvas);
