@@ -56,6 +56,13 @@ if (!DOKU_CLIENT_ID || !DOKU_SECRET_KEY) {
   console.warn("⚠️  DOKU_CLIENT_ID / DOKU_SECRET_KEY belum diisi di .env — endpoint doku-create-order akan gagal.");
 }
 
+// ── Polyfill WebSocket global (Node < 22) untuk @supabase/realtime-js ──────
+// Node 20 tidak punya global WebSocket; supabase-js v2 butuh ini saat createClient().
+import WebSocket from "ws";
+if (typeof globalThis.WebSocket === "undefined") {
+  globalThis.WebSocket = WebSocket;
+}
+
 // ── Supabase client (Service Role — bypass RLS, hanya dipakai di server) ────
 const SUPABASE_URL = process.env.SUPABASE_URL || "";
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
