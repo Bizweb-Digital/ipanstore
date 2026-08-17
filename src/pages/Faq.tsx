@@ -1,13 +1,20 @@
-import { useState } from "react";
-import { Plus, ArrowRight } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, ArrowRight, Loader2 } from "lucide-react";
 import SEOHead from "@/components/SEOHead";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { WA_LINK } from "@/components/FloatingWhatsApp";
 import PageBackground from "@/components/effects/PageBackground";
 import { breadcrumbJsonLd, faqJsonLd } from "@/lib/seo";
+import { supabase } from "@/lib/admin/supabase";
 
-const faqs = [
+interface SupabaseFAQ {
+  question: string;
+  answer: string;
+  sort_order: number;
+}
+
+const FALLBACK_FAQS = [
   {
     q: "Apa itu Jasa Optimasi PC Gaming IPAN STORE?",
     a: "IPAN STORE adalah layanan tweak PC & emulator profesional yang membantu gamer meningkatkan FPS, mengurangi input lag, dan menstabilkan performa PC gaming. Kami melayani optimasi Windows, setting emulator Free Fire, serta tweak menu premium lewat IPAN APP SettinX.",
@@ -51,7 +58,37 @@ const faqs = [
 ];
 
 const Faq = () => {
+  const [faqs, setFaqs] = useState<{ q: string; a: string }[]>(FALLBACK_FAQS);
+  const [loading, setLoading] = useState(true);
   const [openIndex, setOpenIndex] = useState<number | null>(0);
+
+  useEffect(() => {
+    async function fetchActiveFaqs() {
+      try {
+        const { data, error } = await supabase
+          .from('faqs')
+          .select('question, answer, sort_order')
+          .eq('is_active', true)
+          .order('sort_order', { ascending: true });
+
+        if (!error && data && data.length > 0) {
+          // Sort by sort_order
+          const sorted = data.sort((a, b) => a.sort_order - b.sort_order);
+          setFaqs(sorted.map(faq => ({ q: faq.question, a: faq.answer })));
+        } else {
+          console.log("No active FAQs from Supabase, using fallback");
+          setFaqs(FALLBACK_FAQS);
+        }
+      } catch (err) {
+        console.error("Error fetching FAQs:", err);
+        setFaqs(FALLBACK_FAQS);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchActiveFaqs();
+  }, []);
 
   const toggle = (i: number) => setOpenIndex((cur) => (cur === i ? null : i));
 
@@ -86,7 +123,12 @@ const Faq = () => {
 
               {/* Accordion — divider lines, no boxed items */}
               <div className="max-w-3xl mx-auto border-b border-white/16">
-                {faqs.map((faq, i) => {
+                {loading ? (
+                  <div className="flex flex-col items-center justify-center py-16 gap-3">
+                    <Loader2 className="w-8 h-8 animate-spin text-[#94A3B8]" />
+                    <p className="text-sm text-zinc-500 font-mono">Memuat FAQ…</p>
+                  </div>
+                ) : faqs.map((faq, i) => {
                   const isOpen = openIndex === i;
                   return (
                     <div key={i} className="border-t border-white/16">

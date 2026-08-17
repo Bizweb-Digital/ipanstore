@@ -17,14 +17,13 @@
 import express from "express";
 import cors from "cors";
 import crypto from "crypto";
-import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import nodemailer from "nodemailer";
+import { createClient } from "@supabase/supabase-js";
 import "dotenv/config";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ORDERS_FILE = path.join(__dirname, "orders.json");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -57,6 +56,19 @@ if (!DOKU_CLIENT_ID || !DOKU_SECRET_KEY) {
   console.warn("⚠️  DOKU_CLIENT_ID / DOKU_SECRET_KEY belum diisi di .env — endpoint doku-create-order akan gagal.");
 }
 
+// ── Supabase client (Service Role — bypass RLS, hanya dipakai di server) ────
+const SUPABASE_URL = process.env.SUPABASE_URL || "";
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+
+const supabase =
+  SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
+    ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+    : null;
+
+if (!supabase) {
+  console.warn("⚠️  SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY belum diisi di .env — order tidak akan tersimpan ke database.");
+}
+
 // ── Helper Signature DOKU (HMAC-SHA256) ──────────────────────────────────────
 // Component string:
 //   Client-Id:...\nRequest-Id:...\nRequest-Timestamp:...\nRequest-Target:...\nDigest:...
@@ -83,38 +95,140 @@ function dokuTimestamp() {
   return new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
 }
 
-// ── Penyimpanan Order (JSON file ringan) ────────────────────────────────────
-// Menyimpan data order di server/orders.json (tidak memakai DB eksternal).
-// Tiap order: invoice_number, data pembeli, item, status, email_sent.
-const ordersStore = {
-  file: ORDERS_FILE,
-  data: {},
-  load() {
-    try {
-      if (fs.existsSync(this.file)) {
-        this.data = JSON.parse(fs.readFileSync(this.file, "utf8"));
-      }
-    } catch (e) {
-      console.warn("⚠️  Gagal baca orders.json:", e.message);
-      this.data = {};
-    }
-  },
-  save() {
-    try {
-      fs.writeFileSync(this.file, JSON.stringify(this.data, null, 2));
-    } catch (e) {
-      console.error("⚠️  Gagal tulis orders.json:", e.message);
-    }
-  },
-  get(invoice) {
-    return this.data[invoice] || null;
-  },
-  set(invoice, val) {
-    this.data[invoice] = val;
-    this.save();
-  },
+// ── Penyimpanan Order (Supabase) ────────────────────────────────────────────
+// Orders disimpan di tabel `orders` Supabase.
+// Fallback ke in-memory map jika Supabase belum dikonfigurasi (dev/testing).
+const ordersFallback = new Map();
+
+// Constants untuk email tracking
+const ORDER_DEFAULTS = {
+  email_sent: false,
+  email_sent_at: null,
 };
-ordersStore.load();
+
+/**
+ * Simpan order baru ke Supabase (atau fallback).
+ * @param {object} order
+ * @returns {Promise<{ok: boolean, data?: any, error?: string}>}
+ */
+async function saveOrder(order) {
+  if (!supabase) {
+    ordersFallback.set(order.invoice_number, { ...ORDER_DEFAULTS, ...order });
+    return { ok: true, data: order };
+  }
+
+  // Upsert berdasarkan invoice_number (unique)
+  const { data, error } = await supabase
+    .from("orders")
+    .upsert({ ...ORDER_DEFAULTS, ...order }, { onConflict: "invoice_number" })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("❌ Supabase saveOrder error:", error.message);
+    // Fallback agar tidak hilang
+    ordersFallback.set(order.invoice_number, { ...ORDER_DEFAULTS, ...order });
+    return { ok: false, error: error.message };
+  }
+  return { ok: true, data };
+}
+
+/**
+ * Ambil order berdasarkan invoice_number.
+ * @param {string} invoice
+ * @returns {Promise<object|null>}
+ */
+async function getOrder(invoice) {
+  if (!supabase) {
+    return ordersFallback.get(invoice) || null;
+  }
+
+  const { data, error } = await supabase
+    .from("orders")
+    .select("*")
+    .eq("invoice_number", invoice)
+    .single();
+
+  if (error) {
+    // Cek fallback
+    return ordersFallback.get(invoice) || null;
+  }
+  return data;
+}
+
+/**
+ * Update order berdasarkan invoice_number.
+ * @param {string} invoice
+ * @param {object} updates
+ */
+async function updateOrder(invoice, updates) {
+  if (!supabase) {
+    const existing = ordersFallback.get(invoice);
+    if (existing) {
+      ordersFallback.set(invoice, { ...existing, ...updates });
+    }
+    return { ok: !!existing };
+  }
+
+  const { error } = await supabase
+    .from("orders")
+    .update(updates)
+    .eq("invoice_number", invoice);
+
+  if (error) {
+    console.error("❌ Supabase updateOrder error:", error.message);
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
+}
+
+/**
+ * Resolve service_id dari item_name.
+ * Frontend mengirim format "IPAN STORE - ${selected.name}" (lihat src/pages/Order.tsx)
+ * Contoh: "IPAN STORE - SET PC", "IPAN STORE - ELITE", "IPAN STORE - IPAN APP SettinX V1"
+ * @param {string} itemName
+ * @returns {Promise<string|null>}
+ */
+async function resolveServiceId(itemName) {
+  if (!supabase || !itemName) return null;
+
+  // Strip prefix "IPAN STORE - " jika ada
+  const cleanName = String(itemName).replace(/^IPAN STORE\s*-\s*/i, "").trim();
+  if (!cleanName) return null;
+
+  // 1. Coba exact match nama service
+  let { data } = await supabase
+    .from("services")
+    .select("id")
+    .ilike("name", cleanName)
+    .limit(1)
+    .single();
+
+  if (data?.id) return data.id;
+
+  // 2. Coba partial match (untuk kasus nama beda kapitalisasi/spasi)
+  ({ data } = await supabase
+    .from("services")
+    .select("id")
+    .ilike("name", `%${cleanName}%`)
+    .limit(1)
+    .single());
+
+  if (data?.id) return data.id;
+
+  // 3. Coba match via slug (untuk kasus "settinx" → "app-settinx")
+  if (/settinx/i.test(cleanName)) {
+    ({ data } = await supabase
+      .from("services")
+      .select("id")
+      .eq("slug", "app-settinx")
+      .limit(1)
+      .single());
+    if (data?.id) return data.id;
+  }
+
+  return null;
+}
 
 // ── Email otomatis (nodemailer + SMTP Gmail / provider lain) ────────────────
 // Konfigurasi di .env:
@@ -433,19 +547,25 @@ app.post("/api/doku-create-order", async (req, res) => {
       });
     }
 
-    // Simpan data order sebelum dikirim ke pembeli (untuk kirim email saat lunas)
-    ordersStore.set(invoiceNumber, {
+    // Simpan data order ke Supabase sebelum dikirim ke pembeli (untuk kirim email saat lunas)
+    const orderPayload = {
       invoice_number: invoiceNumber,
-      amount: Number(amount),
-      item_name: String(item_name || "IPAN STORE Product"),
       customer_name: String(customer_name || ""),
       customer_email: String(customer_email || ""),
       customer_phone: String(customer_phone || ""),
+      amount: Number(amount),
       status: "PENDING",
-      token_id: data?.response?.payment?.token_id || "",
+      doku_transaction_id: data?.response?.payment?.token_id || "",
       created_at: new Date().toISOString(),
-      email_sent: false,
-      email_sent_at: null,
+    };
+
+    await resolveServiceId(item_name).then(async (serviceId) => {
+      if (serviceId) {
+        orderPayload.service_id = serviceId;
+      } else {
+        console.warn(`⚠️  Service tidak ditemukan untuk item: ${item_name}`);
+      }
+      await saveOrder(orderPayload);
     });
 
     console.log(`✅ DOKU order dibuat: ${invoiceNumber} | ${data?.response?.payment?.token_id || ""}`);
@@ -514,41 +634,66 @@ app.post("/api/doku-webhook", async (req, res) => {
 
     // ── Proses order saat pembayaran SUCCESS ─────────────────────────────
     if (status === "SUCCESS") {
-      const order = ordersStore.get(invoice);
+      const order = await getOrder(invoice);
+      
       if (!order) {
-        // Order tidak ada di store — buat minimal dari payload webhook.
+        // Order tidak ada di DB — buat minimal dari payload webhook.
         console.warn(`⚠️  Webhook SUCCESS untuk invoice tak dikenal: ${invoice}`);
+        const orderPayload = {
+          invoice_number: invoice || `UNKNOWN-${Date.now()}`,
+          amount: Number(amount) || 0,
+          status: "PAID",
+          paid_at: new Date().toISOString(),
+          doku_transaction_id: payload?.transaction?.token_id || "",
+          webhook_payload: payload,
+        };
+        await saveOrder(orderPayload);
       } else {
         // Tandai lunas
-        order.status = "PAID";
-        order.paid_at = new Date().toISOString();
-        order.webhook_payload = payload;
-        ordersStore.set(invoice, order);
+        await updateOrder(order.invoice_number || order.id, {
+          status: "PAID",
+          paid_at: new Date().toISOString(),
+          webhook_payload: payload,
+          doku_transaction_id: payload?.transaction?.token_id || order.doku_transaction_id,
+        });
 
         // Kirim email otomatis HANYA untuk paket IPAN APP SettinX V1
-        const isSettinX =
-          /settinx/i.test(order.item_name || "") || /settinx/i.test(order.invoice_number || "");
+        // Cek via invoice_number atau service slug yang ter-resolve
+        let isSettinX = /settinx/i.test(order.invoice_number || "");
+        
+        // Cek juga via service slug jika service_id ada
+        if (!isSettinX && order.service_id && supabase) {
+          const { data: svc } = await supabase
+            .from("services")
+            .select("slug, name")
+            .eq("id", order.service_id)
+            .single();
+          if (svc && /settinx/i.test(svc.slug || svc.name || "")) {
+            isSettinX = true;
+          }
+        }
 
-        if (isSettinX && order.customer_email && !order.email_sent) {
-          console.log(`📧 Mengirim email SettinX ke ${order.customer_email} (invoice ${invoice})...`);
+        if (isSettinX && order.customer_email) {
+          console.log(`📧 Mengirim email SettinX ke ${order.customer_email} (invoice ${order.invoice_number})...`);
           const result = await sendSettinXEmail({
             to: order.customer_email,
             customerName: order.customer_name,
-            invoiceNumber: invoice,
+            invoiceNumber: order.invoice_number,
             amount: order.amount || amount,
             paidAt: order.paid_at,
           });
 
           if (result.ok) {
-            order.email_sent = true;
-            order.email_sent_at = new Date().toISOString();
-            ordersStore.set(invoice, order);
-            console.log(`📧 Email SettinX TERKIRIM: ${order.customer_email} (invoice ${invoice})`);
+            await updateOrder(order.invoice_number || order.id, {
+              email_sent: true,
+              email_sent_at: new Date().toISOString(),
+            });
+            console.log(`📧 Email SettinX TERKIRIM: ${order.customer_email} (invoice ${order.invoice_number})`);
           } else {
             console.error(`📧 Email SettinX GAGAL ke ${order.customer_email}: ${result.error}`);
           }
         } else if (isSettinX) {
-          console.warn(`⚠️  SettinX SUCCESS tapi email tidak dikirim: email_sent=${order.email_sent}, email=${order.customer_email || "KOSONG"}`);
+          console.warn(`⚠️  SettinX SUCCESS tapi email tidak dikirim: email=${order.customer_email || "KOSONG"}`);
         }
       }
     }
@@ -614,6 +759,10 @@ app.post("/api/doku-cancel-order", async (req, res) => {
       return res.status(r.status).json({ success: false, message: data.message?.[0] || `HTTP ${r.status}`, raw: data });
     }
     console.log(`✅ Order dibatalkan: ${invoice_number}`);
+    
+    // Update status di Supabase
+    await updateOrder(invoice_number, { status: "REFUNDED", refunded_at: new Date().toISOString() });
+    
     return res.json({ success: true, raw: data });
   } catch (e) {
     console.error("doku-cancel-order error:", e);
