@@ -105,19 +105,33 @@ export default function AdminServices() {
     try {
       setIsSaving(true);
 
-      const result = editingService.id
-        ? await updateService(editingService.id, editingService)
-        : await updateService(undefined, editingService as Omit<Service, 'id' | 'created_at'>);
+      let serviceData: Omit<Service, 'id' | 'created_at' | 'updated_at'>;
+      
+      if (editingService.id) {
+        // Update existing service - remove id from payload
+        const { id, ...updateData } = editingService;
+        serviceData = updateData;
+        
+        await updateService(editingService.id, serviceData);
+        await logAudit('service.update', editingService.id, { 
+          name: editingService.name, 
+          slug: editingService.slug, 
+          price: editingService.price 
+        });
+        toast.success('Layanan berhasil diperbarui');
+      } else {
+        // Create new service
+        serviceData = editingService as Omit<Service, 'id' | 'created_at' | 'updated_at'>;
+        
+        await updateService(undefined, serviceData);
+        await logAudit('service.create', null, { 
+          name: editingService.name, 
+          slug: editingService.slug, 
+          price: editingService.price 
+        });
+        toast.success('Layanan berhasil dibuat');
+      }
 
-      if (result.error) throw result.error;
-
-      await logAudit(
-        editingService.id ? 'service.update' : 'service.create',
-        editingService.id || null,
-        { name: editingService.name, slug: editingService.slug, price: editingService.price }
-      );
-
-      toast.success(editingService.id ? 'Layanan berhasil diperbarui' : 'Layanan berhasil dibuat');
       handleCloseDialog();
       await refetch();
     } catch (error: unknown) {

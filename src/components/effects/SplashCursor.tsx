@@ -63,11 +63,12 @@ function SplashCursor({
     const pixelRatio = 1;
     const frameInterval = 1000 / 24;
 
-    // Keep the fluid effect, but avoid allocating desktop-sized simulation
-    // buffers that are disproportionate to the decorative canvas.
+    // Adaptive quality based on platform - reduce simulation size for mobile devices
+    const isMobile = typeof navigator !== 'undefined' && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    
     let config = {
-      SIM_RESOLUTION: Math.min(SIM_RESOLUTION, 48),
-      DYE_RESOLUTION: Math.min(DYE_RESOLUTION, 320),
+      SIM_RESOLUTION: Math.min(SIM_RESOLUTION, isMobile ? 32 : 48),
+      DYE_RESOLUTION: Math.min(DYE_RESOLUTION, isMobile ? 256 : 320),
       CAPTURE_RESOLUTION,
       DENSITY_DISSIPATION,
       VELOCITY_DISSIPATION,
@@ -75,7 +76,7 @@ function SplashCursor({
       PRESSURE_ITERATIONS: Math.min(PRESSURE_ITERATIONS, 2),
       CURL,
       SPLAT_RADIUS,
-      SPLAT_FORCE,
+      SPLAT_FORCE: isMobile ? SPLAT_FORCE * 0.7 : SPLAT_FORCE,
       SHADING,
       COLOR_UPDATE_SPEED,
       PAUSED: false,

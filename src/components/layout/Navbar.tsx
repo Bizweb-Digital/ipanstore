@@ -14,7 +14,7 @@ const links = [
   { to: "/order", label: "Order" },
   { to: "/faq", label: "FAQ" },
   { to: "/kontak", label: "Kontak" },
-  { to: "/admin/login", label: "Admin Panel", variant: "primary" },
+  { to: "/admin/login", label: "Login Admin", variant: "primary" },
 ];
 
 const socialLinks = [

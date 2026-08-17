@@ -64,17 +64,28 @@ export function useServices() {
     id: string | undefined,
     data: Omit<Service, 'id' | 'created_at' | 'updated_at'>
   ) => {
-    if (id) {
-      const { error } = await supabase
-        .from('services')
-        .update({ ...data, updated_at: new Date().toISOString() })
-        .eq('id', id);
-      return { error };
-    } else {
-      const { error } = await supabase
-        .from('services')
-        .insert({ ...data });
-      return { error };
+    try {
+      if (id) {
+        const { data: updatedData, error } = await supabase
+          .from('services')
+          .update({ ...data, updated_at: new Date().toISOString() })
+          .eq('id', id)
+          .select();
+        
+        if (error) throw error;
+        return { data: updatedData?.[0] || null, error: null };
+      } else {
+        const { data: insertedData, error } = await supabase
+          .from('services')
+          .insert({ ...data })
+          .select();
+        
+        if (error) throw error;
+        return { data: insertedData?.[0] || null, error: null };
+      }
+    } catch (error) {
+      console.error('UpdateService error:', error);
+      throw error;
     }
   };
 

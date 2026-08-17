@@ -14,6 +14,9 @@ interface LayoutProps {
 const Layout = ({ children }: LayoutProps) => {
   if (typeof window === 'undefined') return null;
 
+  // Detect mobile device untuk optimasi performa
+  const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
   // Satu instance Lenis global untuk seluruh aplikasi. Dibuat sekali dan
   // dipakai bersama oleh semua halaman — mencegah banyak rAF loop Lenis
   // yang bertumpuk (penyebab scroll bergetar/tersendat).
@@ -98,15 +101,15 @@ const Layout = ({ children }: LayoutProps) => {
       <SplashCursor
         COLOR="#94A3B8"
         RAINBOW_MODE={false}
-        SIM_RESOLUTION={48}
-        DYE_RESOLUTION={320}
+        SIM_RESOLUTION={isMobile ? 32 : 48}
+        DYE_RESOLUTION={isMobile ? 256 : 320}
         PRESSURE_ITERATIONS={2}
         SHADING={false}
-        SPLAT_RADIUS={0.15}
-        SPLAT_FORCE={2200}
+        SPLAT_RADIUS={0.12}
+        SPLAT_FORCE={isMobile ? 2200 * 0.7 : 2200}
         DENSITY_DISSIPATION={4}
         VELOCITY_DISSIPATION={2.5}
-        CURL={2}
+        CURL={isMobile ? 1.5 : 2}
       />
       {/* Latar animasi Scanner global — fixed, hadir di semua page dan tetap
           terlihat saat user scroll ke bagian manapun. z-0 agar konten yang

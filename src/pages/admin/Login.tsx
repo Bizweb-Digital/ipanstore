@@ -42,18 +42,16 @@ export default function AdminLogin() {
       <div className="w-full max-w-md animate-fade-up">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-4 border border-primary/20">
-            <Store className="w-8 h-8 text-primary" />
-          </div>
+          <img src="/logo-transparent.png" alt="IPAN STORE" className="h-16 mb-4" />
           <h1 className="font-display text-2xl font-bold">
             IPAN <span className="text-primary">STORE</span>
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">Admin Panel</p>
+          <p className="text-sm text-muted-foreground mt-1">Login Admin</p>
         </div>
 
         <Card className="bg-card border-white/10 shadow-soft-md">
           <CardHeader className="pb-6">
-            <CardTitle className="text-xl">Masuk ke Admin Panel</CardTitle>
+            <CardTitle className="text-xl">Masuk ke Login Admin</CardTitle>
             <CardDescription>
               Gunakan kredensial admin untuk mengakses dashboard
             </CardDescription>
