@@ -62,8 +62,8 @@ const Navbar = () => {
             <img
               src={logo}
               alt="Ipan Store"
-              width={577}
-              height={433}
+              width={288}
+              height={216}
               className="h-10 w-auto object-contain"
             />
           </a>

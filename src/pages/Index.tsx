@@ -22,7 +22,7 @@ const showcaseCards = [
   },
   {
     icon: <Cpu className="h-6 w-6" strokeWidth={1.75} />,
-    title: "Windows Lebih Enteng",
+    title: "Windows Lebih Ringan",
     desc: "Debloat bloatware & atur ulang power plan. Booting cepat, RAM idle lega.",
   },
   {

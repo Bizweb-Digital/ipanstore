@@ -181,7 +181,7 @@ const AppSettinxSection = ({ compact = false }: { compact?: boolean }) => {
   }
 
   return (
-    <section className="relative py-24 overflow-hidden border-t border-white/16">
+    <section className="relative z-10 py-24 overflow-hidden border-t border-white/16">
       <div className="container mx-auto px-4">
         {content}
       </div>

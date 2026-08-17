@@ -46,6 +46,7 @@ const ScrollStackCards = ({
   const visibleRef = useRef(true);
   const curYRef = useRef<number[]>([]);
   const curScaleRef = useRef<number[]>([]);
+  const curOpacityRef = useRef<number[]>([]);
 
   const parsePercentage = useCallback((value: string | number, containerHeight: number) => {
     if (typeof value === "string" && value.includes("%")) {
@@ -65,7 +66,7 @@ const ScrollStackCards = ({
 
   const computeTargets = useCallback(() => {
     const cards = cardsRef.current;
-    if (!cards.length) return [] as { translateY: number; scale: number }[];
+    if (!cards.length) return [] as { translateY: number; scale: number; opacity: number }[];
 
     const scrollTop = getScrollTop();
     const vh = window.innerHeight;
@@ -76,7 +77,7 @@ const ScrollStackCards = ({
     const pinEnd = endTop - vh / 2;
 
     return cards.map((card, i) => {
-      if (!card) return { translateY: 0, scale: 1 };
+      if (!card) return { translateY: 0, scale: 1, opacity: 1 };
       const cardTop = getOffset(card);
       const pinStart = cardTop - stackPosPx - itemStackDistance * i;
       const triggerEnd = cardTop - parsePercentage("8%", vh);
@@ -99,14 +100,26 @@ const ScrollStackCards = ({
         translateY = pinEnd - cardTop + stackPosPx + itemStackDistance * i;
       }
 
+      // Opacity: kartu yang sudah "pinned" di belakang tumpukan di-fade
+      // sangat halus (0.85) agar teks dari kartu belakang tidak tembus
+      // terlihat ke kartu depan, tapi tetap terlihat bentuk kartunya.
+      let opacity = 1;
+      if (scrollTop >= pinStart) {
+        // Hitung seberapa dalam kartu ini sudah tertumpuk
+        const stackDepth = Math.max(0, Math.min(1, (scrollTop - pinStart) / (triggerEnd - pinStart)));
+        // Semakin dalam tertumpuk, semakin transparan (tapi tidak hilang total)
+        opacity = 1 - stackDepth * 0.15;
+      }
+
       return {
         translateY: Math.round(translateY * 10) / 10,
         scale: Math.round(scale * 1000) / 1000,
+        opacity: Math.round(opacity * 100) / 100,
       };
     });
   }, [getScrollTop, getOffset, parsePercentage, stackPosition, itemStackDistance, itemScale, baseScale]);
 
-  const apply = useCallback((targets: { translateY: number; scale: number }[]) => {
+  const apply = useCallback((targets: { translateY: number; scale: number; opacity: number }[]) => {
     const cards = cardsRef.current;
     // Di HP (touch) scroll native bergerak cepat → pakai lerp lebih halus
     // agar kartu mengikuti dengan buttery (tidak terlihat lompat/tidak smooth).
@@ -123,13 +136,18 @@ const ScrollStackCards = ({
 
       const cy = curYRef.current[i] ?? t.translateY;
       const cs = curScaleRef.current[i] ?? t.scale;
+      const co = curOpacityRef.current[i] ?? t.opacity;
       const ny = cy + (t.translateY - cy) * k;
       const ns = cs + (t.scale - cs) * k;
+      const no = co + (t.opacity - co) * k;
       curYRef.current[i] = ny;
       curScaleRef.current[i] = ns;
+      curOpacityRef.current[i] = no;
 
       const transform = `translate3d(0, ${Math.round(ny * 10) / 10}px, 0) scale(${Math.round(ns * 1000) / 1000})`;
       if (card.style.transform !== transform) card.style.transform = transform;
+      const opacity = `${Math.round(no * 100) / 100}`;
+      if (card.style.opacity !== opacity) card.style.opacity = opacity;
     }
   }, []);
 
@@ -164,10 +182,14 @@ const ScrollStackCards = ({
 
     els.forEach((card, i) => {
       if (i < els.length - 1) card.style.marginBottom = `${itemDistance}px`;
-      card.style.willChange = "transform";
+      card.style.willChange = "transform, opacity";
       card.style.transformOrigin = "top center";
       card.style.backfaceVisibility = "hidden";
       card.style.transform = "translateZ(0)";
+      card.style.opacity = "1";
+      // z-index: kartu pertama (paling atas) harus di atas kartu yang
+      // bertumpuk di belakangnya agar tidak ada teks yang "tembus".
+      card.style.zIndex = String(els.length - i);
     });
 
     const onScroll = () => start();

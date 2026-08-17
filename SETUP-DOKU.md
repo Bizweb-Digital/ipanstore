@@ -67,7 +67,7 @@ browser, orang lain bisa meniru / mencurangi transaksi Anda. Karena itu
 1. Di Dashboard DOKU → **Integrations → Notifications**
 2. **Notification URL** = `https://<host-backend-anda>/api/doku-webhook`
    - Contoh lokal/testing   : `https://ipan-vps.tailxxxx.ts.net/api/doku-webhook`
-   - Contoh production live : `https://ipanstore.my.id/api/doku-webhook`
+     - Contoh production live : `https://api.ipanstore.id/api/doku-webhook`
      (atau lewat eksposur Tailscale Funnel / reverse proxy)
 3. Klik **Save**.
 4. Klik **Resend Sample Notification** untuk test (lihat di server log).
@@ -86,10 +86,10 @@ DOKU_CLIENT_ID=MCH-0001-xxxxxxxxxxxxxxxx          # dari langkah 1
 DOKU_SECRET_KEY=your_secret_key_here              # dari langkah 1 (RAHASIA)
 DOKU_BASE_URL=https://api.doku.com                # https://api-sandbox.doku.com (sandbox)
 DOKU_CHECKOUT_PATH=/checkout/v1/payment           # jangan ganti
-DOKU_CALLBACK_URL=https://ipanstore.my.id/order   # "Back to merchant" setelah bayar
+DOKU_CALLBACK_URL=https://ipanstore.id/order   # "Back to merchant" setelah bayar
 
 # CORS — domain front-end Anda
-ALLOWED_ORIGINS=https://ipanstore.my.id,http://localhost:8080
+ALLOWED_ORIGINS=https://ipanstore.id,https://www.ipanstore.id,http://localhost:8080
 
 # Port backend (bebas, mis. 3001)
 PORT=3001
@@ -213,7 +213,7 @@ VITE_BACKEND_URL=https://sever-h81m-s2ph.<tailnet-name>.ts.net
 Pastikan domain front-end ada di `ALLOWED_ORIGINS`:
 
 ```bash
-ALLOWED_ORIGINS=https://ipanstore.my.id,https://www.ipanstore.my.id,http://localhost:8080
+ALLOWED_ORIGINS=https://ipanstore.id,https://www.ipanstore.id,http://localhost:8080
 ```
 
 Lalu restart backend:
@@ -230,7 +230,7 @@ docker compose down
 docker compose up --build -d
 ```
 
-Verifikasi live: buka https://ipanstore.my.id/order, lakukan order test kecil (paket paling murah).
+Verifikasi live: buka https://ipanstore.id/order, lakukan order test kecil (paket paling murah).
 
 ---
 

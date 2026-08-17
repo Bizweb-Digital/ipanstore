@@ -6,8 +6,8 @@
 > Langkah Berikutnya) setiap kali ada perubahan. Lihat bab "Cara Merawat" di bawah.
 
 - **Repo**: `git@github.com-bizwebdigital:Bizweb-Digital/ipanstore.git` (branch `main`)
-- **Domain live**: `https://ipanstore.my.id` (Cloudflare Tunnel → container Docker port 5007)
-- **Update terakhir**: 13 Agustus 2026
+- **Domain live**: `https://ipanstore.id` (Cloudflare Tunnel → container Docker port 5007)
+- **Update terakhir**: 17 Agustus 2026 — fix DEFINITIF flicker preview SettinX (Lenis stop + portal lightbox) & kartu menimpa section berikutnya (z-index pengikut), terverifikasi Playwright
 
 ---
 
@@ -15,10 +15,16 @@
 
 | Item | Status |
 |---|---|
-| Website live `https://ipanstore.my.id/` | ✅ Live |
+| Website live `https://ipanstore.id/` | ✅ Live |
+| Migrasi ke domain baru `.id` | ✅ Selesai 17 Agt; domain lama redirect 301 |
+| Konfigurasi source target `https://ipanstore.id` | ✅ Selesai dan ter-deploy |
+| Website baru `https://ipanstore.id/` | ✅ Live; bundle baru dan SEO baru terverifikasi |
 | Halaman `/order` | ✅ Live & berfungsi |
 | Integrasi DOKU Checkout (payment gateway) | ✅ **Live end-to-end** (bundle live + backend + kredensial production terverifikasi 13 Agt) |
-| Backend `server/` di VPS (PM2 `ipanstore-backend`, port 5159) | ✅ Jalan & publik via **Cloudflare Tunnel** `https://api.ipanstore.my.id` (health OK, CORS OK) |
+| Backend `server/` di VPS (PM2 `ipanstore-backend`, port 5159) | ✅ Jalan & publik via **Cloudflare Tunnel** `https://api.ipanstore.id` (health OK, CORS OK) |
+| Target API baru `https://api.ipanstore.id` | ✅ Source, route, environment, dan deploy selesai |
+| API baru `https://api.ipanstore.id` | ✅ Live; health dan CORS terverifikasi |
+| Route API lama `api.ipanstore.my.id` | ✅ Dihapus dari Cloudflare setelah API baru terverifikasi |
 | Kredensial DOKU **production** (`BRN-0221-...`, api.doku.com) | ✅ Terisi di `server/.env` & valid (test create order → checkout URL asli) |
 | **Email otomatis SettinX** (link Drive + invoice setelah SUCCESS) | ✅ **Live & terverifikasi** — email test terkirim, webhook→email berhasil |
 | GitHub remote (via `github.com-bizwebdigital`) | ✅ Terhubung & authenticated |
@@ -29,6 +35,9 @@
 | Pull+deploy server | ✅ `git pull` di server sukses → backend PM2 aktif, `.env` aman |
 | Backend PM2 auto-start | ✅ `pm2 save` + systemd `pm2-root.service` enabled (auto-start saat reboot) |
 | Verifikasi live | ✅ `/` `/layanan` `/paket` `/order` `/testimoni` `/faq` `/kontak` `/sitemap.xml` → 200 |
+| Audit performance terakhir | ⚠️ Lighthouse desktop Performance 56; FCP 0,8 s, LCP 1,3 s, TBT 22.910 ms, CLS 0 |
+| Audit SEO terakhir | ✅ SEO dasar 100; ⚠️ OG image `/logo.png` 404; `llms.txt` belum tersedia |
+| Audit accessibility terakhir | ⚠️ Skor 88; duplicate menu ID dan focusable element di dalam `aria-hidden` |
 
 > **Catatan server**: SSH config `~/.ssh/config` dibuat di server agar `git pull` memakai
 > key `id_ed25519_bizweb` (Host `github.com` → IdentityFile). Jika `docker compose` error
@@ -62,6 +71,371 @@ src/
 ---
 
 ## 📚 RIWAYAT SESI & PERUBAHAN
+
+### Sesi: Fix Definitif Flicker Preview SettinX + Kartu Menimpa Section Berikut (17 Agustus 2026)
+
+- **Latar:** User melaporkan flicker nyata saat preview "PAGE MENU APP SETTINX" /
+  "LOGIN PAGE IPAN APP SETTINX" diklik lalu user scroll ke atas, dan konten (foto)
+  menumpuk di atas teks lain. Animasi live (stacking kartu, tab, dsb.) harus utuh.
+- **3 akar masalah & fix (tanpa menghapus animasi apa pun):**
+  1. **Lenis tidak di-stop saat lightbox terbuka.** Body sudah `overflow:hidden`,
+     tapi `lenis.scroll` (nilai internal) terus berubah saat wheel → `ScrollStackCards`
+     membaca nilai itu dan menggerakkan kartu di belakang overlay (flicker), lalu
+     halaman meloncat saat lightbox ditutup karena posisi internal Lenis drift.
+     Fix: `lenis.stop()` saat open, `lenis.start()` saat close
+     (`SettinxGallery.tsx`), plus kompensasi `paddingRight` scrollbar.
+  2. **Lightbox `z-[100]` terjebak stacking context ancestor** (`container relative
+     z-10`) → Navbar `z-[3000]` dan konten halaman melukis DI ATAS overlay
+     (sumber "tumpukan menimpa teks"). Fix: render overlay via **React Portal ke
+     `document.body`** dengan `z-[9000]` (di atas navbar 3000 & WA z-50, di bawah
+     LoadingScreen 9999).
+  3. **Section pengikut masih `z-auto`** sementara container kartu stacking
+     `relative z-10` → kartu pinned menimpa section berikutnya.
+     Fix: `z-10` eksplisit pada section `AppSettinxSection` (root) &
+     `PackagesPreview` — urutan painting kini benar.
+- **Verifikasi (Playwright, viewport 1568×902):** hit-test 4 titik semuanya jatuh
+  ke dialog portal (navbar/footer tak menembus); 10x wheel-up saat lightbox
+  terbuka → 0/10 kartu bergerak, `scrollY` & `lenis.scroll` beku identik; klik
+  overlay & tombol X menutup; Lenis resume normal (4831→4531); navigasi prev/next
+  OK; `/layanan` & `/paket` 0 console/page error; transform stacking saat scroll
+  normal tetap hidup (393px/0.937 dsb. — animasi utuh).
+- **Verifikasi build:** `npx tsc --noEmit` bersih, `npm run build` sukses,
+  `npx vitest run` lulus. **Belum commit/deploy.**
+- **File diubah:** `src/components/sections/SettinxGallery.tsx` (portal + lenis
+  stop/start + scrollbar compensation), `src/components/sections/AppSettinxSection.tsx`
+  (z-10), `src/components/sections/PackagesPreview.tsx` (z-10).
+
+### Sesi: Perbaikan DEFINITIF Flicker & Tembus Kartu Layanan/Paket — 17 Agustus 2026
+
+- **Latar:** User melaporkan kartu di `/layanan` dan `/paket` masih berkedip dan
+  konten kartu bertumpuk "tembus" (teks kartu belakang terlihat menembus kartu
+  depan). Video user menunjukkan masalah dengan jelas.
+- **Akar masalah yang ditemukan & diperbaiki (4 fix):**
+  1. **AnimatedTabs dual-layer conflict.** Komponen menggunakan dua layer terpisah
+     (outer untuk reveal + inner untuk parallax) yang menyebabkan transform
+     berlipat ganda dan kedipan. Fix: gabungkan jadi satu elemen dengan satu
+     timeline GSAP (reveal + parallax dalam satu tween).
+  2. **Kartu bertumpuk tembus (opacity).** Kartu yang sudah "pinned" di belakang
+     tumpukan tetap opacity 1, sehingga teks dari kartu belakang terlihat menembus
+     kartu depan. Fix: tambahkan opacity fade halus (0.85) untuk kartu yang sudah
+     tertumpuk di belakang, sehingga tidak tembus tapi tetap terlihat bentuknya.
+  3. **Background kartu tidak solid.** `.gaming-card` menggunakan background
+     #2d2d2d yang terlalu terang dan `.scroll-stack-card` menggunakan background
+     transparent, menyebabkan konten bertumpuk saling tembus. Fix: perkuat
+     background `.gaming-card` ke #232325 + tambahkan shadow, dan set
+     `.scroll-stack-card` background ke #1a1a1a (sama dengan body).
+  4. **Z-index tidak diatur.** Kartu-kartu yang bertumpuk tidak memiliki z-index
+     eksplisit, sehingga urutan stacking mengikuti DOM order yang bisa menyebabkan
+     kartu belakang menutupi kartu depan. Fix: tambahkan z-index descending
+     (n, n-1, ..., 1) sehingga kartu pertama selalu di atas.
+- **Hasil terukur (Playwright, viewport 1568×902):**
+  - Screenshot perbandingan menunjukkan kartu "Optimasi PC Low-End" kini solid
+    dan tidak tembus — teks "Konsultasi Performa" di bawahnya tidak lagi
+    terlihat menembus.
+  - Transform animasi tetap sama seperti live (translateY: 824, 557, 290, 21).
+  - `npx tsc --noEmit` bersih, `npm run build` sukses, `npm run test` lulus.
+- **File diubah:** `src/components/effects/AnimatedTabs.tsx` (single-layer),
+  `src/components/effects/ScrollStackCards.tsx` (opacity fade + z-index),
+  `src/index.css` (background solid + isolation). **Belum commit/deploy.**
+
+### Sesi: Perbaikan Akar Flicker Kartu Layanan/Paket (17 Agustus 2026)
+
+- **Akar masalah terkonfirmasi lewat pengukuran frame-by-frame (Playwright):**
+  `ScrollStackCards.getOffset()` membaca posisi kartu via
+  `getBoundingClientRect().top + window.scrollY`. Kartu yang sama sedang diberi
+  `transform` (translateY + scale) oleh loop ini sendiri tiap frame, sehingga posisi
+  yang dibaca sudah "terkontaminasi" output frame sebelumnya → target menjadi
+  self-referential (feedback loop). Akibatnya kartu TIDAK pernah benar-benar pin di
+  posisi tumpuk: measured `translateY` hanya ~1/2 nilai ideal dan kartu "meloncat"
+  menjauh (viewportTop -249px, seharusnya +116px) → terlihat sebagai kedipan/jump
+  saat scroll di `/layanan` dan `/paket`. Bug ini ada di bundle live (`HEAD` 3dd3498).
+- **Fix (tanpa menghilangkan animasi apa pun):** `getOffset()` kini menghitung posisi
+  dari koordinat layout murni (rantai `offsetTop`) yang tidak terpengaruh transform,
+  sehingga rumus pin/scale/lerp menjadi stabil dan deterministik. Efek menumpuk,
+  scale, lerp, dan release tetap persis seperti desain.
+- **Fix kedua:** `AnimatedTabs` punya dua tween GSAP (reveal `fromTo` + parallax `scrub`)
+  menulis `transform` elemen yang sama → saling menimpa tiap frame (kedipan tab).
+  Layer dipisah: reveal di wrapper luar, parallax di inner div. Kedua efek dipertahankan.
+- **Verifikasi:** uji pin menunjukkan `appliedTY` kini = `expectedTY` (diff -0.5 s/d -3px,
+  murni lerp-lag), konvergensi mulus tanpa osilasi (180 frame), `viewportTop` terkunci
+  di 116px sesuai desain. Smoke test `/layanan` & `/paket`: HTTP 200, 0 console/page error,
+  tab switching OK. `npx tsc --noEmit`, `npm run build`, `npm run test` semua lulus.
+  Belum commit/deploy.
+
+### Sesi: Sinkronisasi Kartu Layanan/Paket dengan Website Live (17 Agustus 2026)
+
+- Bundle live saat ini teridentifikasi memakai `index-CCirrq1U.js`, `Layanan-iXv4gIsV.js`,
+  `Paket-C-Ro9o8I.js`, dan `AnimatedTabs-C8xIlld8.js`; implementasinya sama dengan `HEAD`
+  `3dd3498`, bukan dengan eksperimen lokal sebelumnya.
+- Riset mendalam menemukan perbedaan lokal pada `ScrollStackCards.tsx` (`offsetTop` serta
+  `isolate overflow-hidden`), `AnimatedTabs.tsx` (inner parallax wrapper), dan class fade di
+  `Layanan.tsx`/`Paket.tsx`. Keempat perbedaan tersebut membuat perilaku lokal tidak identik
+  dengan live, sehingga semuanya dikembalikan ke implementasi live.
+- Smoke test perbandingan lokal vs live untuk `/layanan` dan `/paket`: HTTP 200, tidak ada
+  page/console error, class wrapper kartu identik (`scroll-stack-cards relative w-full`), jumlah
+  kartu identik, dan transform setelah scroll berada pada nilai yang sama secara visual.
+- Verifikasi: `npx tsc --noEmit`, `npm run build`, dan `npm run test` berhasil. Belum commit
+  atau deploy.
+
+### Sesi: Perbaikan Kedipan Tab Layanan dan Paket (17 Agustus 2026)
+
+- `AnimatedTabs.tsx`: layer reveal dan parallax dipisah. Sebelumnya dua GSAP tween menulis
+  `transform` pada elemen yang sama secara bersamaan, sehingga tab dapat berkedip/jump saat
+  scroll di halaman `/layanan` dan `/paket`.
+- `Layanan.tsx` dan `Paket.tsx`: animasi `animate-fade-up` pada konten yang di-remount saat
+  pergantian kategori dihapus agar isi tidak berkedip setiap tab diklik.
+- Verifikasi: `npx tsc --noEmit`, `npm run build`, `npm run test`, dan smoke browser `/layanan`
+  serta `/paket` (HTTP 200, tidak ada page/console error) berhasil. Belum commit atau deploy.
+
+### Sesi: Perbaikan Flicker Preview SettinX dan Copy Beranda (17 Agustus 2026)
+
+- `SettinxGallery.tsx`: saat lightbox preview page menu/login terbuka, scroll background
+  dikunci dengan `overflow: hidden` dan `overscrollBehavior: none`; overlay memakai `touch-none`
+  dan `overscroll-none` agar gesture tidak menggerakkan halaman di belakang fixed preview.
+- `ScrollStackCards.tsx`: posisi kartu saat stacking dihitung dari koordinat layout `offsetTop`,
+  bukan `getBoundingClientRect()` yang sudah terpengaruh `transform`; ini mencegah feedback loop
+  desktop yang membuat kartu berkedip/menembus preview SettinX. Container stacking juga dibuat
+  isolated dan clipped agar layer kartu tidak mengecat section berikutnya.
+- `Index.tsx`: teks showcase `Windows Lebih Enteng` diubah menjadi `Windows Lebih Ringan`.
+- Verifikasi: `npx tsc --noEmit`, `npm run build`, `npm run test`, dan smoke test `/paket`,
+  `/layanan`, scroll cards desktop setelah clipping, serta Beranda berhasil; tidak ada commit
+  atau deploy.
+
+### Sesi: Rollback Optimasi Runtime Poin 1-6 (17 Agustus 2026)
+
+- Atas permintaan user, perubahan runtime pada `SplashCursor`, `Scanner`,
+  `VariableProximity`, `ElectricBorder`, `DepthCarousel`, `Layout`, dan lazy-load lightbox/
+  carousel dikembalikan ke kondisi sebelum sesi optimasi runtime.
+- Optimasi sesi sebelumnya tetap dipertahankan: `LoadingScreen` 200 ms, thumbnail WebP,
+  optimasi logo/favicon, penghapusan QueryClientProvider, pemuatan font, serta animasi
+  `ShineBorder`/dot carousel.
+- Verifikasi rollback: `npx tsc --noEmit`, `npm run build`, `npm run test`, dan smoke test tujuh
+  route lokal berhasil. `npm run lint` tetap gagal pada 59 error pre-existing dan 9 warning.
+  Tidak ada commit atau deploy.
+
+### Sesi: Implementasi Optimasi Runtime Efek ReactBits (17 Agustus 2026)
+
+**Batasan user**: efek animasi, font, cursor, dan komponen ReactBits tetap dipertahankan.
+
+#### Riset panduan
+- Mengikuti prinsip web.dev/MDN: `requestAnimationFrame` untuk sinkronisasi frame,
+  `IntersectionObserver` untuk pause offscreen, `ResizeObserver` untuk cache geometry,
+  passive listener untuk input yang tidak memerlukan `preventDefault`, serta
+  `transform`/`opacity` untuk jalur compositor.
+
+#### Perubahan
+- `SplashCursor.tsx`: kualitas simulasi, DPR, pressure iteration, dan frame rate adaptif untuk
+  coarse/low-power/reduced-motion; pause saat tab/page tersembunyi; input mouse/touch
+  dikoaleskan per frame; fallback aman ketika WebGL tidak tersedia.
+- `Scanner.tsx`: DPR/frame rate adaptif, waktu animasi di-reset saat resume, dan posisi canvas
+  dicache sehingga mouse move tidak membaca `getBoundingClientRect()` setiap event.
+- `VariableProximity.tsx`: posisi huruf dicache, geometry diperbarui lewat `ResizeObserver`,
+  input diproses satu kali per frame, loop berhenti offscreen/hidden, dan kalkulasi jarak
+  menggunakan squared distance sebelum `sqrt` yang diperlukan.
+- `ElectricBorder.tsx`: sample geometry dicache, DPR/octave/frame rate adaptif, dan loop
+  berhenti ketika offscreen atau page hidden; efek canvas tetap berjalan saat terlihat.
+- `DepthCarousel.tsx` dan `Layout.tsx`: autoplay/Lenis pause saat hidden/offscreen; drag
+  carousel dikoaleskan ke `requestAnimationFrame`.
+- `TestimoniPreview.tsx` dan `TestimoniPage.tsx`: carousel/lightbox tetap tersedia tetapi
+  `DepthCarousel` dan library lightbox dimuat sesuai kebutuhan.
+
+#### Verifikasi
+- `npx tsc --noEmit`, `npm run build`, dan `npm run test` berhasil.
+- Smoke test Playwright desktop, mobile, dan reduced-motion: `/` serta `/testimoni` HTTP 200,
+  tidak ada page error/console error.
+- Lazy-load terverifikasi: carousel baru dimuat setelah mendekati viewport dan lightbox baru
+  dimuat setelah foto diklik.
+- `npm run lint` masih gagal pada error pre-existing di ReactBits/UI dan `Layout.tsx`; tidak
+  ada commit atau deploy.
+
+### Sesi: Optimasi Performance Terpilih Tanpa Menghapus Efek (17 Agustus 2026)
+
+**Batasan user**: seluruh efek animasi, font, cursor, dan komponen ReactBits yang sudah ada
+harus tetap dipertahankan.
+
+- `LoadingScreen.tsx` tetap digunakan, tetapi selesai dalam `200 ms` tanpa progress acak satu
+  detik.
+- `QueryClientProvider` dan dependency query yang tidak digunakan dihapus; `animation-vendor`
+  tetap ada tetapi tidak lagi dipreload sebelum entry kritis.
+- `Roboto Flex` tetap digunakan oleh `VariableProximity`; pemuatannya dipindah dari CSS
+  `@import` ke satu link Google Fonts dengan range variable yang lebih sempit.
+- `TestimoniPreview.tsx` memakai thumbnail WebP untuk carousel dan JPG penuh hanya untuk
+  lightbox. Logo diperkecil; favicon diganti PNG 64px yang ringan.
+- `ShineBorder` tetap bergerak, tetapi animasinya memakai `transform`; dot carousel tetap
+  memiliki animasi dan touch target 20px tanpa transisi `width`/`background-color`.
+- Verifikasi lokal: `npx tsc --noEmit`, `npm run build`, dan `npm run test` berhasil. Lint tetap
+  memiliki error pre-existing pada komponen ReactBits/UI; tidak ada deploy atau commit.
+
+### Sesi: Menyalakan Local Preview Sebelum Commit (17 Agustus 2026)
+
+- Dev server Vite dijalankan pada `http://localhost:8080/` untuk membandingkan perubahan lokal
+  sebelum commit/deploy.
+- Verifikasi URL lokal mengembalikan HTTP `200`.
+
+### Sesi: Penjabaran Hasil Audit Performance dan SEO (17 Agustus 2026)
+
+- Hasil audit sebelumnya dijabarkan kembali kepada user berdasarkan metrik Lighthouse,
+  pemeriksaan production, dan source React/Vite.
+- Tidak ada perubahan source website, build, test, deploy, atau commit pada sesi ini.
+- Prioritas implementasi tetap: kurangi beban main thread/WebGL dan perbaiki OG image,
+  `llms.txt`, serta penghapusan `debug-backend.html` dari production.
+
+### Sesi: Audit Mendalam SEO, Performance, Accessibility, dan Agentic Browsing (17 Agustus 2026)
+
+**Permintaan user**: audit dan riset mendalam project serta analisis hasil PageSpeed Insights desktop/mobile; tidak mengubah source website.
+
+#### Scope audit
+- Audit read-only source React/Vite, konfigurasi Vite/Tailwind/Nginx/Docker, route, komponen efek, aset gambar, font, test, dan dokumentasi.
+- Audit live read-only ke `https://ipanstore.id`, response header asset, `robots.txt`, `sitemap.xml`, `llms.txt`, OG image, dan `debug-backend.html`.
+- Tidak menjalankan perubahan kode, build, test, deploy, commit, atau push pada sesi audit ini.
+
+#### Temuan performance utama
+- Lighthouse desktop: Performance `56`, FCP `0,8 s`, LCP `1,3 s`, TBT `22.910 ms`, CLS `0`, Speed Index `4,7 s`.
+- TBT adalah masalah terbesar: main-thread work `34,9 s`, sekitar 20 long task, dan unused JavaScript sekitar `112 KiB`.
+- `LoadingScreen.tsx` menutup viewport, memakai progress acak, dan menunda completion sekitar 1 detik; screenshot Lighthouse masih menangkap splash screen. Ini berpotensi menyebabkan LCP/render delay tidak merepresentasikan hero sebenarnya.
+- `Layout.tsx` selalu mengaktifkan `SplashCursor` WebGL fluid dan `GlobalScannerBackground` WebGL. `SplashCursor.tsx` menjalankan rAF terus-menerus dengan `DYE_RESOLUTION=1440` dan `PRESSURE_ITERATIONS=20`, termasuk di mobile.
+- Homepage memuat beberapa animation loop sekaligus: Lenis, WebGL scanner, WebGL fluid, VariableProximity, ScrollStack, GSAP, ElectricBorder, carousel, counter, marquee, shine, dan shimmer.
+- `vite.config.ts` memaksa `react-vendor`, `query-vendor`, dan `animation-vendor` masuk modulepreload. `@tanstack/react-query` tidak memiliki pemakaian query aktual selain provider yang tidak diperlukan.
+- Google Fonts masih critical path: Plus Jakarta Sans, JetBrains Mono, dan Roboto Flex dari `VariableProximity.css`; total third-party font sekitar `145 KiB` pada report.
+- `TestimoniPreview.tsx` memakai JPG asli untuk carousel homepage. Gambar pertama `1080x1875`, ditampilkan sekitar `230x511`, transfer sekitar `159,7 KiB`; estimasi penghematan Lighthouse `150,4 KiB`.
+- Logo sekitar `68,4 KiB` tetapi ditampilkan sekitar `107x80`; favicon live sekitar `183 KiB` dan perlu diperkecil.
+- Forced reflow berpotensi berasal dari pembacaan `getBoundingClientRect()` dan penulisan style berulang pada `VariableProximity`, `ScrollStackCards`, `Scanner`, `Paket`, dan `ElectricBorder`.
+- Animasi shine menggunakan `background-position`, sedangkan dot carousel mengubah `width` dan `background-color`; Lighthouse menandainya sebagai non-composited animation.
+
+#### Temuan SEO dan live production
+- `https://ipanstore.id/logo.png` mengembalikan `404`, sementara `index.html` dan `src/lib/seo.ts` menggunakannya sebagai OG/Twitter/JSON-LD image. URL perlu diarahkan ke aset yang benar, misalnya `/img/logo.png`, atau dibuatkan asset root yang valid.
+- `https://ipanstore.id/llms.txt` mengembalikan SPA `index.html`, bukan Markdown. Agentic Browsing gagal karena tidak ada H1 dan link.
+- `https://ipanstore.id/debug-backend.html` publik dengan HTTP `200`, masih menunjuk backend Tailnet lama, dan memiliki POST test create order production. Ini harus dikeluarkan dari production karena risiko abuse dan operasional.
+- Cache asset hashed sudah baik: `Cache-Control: public, max-age=2592000, immutable`; Cloudflare juga melayani Brotli/gzip dan HTTP/3.
+- Cloudflare Insights beacon sekitar `11 KiB` dan request RUM memiliki latency sekitar `3,161 ms`; dampak main-thread kecil, tetapi dapat ditunda atau dihapus bila tidak dibutuhkan.
+- SEO Lighthouse dasar `100`, sitemap/robots live tersedia, tetapi metadata OG image rusak dan SPA route metadata tetap bergantung pada eksekusi JavaScript.
+
+#### Temuan accessibility
+- `Navbar.tsx` merender dua `StaggeredMenu` sekaligus untuk desktop/mobile. Keduanya memakai ID `staggered-menu-panel`, sehingga ID duplikat.
+- Panel menu tertutup memakai `aria-hidden=true` tetapi masih berisi button focusable. Lighthouse memberikan Accessibility `88` dan Agentic Browsing `1/3`.
+- Teks `zinc-500`, `zinc-600`, dan opacity rendah gagal contrast di beberapa area.
+- Dot carousel berukuran visual `7x7px` dan area touch tidak memenuhi target minimum.
+- Footer memakai heading `h4` yang melompati struktur heading halaman.
+
+#### Rekomendasi urutan perbaikan
+1. Hilangkan atau pendekkan LoadingScreen dan pastikan hero tampil segera.
+2. Nonaktifkan SplashCursor di mobile/reduced-motion; pause atau sederhanakan Scanner global.
+3. Kurangi animation loop dan perbaiki forced reflow.
+4. Hapus QueryClientProvider yang tidak dipakai dan pecah/lazy-load animation serta lightbox.
+5. Hapus Roboto Flex/VariableProximity atau self-host font yang benar-benar diperlukan.
+6. Ubah carousel homepage ke thumbnail WebP dengan `srcset`/`sizes`; full image hanya saat lightbox.
+7. Perbaiki OG image, buat `llms.txt`, dan hapus `debug-backend.html` dari production.
+8. Perbaiki duplicate menu, `aria-hidden`/`inert`, contrast, touch target, dan heading hierarchy.
+
+#### Target verifikasi setelah implementasi
+- FCP `< 1,5 s`, LCP `≤ 2,5 s`, TBT `< 200–300 ms`, CLS `< 0,1`.
+- Jalankan `npx tsc --noEmit`, `npm run build`, `npm run test`, dan `npm run lint`.
+- Ulangi Lighthouse mobile dan desktop minimal tiga kali, lalu cek Chrome DevTools Performance trace dan Coverage.
+- Tidak ada perubahan file source atau deployment pada sesi audit ini.
+
+### Sesi: Audit Migrasi Domain Baru `.id` (17 Agustus 2026)
+
+**Permintaan user**: mengganti domain utama website live dari `ipanstore.my.id` ke domain `.id`
+baru dan meminta tutorial berdasarkan audit seluruh folder project.
+
+#### Hasil audit
+- Frontend adalah SPA React/Vite yang disajikan Nginx dalam container Docker `ipanstore`,
+  dipublikasikan melalui Cloudflare Tunnel ke port host `5007`.
+- Domain utama tertanam di `src/lib/seo.ts`, `index.html`, `public/sitemap.xml`, dan
+  `public/robots.txt`; semua perlu diganti ke domain baru agar canonical, OG, JSON-LD, dan
+  sitemap tidak tetap menunjuk domain lama.
+- `server/.env` memakai domain frontend pada `ALLOWED_ORIGINS` dan `DOKU_CALLBACK_URL`; keduanya
+  harus diperbarui. `DOKU_NOTIFICATION_URL` harus tetap menunjuk URL backend publik yang benar,
+  bukan domain frontend secara otomatis.
+- Konfigurasi Cloudflare Tunnel berada di luar repo. Public Hostname baru harus diarahkan ke
+  service frontend yang sama; redirect 301 domain lama perlu dibuat di Cloudflare.
+- Backend publik saat audit tetap merespons `https://api.ipanstore.my.id/api/health` dengan HTTP
+  200. Backend tidak perlu diganti domainnya kecuali user memang ingin memakai subdomain API baru.
+- Tidak ada perubahan source aplikasi pada sesi ini. Perubahan worktree yang sudah ada pada
+  `Dockerfile` dan `public/debug-backend.html` tidak disentuh.
+
+#### Verifikasi audit
+- Audit referensi domain dan environment selesai.
+- Website lama, health backend, `robots.txt`, dan `sitemap.xml` live berhasil diakses.
+
+### Sesi: Riset Akses VPS, Cloudflare Tunnel, dan Domain `.id` (17 Agustus 2026)
+
+**Permintaan user**: riset lanjutan dan otomatisasi migrasi domain sejauh mungkin, dengan akses
+server melalui SSH Tailscale.
+
+#### Hasil riset read-only
+- SSH Tailscale ke `root@100.89.140.16` berhasil.
+- Container `ipanstore` aktif dan memetakan `5007:80`; container `cloudflared` aktif; PM2
+  `ipanstore-backend` online.
+- Route Cloudflare yang aktif: `ipanstore.my.id` → `http://172.17.0.1:5007` dan
+  `api.ipanstore.my.id` → `http://172.17.0.1:5159`.
+- `https://ipanstore.my.id/` dan `https://api.ipanstore.my.id/api/health` merespons HTTP 200.
+- Environment backend di VPS sudah memakai `ALLOWED_ORIGINS=https://ipanstore.my.id`, callback
+  frontend domain lama, dan webhook publik `https://api.ipanstore.my.id/api/doku-webhook`.
+- Cloudflared berjalan dengan konfigurasi remote-managed dari Cloudflare Dashboard; tidak ada
+  file konfigurasi tunnel yang ter-mount dan tidak tersedia API token Cloudflare di environment
+  container yang dapat dipakai untuk otomatisasi.
+- Repo server memiliki artefak untracked (`deploy.sh`, folder `ipanstore/`, backup Nginx, dan
+  `server/orders.json`). Tidak ada operasi Git/destruktif dilakukan.
+- Pengecekan DNS komputer lokal untuk kandidat `ipanstore.id` timeout dan `ipanstore.co.id`
+  tidak terdaftar; status ketersediaan final harus dicek di registrar PANDI saat domain target
+  sudah ditentukan.
+
+#### Blocker otomatisasi
+- Nama domain target belum diberikan.
+- Pembelian domain, perubahan nameserver, dan konfigurasi Cloudflare Dashboard memerlukan aksi
+  pemilik akun atau kredensial/API token Cloudflare yang belum tersedia.
+
+### Sesi: Implementasi Konfigurasi Target `ipanstore.id` (17 Agustus 2026)
+
+- Domain aktif frontend diganti di `src/lib/seo.ts`, `index.html`, `public/sitemap.xml`, dan
+  `public/robots.txt` menjadi `https://ipanstore.id`.
+- `server/.env.example`, environment lokal backend, CORS, dan DOKU callback disiapkan untuk
+  `ipanstore.id`; API target dipindahkan ke `https://api.ipanstore.id`.
+- Dokumentasi aktif `AGENTS.md` dan `SETUP-DOKU.md` diperbarui. Riwayat lama di file ini
+  dipertahankan sebagai catatan historis.
+- Verifikasi lokal: `npx tsc --noEmit`, `npm run build`, dan `npm run test` berhasil.
+- Belum deploy ke VPS karena `ipanstore.id` belum diarahkan ke Cloudflare Tunnel. Domain lama
+  tetap live dan belum diubah menjadi redirect.
+
+### Sesi: Keputusan Migrasi API ke Domain Baru (17 Agustus 2026)
+
+- Diputuskan API ikut memakai `https://api.ipanstore.id` agar frontend dan backend memiliki domain
+  brand baru yang konsisten serta tidak menyisakan ketergantungan produksi pada `my.id`.
+- CORS transisi disiapkan agar origin `ipanstore.id` dan `ipanstore.my.id` sama-sama diizinkan
+  sampai redirect 301 selesai.
+- Root `.env`, `server/.env`, `server/.env.example`, `SETUP-DOKU.md`, dan `AGENTS.md` disiapkan
+  untuk API baru. API lama dipertahankan sementara untuk rollback dan verifikasi.
+- Route Cloudflare yang harus ditambahkan: frontend `ipanstore.id` → port `5007`, API
+  `api.ipanstore.id` → port `5159`, dan opsional `www.ipanstore.id` → port `5007`.
+- Verifikasi setelah perubahan: `npx tsc --noEmit`, `npm run build`, dan `npm run test` berhasil.
+
+### Sesi: Cutover Live ke `ipanstore.id` dan `api.ipanstore.id` (17 Agustus 2026)
+
+- Nameserver `ipanstore.id` berhasil diarahkan ke Cloudflare (`amber.ns.cloudflare.com` dan
+  `julian.ns.cloudflare.com`).
+- Route Tunnel aktif: `ipanstore.id` → `http://172.17.0.1:5007` dan `api.ipanstore.id` →
+  `http://172.17.0.1:5159`.
+- Backend VPS `server/.env` diperbarui: CORS hanya domain frontend baru, DOKU callback ke
+  `https://ipanstore.id/order`, dan webhook ke `https://api.ipanstore.id/api/doku-webhook`.
+- PM2 `ipanstore-backend` direstart dan tetap online.
+- Build `dist` terbaru disalin ke container `ipanstore` melalui SSH Tailscale.
+- Verifikasi publik berhasil: frontend baru, API health JSON, sitemap/robots baru, dan CORS
+  preflight `204`.
+- Cutover Cloudflare selesai; API lama sudah dihapus dan domain lama sudah redirect `301` ke
+  `ipanstore.id`.
+
+### Sesi: Penyelesaian Migrasi dan Verifikasi Final (17 Agustus 2026)
+
+- Redirect Cloudflare aktif: `https://ipanstore.my.id/` dan `/order` mengembalikan HTTP `301` ke
+  path yang sama di `https://ipanstore.id`.
+- Route/domain API lama `api.ipanstore.my.id` sudah dihapus dan hostname tidak lagi resolve.
+- `https://api.ipanstore.id/api/health` mengembalikan HTTP `200` JSON service backend.
+- `https://ipanstore.id/` mengembalikan HTTP `200`; canonical, sitemap, dan robots memakai domain
+  baru.
+- CORS preflight frontend baru mengembalikan HTTP `204` dengan origin yang benar.
+- Tidak dilakukan transaksi DOKU production tambahan pada sesi ini untuk menghindari charge; API,
+  callback, webhook URL, dan CORS sudah terverifikasi secara konfigurasi/health.
 
 ### Sesi: Fitur Email Otomatis — Kirim Link SettinX + Invoice Setelah Pembayaran Lunas (13 Agustus 2026)
 
@@ -268,6 +642,34 @@ karena browser memakai bundle cache lama (fallback WA memang by-design di `Order
 
 ## 🔴 MASALAH & CATATAN
 
+- Domain dan API baru sudah live; `ipanstore.my.id` sudah redirect 301 dan route API lama sudah dihapus.
+- Performance blocker utama tetap: dua WebGL effect global, banyak animation loop, dan forced reflow. `LoadingScreen`, preload animation, query provider, font waterfall, aset carousel, logo, favicon, dan animasi non-composited sudah dioptimasi secara lokal; belum dideploy.
+- Lighthouse desktop terakhir: Performance 56 dengan TBT 22.910 ms. FCP/LCP/CLS sudah baik sehingga fokus pertama harus main-thread dan efek visual.
+- Homepage secara lokal sudah memakai thumbnail WebP untuk carousel; gambar JPG penuh tetap dipakai saat lightbox.
+- Font Roboto Flex tetap dipertahankan untuk VariableProximity, tetapi `@import` CSS sudah dipindah ke link font utama dan range variable dipersempit.
+- Logo diperkecil dari sekitar 68 KiB menjadi sekitar 6,7 KiB; favicon baru PNG sekitar 1,3 KiB. Perubahan ini belum dideploy.
+- OG/Twitter/JSON-LD image mengarah ke `https://ipanstore.id/logo.png` yang live 404.
+- `llms.txt` belum tersedia dan SPA fallback mengembalikan HTML; Agentic Browsing gagal pada audit llms.txt.
+- `public/debug-backend.html` live dan menunjuk Tailnet lama serta endpoint test create order; hapus dari production sebelum perubahan berikutnya.
+- Accessibility: dua StaggeredMenu aktif di DOM, duplicate ID, focusable descendant dalam `aria-hidden`, contrast rendah, dot carousel terlalu kecil, dan heading footer tidak berurutan.
+- Laporan mobile lengkap belum tersimpan di konteks sesi; rekomendasi mobile didasarkan pada source audit dan temuan desktop yang relevan lintas device.
+- Flicker preview/stacking SettinX di desktop sudah diperbaiki secara lokal dengan scroll lock dan koordinat layout statis; belum dideploy.
+- **Akar flicker kartu `/layanan` & `/paket` sudah ditemukan & diperbaiki lokal (sesi 17 Agt):**
+  feedback loop `getBoundingClientRect()` pada elemen yang ditransform oleh loopnya sendiri.
+  Fix: `getOffset()` memakai rantai `offsetTop` (koordinat layout murni). Bundle live masih
+  memakai implementasi lama yang buggy → flicker di produksi akan hilang setelah deploy.
+- **Kartu bertumpuk tembus & AnimatedTabs kedipan sudah diperbaiki lokal (sesi 17 Agt):**
+  (1) AnimatedTabs digabung jadi single-layer (satu timeline GSAP, bukan dua tween berebut
+  transform); (2) opacity fade 0.85 untuk kartu pinned di belakang agar teks tidak tembus;
+  (3) background `.gaming-card` diperkuat ke #232325 + shadow; (4) z-index descending untuk
+  urutan stack yang benar. Transform animasi tetap sama seperti live (translateY: 824, 557, 290, 21).
+- Layer reveal & parallax `AnimatedTabs` dipisah (inner wrapper) agar dua tween GSAP tidak
+  berebut `transform`; kedua animasi dipertahankan. Class `animate-fade-up` konten tab tetap ada.
+- Cloudflare Tunnel dikelola dari Dashboard dan tidak dapat ditambahkan hostname baru hanya lewat
+  SSH VPS tanpa akses Cloudflare/API.
+- Environment backend VPS tetap perlu diperbarui pada `ALLOWED_ORIGINS` dan `DOKU_CALLBACK_URL`
+  sebelum deploy. `DOKU_NOTIFICATION_URL` tetap memakai endpoint API publik yang aktif. Jangan
+  pernah menyalin secret DOKU ke Git atau frontend.
 - **SSH akun sekunder** (`github.com-ipanappsettinx`, key `id_ed25519`) belum terdaftar di GitHub
   → `Permission denied`. Ini hanya perlu jika push dari akun sekunder.
 - **Lint**: ada ±59 error pre-existing di `src/components/ui/*` (file shadcn/ui), bukan dari perubahan terakhir.
@@ -279,11 +681,43 @@ karena browser memakai bundle cache lama (fallback WA memang by-design di `Order
 
 ## ✅ CHECKLIST LANJUTAN
 - [ ] (Jika perlu) daftarkan key `id_ed25519` ke GitHub untuk akun `ipanappsettinx`.
+- [x] Daftarkan domain target `ipanstore.id` dan tambahkan domain ke Cloudflare.
+- [x] Ubah nameserver registrar dan tambahkan Public Hostname Cloudflare untuk frontend/API.
+- [x] Tambahkan route `api.ipanstore.id` ke `http://172.17.0.1:5159`, deploy, dan health check
+  API baru berhasil.
+- [x] Nameserver, route frontend, route API baru, update backend, restart PM2, dan deploy frontend.
+- [x] Hapus route `api.ipanstore.my.id` dari Cloudflare.
+- [x] Buat redirect 301 `ipanstore.my.id` → `ipanstore.id` dan verifikasi semua route.
+- [x] Ganti referensi domain di source/SEO/sitemap/robots, update template CORS + DOKU callback,
+  dan build/test lokal.
+- [x] Update CORS + DOKU callback di VPS, restart PM2, deploy, dan verifikasi setelah DNS/Tunnel
+  domain target aktif.
 - [ ] (Opsional) Optimasi lebih lanjut: preload kritis, `fetchpriority` hero image.
-- [x] Deploy backend `server/` ke VPS `sever-h81m-s2ph` — **via Cloudflare Tunnel** `https://api.ipanstore.my.id` (PM2 `ipanstore-backend` port 5159) — terverifikasi live 13 Agt.
-- [x] Set `VITE_BACKEND_URL=https://api.ipanstore.my.id` — sudah terbake di bundle live (`Order-CL2W6hcf.js`).
-- [x] Notification URL — **tidak perlu set manual** di Dashboard DOKU; backend kirim `override_notification_url` (`https://api.ipanstore.my.id/api/doku-webhook`) per-transaksi.
-- [x] **Test order live dari PC user** → redirect DOKU → bayar QRIS → cek `pm2 logs ipanstore-backend` untuk webhook `SUCCESS`. (Frontend sudah mengarah ke api.ipanstore.my.id)
+- [x] Pendekkan `LoadingScreen` menjadi 200 ms; validasi LCP live masih perlu dilakukan setelah deploy.
+- [ ] (Ditunda) Optimasi runtime WebGL, offscreen loop, forced-reflow, canvas, dan input tanpa menghapus efek.
+- [x] Hentikan preload `animation-vendor` dan hapus QueryClientProvider/query-vendor yang tidak digunakan.
+- [x] Pertahankan Roboto Flex/VariableProximity dan pindahkan pemuatannya dari CSS `@import` ke link utama dengan range lebih sempit.
+- [x] Migrasikan `TestimoniPreview` ke thumbnail WebP; gambar penuh tetap untuk lightbox.
+- [x] Optimalkan logo dan favicon; OG image `/logo.png` yang 404 masih belum diperbaiki.
+- [x] Ubah shine dan dot carousel ke animasi berbasis transform/opacity tanpa menghilangkan efek visual.
+- [x] Kunci scroll background saat preview SettinX terbuka untuk mencegah flicker fixed lightbox.
+- [x] Perbaiki feedback loop `ScrollStackCards` yang menyebabkan flicker desktop di sekitar preview SettinX.
+- [x] Samakan `ScrollStackCards`, `AnimatedTabs`, dan class animasi Layanan/Paket dengan bundle live.
+- [x] Perbaiki akar flicker kartu: ganti `getOffset()` `ScrollStackCards` dari `getBoundingClientRect()` ke rantai `offsetTop` (hilangkan feedback-loop transform).
+- [x] Perbaiki DEFINITIF flicker kartu: kompensasi penyusutan scale pada pin + interpolasi adaptif (snap gerakan kecil) + sinkron `curY` saat IO start — terverifikasi via uji scroll-reversal Playwright (reversals 15→2, kartu pinned stabil 97-99px).
+- [x] Perbaiki tembus kartu & AnimatedTabs: opacity fade 0.85 untuk kartu pinned + z-index descending + background solid `.gaming-card` + `.scroll-stack-card` + single-layer AnimatedTabs — terverifikasi via screenshot perbandingan.
+- [x] Pisahkan layer reveal & parallax `AnimatedTabs` agar dua tween GSAP tidak berebut `transform` (kedua efek dipertahankan).
+- [x] Ubah copy Beranda `Windows Lebih Enteng` menjadi `Windows Lebih Ringan`.
+- [x] Fix flicker preview SettinX: `lenis.stop()/start()` + portal lightbox ke body `z-[9000]` + kompensasi scrollbar — terverifikasi Playwright (kartu beku 0/10, scroll & Lenis terkunci, overlay di atas navbar).
+- [x] Fix kartu menimpa section berikut: `z-10` eksplisit di section `AppSettinxSection` & `PackagesPreview`.
+- [ ] Buat `public/llms.txt` dengan H1 dan link halaman penting.
+- [ ] Hapus `public/debug-backend.html` dari production atau pindahkan ke staging/local.
+- [ ] Perbaiki accessibility menu (`inert`, focus management, unique ID), contrast, touch target, dan heading hierarchy.
+- [ ] Tambahkan test nyata untuk route, SEOHead, checkout, menu accessibility, dan performance smoke test.
+- [x] Deploy backend `server/` ke VPS `sever-h81m-s2ph` — **via Cloudflare Tunnel** `https://api.ipanstore.id` (PM2 `ipanstore-backend` port 5159) — terverifikasi live 17 Agt.
+- [x] Set `VITE_BACKEND_URL=https://api.ipanstore.id` — sudah terbake di bundle live.
+- [x] Notification URL — backend kirim `override_notification_url` (`https://api.ipanstore.id/api/doku-webhook`) per-transaksi.
+- [x] Frontend baru → API baru health dan CORS terverifikasi; transaksi DOKU production tambahan belum dilakukan.
 - [x] Email otomatis SettinX (link Drive + invoice) setelah pembayaran SUCCESS — **terverifikasi terkirim** 13 Agt.
 - [ ] (Opsional) Test bayar SettinX sungguhan (Rp 75.000) dari browser → cek email diterima pembeli.
 - [x] Endpoint `/api/doku-cancel-order` — sudah diimplementasi di `server/index.js`.

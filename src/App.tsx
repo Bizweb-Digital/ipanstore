@@ -1,5 +1,4 @@
 import { useState, useCallback, Suspense, lazy } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
@@ -21,8 +20,6 @@ const Faq = lazy(() => import("./pages/Faq"));
 const Kontak = lazy(() => import("./pages/Kontak"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
-const queryClient = new QueryClient();
-
 const App = () => {
   const [loading, setLoading] = useState(true);
 
@@ -31,30 +28,28 @@ const App = () => {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        {loading && <LoadingScreen onComplete={handleLoadingComplete} />}
-        <BrowserRouter>
-          <Suspense fallback={<PageSkeleton />}>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/layanan" element={<Layanan />} />
-              <Route path="/layanan/boost-fps-free-fire" element={<BoostFpsFreeFire />} />
-              <Route path="/layanan/tweaking-pc-gaming" element={<TweakingPcGaming />} />
-              <Route path="/paket" element={<Paket />} />
-              <Route path="/order" element={<Order />} />
-              <Route path="/testimoni" element={<TestimoniPage />} />
-              <Route path="/faq" element={<Faq />} />
-              <Route path="/kontak" element={<Kontak />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      {loading && <LoadingScreen onComplete={handleLoadingComplete} />}
+      <BrowserRouter>
+        <Suspense fallback={<PageSkeleton />}>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/layanan" element={<Layanan />} />
+            <Route path="/layanan/boost-fps-free-fire" element={<BoostFpsFreeFire />} />
+            <Route path="/layanan/tweaking-pc-gaming" element={<TweakingPcGaming />} />
+            <Route path="/paket" element={<Paket />} />
+            <Route path="/order" element={<Order />} />
+            <Route path="/testimoni" element={<TestimoniPage />} />
+            <Route path="/faq" element={<Faq />} />
+            <Route path="/kontak" element={<Kontak />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
+      </BrowserRouter>
+    </TooltipProvider>
   );
 };
 

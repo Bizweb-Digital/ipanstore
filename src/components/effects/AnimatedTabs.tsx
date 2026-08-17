@@ -11,9 +11,12 @@ interface AnimatedTabsProps {
 
 /**
  * AnimatedTabs — container tab (Optimize / Set PC / Anti Cheat / App SettinX)
- * yang ikut BERGERAK saat halaman di-scroll: masuk dari bawah dengan fade +
- * parallax halus, tanpa getaran. Memakai gsap ScrollTrigger `scrub` yang
- * smooth dan hanya menganimasikan transform + opacity (GPU).
+ * yang masuk dari bawah dengan fade, lalu bergerak parallax halus mengikuti
+ * scroll, TANPA kedipan/getaran.
+ *
+ * Satu elemen, satu tween: reveal dan parallax digabung dalam satu
+ * timeline GSAP sehingga tidak ada dua tween yang saling menimpa transform
+ * elemen yang sama (penyebab kedipan/jump).
  */
 const AnimatedTabs = ({ children, className = "" }: AnimatedTabsProps) => {
   const ref = useRef<HTMLDivElement>(null);
@@ -23,41 +26,29 @@ const AnimatedTabs = ({ children, className = "" }: AnimatedTabsProps) => {
     if (!el) return;
 
     const ctx = gsap.context(() => {
-      // Masuk dari bawah saat pertama kali terlihat.
-      gsap.fromTo(
-        el,
-        { opacity: 0, y: 28 },
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.7,
-          ease: "power3.out",
-          scrollTrigger: {
-            trigger: el,
-            start: "top 92%",
-            once: true,
-          },
-        }
-      );
-
-      // Parallax sangat halus mengikuti scroll (tidak bergetar).
-      gsap.to(el, {
-        y: -14,
-        ease: "none",
+      // Timeline gabungan: reveal fade-in dari bawah, lalu parallax halus.
+      // Satu tween menulis transform, tidak ada konflik antar-tween.
+      const tl = gsap.timeline({
         scrollTrigger: {
           trigger: el,
-          start: "top bottom",
+          start: "top 92%",
           end: "bottom top",
           scrub: 0.6,
         },
       });
+
+      tl.fromTo(
+        el,
+        { opacity: 0, y: 28 },
+        { opacity: 1, y: 0, duration: 0.7, ease: "power3.out" }
+      ).to(el, { y: -14, ease: "none" }, 0);
     }, el);
 
     return () => ctx.revert();
   }, []);
 
   return (
-    <div ref={ref} className={className} style={{ willChange: "transform, opacity" }}>
+    <div ref={ref} className={className} style={{ willChange: "opacity, transform" }}>
       {children}
     </div>
   );

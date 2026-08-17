@@ -9,18 +9,18 @@ import Reveal from "../effects/Reveal";
 import SplitText from "../effects/SplitText";
 
 const testiPhotos = [
-  { image: "/img/testimoni/Screenshot_2025-12-23-23-15-30-787_com.whatsapp.w4b.jpg", alt: "Testimoni 1" },
-  { image: "/img/testimoni/Screenshot_2025-12-25-13-18-55-378_com.whatsapp.w4b.jpg", alt: "Testimoni 2" },
-  { image: "/img/testimoni/Screenshot_2025-12-28-20-32-03-375_com.whatsapp.w4b.jpg", alt: "Testimoni 3" },
-  { image: "/img/testimoni/Screenshot_2026-01-04-11-44-26-458_com.whatsapp.w4b.jpg", alt: "Testimoni 4" },
-  { image: "/img/testimoni/Screenshot_2026-01-04-20-43-26-760_com.whatsapp.w4b.jpg", alt: "Testimoni 5" },
-  { image: "/img/testimoni/Screenshot_2026-01-10-22-17-33-377_com.whatsapp.w4b.jpg", alt: "Testimoni 6" },
-  { image: "/img/testimoni/Screenshot_2026-01-15-17-58-16-040_com.whatsapp.w4b.jpg", alt: "Testimoni 7" },
-  { image: "/img/testimoni/Screenshot_2026-01-18-14-57-35-501_com.whatsapp.w4b.jpg", alt: "Testimoni 8" },
-  { image: "/img/testimoni/Screenshot_2026-02-08-13-41-09-236_com.whatsapp.w4b.jpg", alt: "Testimoni 9" },
+  { image: "/img/testimoni/thumbs/Screenshot_2025-12-23-23-15-30-787_com.whatsapp.w4b.webp", full: "/img/testimoni/Screenshot_2025-12-23-23-15-30-787_com.whatsapp.w4b.jpg", alt: "Testimoni 1" },
+  { image: "/img/testimoni/thumbs/Screenshot_2025-12-25-13-18-55-378_com.whatsapp.w4b.webp", full: "/img/testimoni/Screenshot_2025-12-25-13-18-55-378_com.whatsapp.w4b.jpg", alt: "Testimoni 2" },
+  { image: "/img/testimoni/thumbs/Screenshot_2025-12-28-20-32-03-375_com.whatsapp.w4b.webp", full: "/img/testimoni/Screenshot_2025-12-28-20-32-03-375_com.whatsapp.w4b.jpg", alt: "Testimoni 3" },
+  { image: "/img/testimoni/thumbs/Screenshot_2026-01-04-11-44-26-458_com.whatsapp.w4b.webp", full: "/img/testimoni/Screenshot_2026-01-04-11-44-26-458_com.whatsapp.w4b.jpg", alt: "Testimoni 4" },
+  { image: "/img/testimoni/thumbs/Screenshot_2026-01-04-20-43-26-760_com.whatsapp.w4b.webp", full: "/img/testimoni/Screenshot_2026-01-04-20-43-26-760_com.whatsapp.w4b.jpg", alt: "Testimoni 5" },
+  { image: "/img/testimoni/thumbs/Screenshot_2026-01-10-22-17-33-377_com.whatsapp.w4b.webp", full: "/img/testimoni/Screenshot_2026-01-10-22-17-33-377_com.whatsapp.w4b.jpg", alt: "Testimoni 6" },
+  { image: "/img/testimoni/thumbs/Screenshot_2026-01-15-17-58-16-040_com.whatsapp.w4b.webp", full: "/img/testimoni/Screenshot_2026-01-15-17-58-16-040_com.whatsapp.w4b.jpg", alt: "Testimoni 7" },
+  { image: "/img/testimoni/thumbs/Screenshot_2026-01-18-14-57-35-501_com.whatsapp.w4b.webp", full: "/img/testimoni/Screenshot_2026-01-18-14-57-35-501_com.whatsapp.w4b.jpg", alt: "Testimoni 8" },
+  { image: "/img/testimoni/thumbs/Screenshot_2026-02-08-13-41-09-236_com.whatsapp.w4b.webp", full: "/img/testimoni/Screenshot_2026-02-08-13-41-09-236_com.whatsapp.w4b.jpg", alt: "Testimoni 9" },
 ];
 
-const lightboxSlides = testiPhotos.map((p) => ({ src: p.image }));
+const lightboxSlides = testiPhotos.map((p) => ({ src: p.full }));
 
 const TestimoniPreview = () => {
   const [lightboxOpen, setLightboxOpen] = useState(false);

@@ -206,14 +206,15 @@
     color: transparent;
   }
 
-  /* Warm dark card */
+  /* Warm dark card — background solid agar tidak tembus saat menumpuk */
   .gaming-card {
-    background: #2d2d2d;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: #232325;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 1rem;
     transition: all 0.3s ease;
     overflow: hidden;
     position: relative;
+    box-shadow: 0 4px 24px -8px rgba(0, 0, 0, 0.4);
   }
 
   .gaming-card:hover {
@@ -442,21 +443,42 @@
   }
 
   .depth-carousel__dot {
-    width: 7px;
-    height: 7px;
+    position: relative;
+    width: 20px;
+    height: 20px;
     padding: 0;
     border: none;
-    border-radius: 999px;
-    background: rgba(148, 163, 184, 0.32);
+    background: transparent;
     cursor: pointer;
     transition:
-      width 0.25s ease,
-      background 0.25s ease;
+      transform 0.25s ease,
+      opacity 0.25s ease;
+  }
+
+  .depth-carousel__dot::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 7px;
+    border-radius: 999px;
+    background: #CBD5E1;
+    opacity: 0.32;
+    transform: translate(-50%, -50%) scaleX(0.35);
+    transform-origin: center;
+    transition:
+      transform 0.25s ease,
+      opacity 0.25s ease;
   }
 
   .depth-carousel__dot.is-active {
-    width: 20px;
-    background: #CBD5E1;
+    transform: translateZ(0);
+  }
+
+  .depth-carousel__dot.is-active::before {
+    opacity: 1;
+    transform: translate(-50%, -50%) scaleX(1);
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -639,6 +661,14 @@
     overflow: visible;
   }
 
+  /* Parent yang membungkus kartu-kartu menumpuk: isolation agar z-index
+     kartu anak tidak bocor ke luar stacking context. */
+  .scroll-stack-cards {
+    position: relative;
+    width: 100%;
+    isolation: isolate;
+  }
+
   .scroll-stack-inner {
     padding: 0;
     min-height: 100vh;
@@ -650,7 +680,7 @@
 
   .scroll-stack-card {
     transform-origin: top center;
-    will-change: transform, filter;
+    will-change: transform, opacity;
     backface-visibility: hidden;
     transform-style: preserve-3d;
     width: 100%;
@@ -661,7 +691,7 @@
     /* Anti-bentrok: kartu yang sedang pinned harus solid agar konten
        yang menumpuk di bawahnya tidak tembus terlihat. Background
        diambil dari PageBackground/section di dalamnya. */
-    background: transparent;
+    background: #1a1a1a;
   }
 
   .scroll-stack-end {

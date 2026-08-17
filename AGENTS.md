@@ -31,7 +31,10 @@
 - Flow deploy manual dari PC:
   1. `git push origin main` (dari PC, key `github.com-bizwebdigital`).
   2. `ssh root@100.89.140.16 "cd /project/website/padel/IpanStore/ipanstore && git pull && docker compose down && docker compose up --build -d"`.
-- Live di `https://ipanstore.my.id` (Cloudflare Tunnel → port 5007).
+- Live utama: `https://ipanstore.id` (Cloudflare Tunnel → port 5007); domain lama
+  `ipanstore.my.id` menunggu redirect 301.
+- Live API: `https://api.ipanstore.id` (Cloudflare Tunnel → port 5159); route API lama
+  `api.ipanstore.my.id` menunggu penghapusan dari Cloudflare.
 
 ## Catatan Teknis Penting
 

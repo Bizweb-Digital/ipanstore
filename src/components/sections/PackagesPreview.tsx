@@ -81,7 +81,7 @@ const PackagesPreview = () => {
   const { ref, revealed } = useScrollReveal<HTMLDivElement>();
 
   return (
-    <section className="relative py-16 md:py-20 scroll-mt-20 overflow-hidden border-t border-zinc-800/60">
+    <section className="relative z-10 py-16 md:py-20 scroll-mt-20 overflow-hidden border-t border-zinc-800/60">
       <div className="container mx-auto px-4">
         <Reveal className="text-center max-w-2xl mx-auto mb-14">
           <span className="section-subheading">Produk & Layanan</span>

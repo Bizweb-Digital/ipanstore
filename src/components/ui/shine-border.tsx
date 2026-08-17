@@ -16,16 +16,16 @@ export function ShineBorder({
   style,
   ...props
 }: ShineBorderProps) {
+  const gradient = `radial-gradient(transparent,transparent, ${
+    Array.isArray(shineColor) ? shineColor.join(",") : shineColor
+  },transparent,transparent)`;
+
   return (
     <div
       style={
         {
           "--border-width": `${borderWidth}px`,
           "--duration": `${duration}s`,
-          backgroundImage: `radial-gradient(transparent,transparent, ${
-            Array.isArray(shineColor) ? shineColor.join(",") : shineColor
-          },transparent,transparent)`,
-          backgroundSize: "300% 300%",
           mask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
           WebkitMask:
             "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
@@ -36,10 +36,16 @@ export function ShineBorder({
         } as React.CSSProperties
       }
       className={cn(
-        "animate-shine pointer-events-none absolute inset-0 size-full rounded-[inherit] will-change-[background-position]",
+        "pointer-events-none absolute inset-0 size-full overflow-hidden rounded-[inherit]",
         className
       )}
       {...props}
-    />
+    >
+      <span
+        aria-hidden="true"
+        className="absolute -inset-full animate-shine will-change-transform"
+        style={{ backgroundImage: gradient, backgroundSize: "100% 100%" }}
+      />
+    </div>
   );
 }

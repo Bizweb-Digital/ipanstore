@@ -118,9 +118,9 @@ export default {
           to: { transform: "translateY(calc(-100% - var(--gap)))" },
         },
         shine: {
-          "0%": { backgroundPosition: "0% 0%" },
-          "50%": { backgroundPosition: "100% 100%" },
-          "100%": { backgroundPosition: "0% 0%" },
+          "0%": { transform: "translate3d(-16.666%, -16.666%, 0)" },
+          "50%": { transform: "translate3d(16.666%, 16.666%, 0)" },
+          "100%": { transform: "translate3d(-16.666%, -16.666%, 0)" },
         },
         aurora: {
           "0%": { backgroundPosition: "0% 50%" },

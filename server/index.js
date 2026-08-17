@@ -50,7 +50,7 @@ const DOKU_CHECKOUT_PATH = process.env.DOKU_CHECKOUT_PATH || "/checkout/v1/payme
 // sehingga tidak perlu set manual di Dashboard DOKU.
 const DOKU_NOTIFICATION_URL = process.env.DOKU_NOTIFICATION_URL || "";
 
-// URL "Back to merchant" setelah pembayaran (opsional, mis. https://ipanstore.my.id/order)
+// URL "Back to merchant" setelah pembayaran (opsional, mis. https://ipanstore.id/order)
 const DOKU_CALLBACK_URL = process.env.DOKU_CALLBACK_URL || "";
 
 if (!DOKU_CLIENT_ID || !DOKU_SECRET_KEY) {

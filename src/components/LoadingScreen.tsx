@@ -6,23 +6,15 @@ const LoadingScreen = ({ onComplete }: { onComplete: () => void }) => {
   const [fadeOut, setFadeOut] = useState(false);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          return 100;
-        }
-        return Math.min(prev + (Math.random() * 8 + 2), 100);
-      });
-    }, 60);
+    const progressTimer = setTimeout(() => setProgress(100), 100);
 
-    return () => clearInterval(interval);
+    return () => clearTimeout(progressTimer);
   }, []);
 
   useEffect(() => {
     if (progress >= 100) {
-      const timer = setTimeout(() => setFadeOut(true), 400);
-      const completeTimer = setTimeout(() => onComplete(), 1000);
+      const timer = setTimeout(() => setFadeOut(true), 120);
+      const completeTimer = setTimeout(() => onComplete(), 200);
       return () => {
         clearTimeout(timer);
         clearTimeout(completeTimer);
@@ -43,7 +35,7 @@ const LoadingScreen = ({ onComplete }: { onComplete: () => void }) => {
 
       <div className="relative w-[min(420px,86vw)] text-center">
         <div className="mb-10 flex justify-center relative">
-          <img src={logo} alt="Ipan Store" width={577} height={433} className="h-16 sm:h-20 w-auto object-contain relative z-10 drop-shadow-[0_0_15px_rgba(148,163,184,0.35)]" />
+          <img src={logo} alt="Ipan Store" width={288} height={216} className="h-16 sm:h-20 w-auto object-contain relative z-10 drop-shadow-[0_0_15px_rgba(148,163,184,0.35)]" />
         </div>
 
         <div className="gaming-card p-6 border-white/5">

@@ -1,4 +1,4 @@
-export const SITE_URL = "https://ipanstore.my.id";
+export const SITE_URL = "https://ipanstore.id";
 export const SITE_NAME = "IPAN STORE";
 export const DEFAULT_OG_IMAGE = `${SITE_URL}/logo.png`;
 

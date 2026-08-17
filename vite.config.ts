@@ -14,11 +14,16 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   build: {
+    modulePreload: {
+      // Keep the ReactBits/animation bundle intact, but let the browser fetch
+      // it after the critical entry instead of prioritising it as a preload.
+      resolveDependencies: (_filename, deps) =>
+        deps.filter((dep) => !dep.includes("animation-vendor")),
+    },
     rollupOptions: {
       output: {
         manualChunks: {
           "react-vendor": ["react", "react-dom", "react-router-dom"],
-          "query-vendor": ["@tanstack/react-query"],
           "animation-vendor": ["gsap", "motion", "lenis"],
         },
       },
@@ -28,6 +33,6 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
-    dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime", "@tanstack/react-query", "@tanstack/query-core"],
+    dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
   },
 }));

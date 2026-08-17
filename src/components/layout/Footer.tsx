@@ -53,8 +53,8 @@ const Footer = () => {
               <img
                 src={logo}
                 alt="Ipan Store"
-                width={577}
-                height={433}
+                width={288}
+                height={216}
                 className="h-16 sm:h-20 w-auto object-contain"
               />
             </a>

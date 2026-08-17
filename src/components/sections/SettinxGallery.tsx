@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 
 type SettinxPhoto = {
@@ -29,6 +30,35 @@ const SettinxGallery = ({ compact = false }: { compact?: boolean }) => {
     setLightboxIndex((i) => (i === null ? null : (i + 1) % SETTINX_PHOTOS.length));
   const prev = () =>
     setLightboxIndex((i) => (i === null ? null : (i - 1 + SETTINX_PHOTOS.length) % SETTINX_PHOTOS.length));
+
+  useEffect(() => {
+    if (lightboxIndex === null) return;
+
+    // Stop Lenis saat lightbox terbuka. Tanpa ini, nilai internal Lenis
+    // (`lenis.scroll`) terus berubah saat user scroll walau body terkunci
+    // `overflow:hidden` → ScrollStackCards membaca nilai itu dan menggerakkan
+    // kartu di belakang overlay (flicker), lalu halaman "meloncat" saat
+    // lightbox ditutup karena posisi internal Lenis sudah drift.
+    const lenis = (window as unknown as { __lenis?: { stop: () => void; start: () => void } }).__lenis;
+    lenis?.stop();
+
+    const previousOverflow = document.body.style.overflow;
+    const previousOverscrollBehavior = document.body.style.overscrollBehavior;
+    const previousPaddingRight = document.body.style.paddingRight;
+    document.body.style.overflow = "hidden";
+    document.body.style.overscrollBehavior = "none";
+    // Kompensasi hilangnya scrollbar agar layout tidak bergeser (kedipan
+    // saat scrollbar muncul/hilang di desktop Windows).
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    if (scrollbarWidth > 0) document.body.style.paddingRight = `${scrollbarWidth}px`;
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.overscrollBehavior = previousOverscrollBehavior;
+      document.body.style.paddingRight = previousPaddingRight;
+      lenis?.start();
+    };
+  }, [lightboxIndex]);
 
   return (
     <>
@@ -66,13 +96,14 @@ const SettinxGallery = ({ compact = false }: { compact?: boolean }) => {
         ))}
       </div>
 
-      {lightboxIndex !== null && (
-        <div
-          className="fixed inset-0 z-[100] bg-[#0C0C0C]/95 flex items-center justify-center p-4"
-          onClick={close}
-          role="dialog"
-          aria-modal="true"
-        >
+      {lightboxIndex !== null &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[9000] touch-none overscroll-none bg-[#0C0C0C]/95 flex items-center justify-center p-4"
+            onClick={close}
+            role="dialog"
+            aria-modal="true"
+          >
           <button
             type="button"
             onClick={(e) => {
@@ -123,8 +154,9 @@ const SettinxGallery = ({ compact = false }: { compact?: boolean }) => {
               </span>
             </figcaption>
           </figure>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </>
   );
 };
