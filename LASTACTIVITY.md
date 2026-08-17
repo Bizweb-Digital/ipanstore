@@ -7,7 +7,7 @@
 
 - **Repo**: `git@github.com-bizwebdigital:Bizweb-Digital/ipanstore.git` (branch `main`)
 - **Domain live**: `https://ipanstore.id` (Cloudflare Tunnel → container Docker port 5007)
-- **Update terakhir**: 17 Agustus 2026 — fix DEFINITIF flicker preview SettinX (Lenis stop + portal lightbox) & kartu menimpa section berikutnya (z-index pengikut), terverifikasi Playwright
+- **Update terakhir**: 17 Agustus 2026 — deploy fix flicker preview SettinX & optimasi performa ke live (commit `0645acc`, bundle `index-D4F5KOaI.js`), `debug-backend.html` dihapus dari produksi
 
 ---
 
@@ -30,11 +30,11 @@
 | GitHub remote (via `github.com-bizwebdigital`) | ✅ Terhubung & authenticated |
 | Server `sever-h81m-s2ph` (`100.89.140.16`) | ✅ Akses SSH root OK, path `/project/website/padel/IpanStore/ipanstore` |
 | Deploy pipeline | ✅ `deploy.sh` = `git pull` → `docker compose down` → `docker compose up --build -d` |
-| Commit/status git lokal | ✅ `64e771f` (fitur email otomatis SettinX) |
-| Push terakhir | ✅ `64e771f` → GitHub (key `github.com-bizwebdigital`) |
-| Pull+deploy server | ✅ `git pull` di server sukses → backend PM2 aktif, `.env` aman |
+| Commit/status git lokal | ✅ `0645acc` (fix flicker SettinX + optimasi performa + hapus debug-backend.html) |
+| Push terakhir | ✅ `0645acc` → GitHub (key `github.com-bizwebdigital`) |
+| Pull+deploy server | ✅ `git pull` di server fast-forward `0645acc`; `dist` di-scp + `docker cp` bersih (hapus file lama), container `ipanstore` up |
 | Backend PM2 auto-start | ✅ `pm2 save` + systemd `pm2-root.service` enabled (auto-start saat reboot) |
-| Verifikasi live | ✅ `/` `/layanan` `/paket` `/order` `/testimoni` `/faq` `/kontak` `/sitemap.xml` → 200 |
+| Verifikasi live | ✅ `/` `/layanan` `/paket` `/order` `/testimoni` `/faq` `/kontak` `/sitemap.xml` → 200; `index-D4F5KOaI.js` live; `debug-backend.html` → 404 (terhapus) |
 | Audit performance terakhir | ⚠️ Lighthouse desktop Performance 56; FCP 0,8 s, LCP 1,3 s, TBT 22.910 ms, CLS 0 |
 | Audit SEO terakhir | ✅ SEO dasar 100; ⚠️ OG image `/logo.png` 404; `llms.txt` belum tersedia |
 | Audit accessibility terakhir | ⚠️ Skor 88; duplicate menu ID dan focusable element di dalam `aria-hidden` |
@@ -71,6 +71,14 @@ src/
 ---
 
 ## 📚 RIWAYAT SESI & PERUBAHAN
+
+### Sesi: Deploy Live Fix Flicker SettinX + Optimasi (17 Agustus 2026)
+
+- Commit `0645acc` di-push ke `origin/main` (key `github.com-bizwebdigital`): `3dd3498..0645acc`.
+- `git pull` di server `sever-h81m-s2ph` fast-forward tanpa konflik; `.env`/backend PM2 aman.
+- Karena `dist` di-gitignore, deploy frontend memakai alur dokumentasi: `scp dist/*` → `/tmp/ipanstore-dist`, lalu bersihkan `/usr/share/nginx/html/*` di container `ipanstore` dan `docker cp` isi baru (agar file lama & `debug-backend.html` benar-benar terhapus).
+- Verifikasi live `https://ipanstore.id`: `/` HTTP 200 dengan bundle `index-D4F5KOaI.js`; `/layanan`, `/paket`, `/sitemap.xml` 200; `/debug-backend.html` → **404** (risiko keamanan terhapus dari produksi); `https://api.ipanstore.id/api/health` 200.
+- `LASTACTIVITY.md` diperbarui dengan status commit/push/deploy terbaru.
 
 ### Sesi: Fix Definitif Flicker Preview SettinX + Kartu Menimpa Section Berikut (17 Agustus 2026)
 
@@ -711,7 +719,7 @@ karena browser memakai bundle cache lama (fallback WA memang by-design di `Order
 - [x] Fix flicker preview SettinX: `lenis.stop()/start()` + portal lightbox ke body `z-[9000]` + kompensasi scrollbar — terverifikasi Playwright (kartu beku 0/10, scroll & Lenis terkunci, overlay di atas navbar).
 - [x] Fix kartu menimpa section berikut: `z-10` eksplisit di section `AppSettinxSection` & `PackagesPreview`.
 - [ ] Buat `public/llms.txt` dengan H1 dan link halaman penting.
-- [ ] Hapus `public/debug-backend.html` dari production atau pindahkan ke staging/local.
+- [x] Hapus `public/debug-backend.html` dari production — terhapus dari repo & terverifikasi live 404 pada deploy `0645acc`.
 - [ ] Perbaiki accessibility menu (`inert`, focus management, unique ID), contrast, touch target, dan heading hierarchy.
 - [ ] Tambahkan test nyata untuk route, SEOHead, checkout, menu accessibility, dan performance smoke test.
 - [x] Deploy backend `server/` ke VPS `sever-h81m-s2ph` — **via Cloudflare Tunnel** `https://api.ipanstore.id` (PM2 `ipanstore-backend` port 5159) — terverifikasi live 17 Agt.
@@ -720,6 +728,7 @@ karena browser memakai bundle cache lama (fallback WA memang by-design di `Order
 - [x] Frontend baru → API baru health dan CORS terverifikasi; transaksi DOKU production tambahan belum dilakukan.
 - [x] Email otomatis SettinX (link Drive + invoice) setelah pembayaran SUCCESS — **terverifikasi terkirim** 13 Agt.
 - [ ] (Opsional) Test bayar SettinX sungguhan (Rp 75.000) dari browser → cek email diterima pembeli.
+- [x] Hapus `public/debug-backend.html` dari production — sudah dihapus dari repo & terverifikasi live 404 pada deploy `0645acc`.
 - [x] Endpoint `/api/doku-cancel-order` — sudah diimplementasi di `server/index.js`.
 
 ---
