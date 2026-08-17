@@ -7,7 +7,7 @@
 
 - **Repo**: `git@github.com-bizwebdigital:Bizweb-Digital/ipanstore.git` (branch `main`)
 - **Domain live**: `https://ipanstore.id` (Cloudflare Tunnel → container Docker port 5007)
-- **Update terakhir**: 18 Agustus 2026 — fix blank screen `/admin/services`; akar masalah null dereference di `Services.tsx`; tsc/build/test lulus; belum commit/deploy
+- **Update terakhir**: 18 Agustus 2026 — **DEPLOY ADMIN PANEL LIVE**: commit `f127463` (admin panel lengkap + Supabase) & `f98b6b5` (polyfill WebSocket Node 20); frontend bundle `index-CSAjFWKB.js` live; backend PM2 jalan dengan Supabase aktif; API health 200; RLS terverifikasi
 
 ---
 
@@ -15,6 +15,7 @@
 
 | Item | Status |
 |---|---|
+| **Admin Panel (Phase 3 + Supabase)** | ✅ **LIVE 18 Agt** — 7 halaman admin + backend Supabase + fix blank screen; commit `f127463`+`f98b6b5`; bundle live `index-CSAjFWKB.js` |
 | Website live `https://ipanstore.id/` | ✅ Live |
 | Migrasi ke domain baru `.id` | ✅ Selesai 17 Agt; domain lama redirect 301 |
 | Konfigurasi source target `https://ipanstore.id` | ✅ Selesai dan ter-deploy |
@@ -30,8 +31,10 @@
 | GitHub remote (via `github.com-bizwebdigital`) | ✅ Terhubung & authenticated |
 | Server `sever-h81m-s2ph` (`100.89.140.16`) | ✅ Akses SSH root OK, path `/project/website/padel/IpanStore/ipanstore` |
 | Deploy pipeline | ✅ `deploy.sh` = `git pull` → `docker compose down` → `docker compose up --build -d` |
-| Commit/status git lokal | ✅ `bf9f7e4` (perbaikan OG image dan penambahan `llms.txt`) |
-| Push terakhir | ✅ `bf9f7e4` → GitHub (key `github.com-bizwebdigital`) |
+| Commit/status git lokal | ✅ `f98b6b5` (polyfill WebSocket Node 20 untuk supabase-js) di atas `f127463` (admin panel lengkap) |
+| Push terakhir | ✅ `f127463..f98b6b5` → GitHub (key `github.com-bizwebdigital`) |
+| Pull+deploy server | ✅ `git pull` fast-forward `f98b6b5`; `npm install` server; PM2 restart; `dist` di-scp + `docker cp` (bundle `index-CSAjFWKB.js` live) |
+| Backend PM2 + Supabase | ✅ `server/.env` VPS diisi `SUPABASE_URL`+`SUPABASE_SERVICE_ROLE_KEY`; warning "belum diisi" hilang; health 200; RLS orders menolak anon (401) ✅ |
 | Pull+deploy server | ✅ `git pull` di server fast-forward `bf9f7e4`; `dist` di-scp + `docker cp` bersih (hapus file lama), container `ipanstore` up |
 | Backend PM2 auto-start | ✅ `pm2 save` + systemd `pm2-root.service` enabled (auto-start saat reboot) |
 | Verifikasi live | ✅ `/` `/layanan` `/paket` `/order` `/testimoni` `/faq` `/kontak` `/sitemap.xml` `/img/logo.png` `/llms.txt` → 200; `index-DfWwNhiH.js` live; `debug-backend.html` → 404 (terhapus) |
@@ -71,6 +74,29 @@ src/
 ---
 
 ## 📚 RIWAYAT SESI & PERUBAHAN
+
+### Sesi: Deploy Admin Panel Live + Fix WebSocket Node 20 (18 Agustus 2026)
+
+**Permintaan user**: Lanjutkan task terhenti (fix blank screen `/admin/services`), baca ulang prompt & todo history, jangan ada yang terlewat, perubahan harus nyata.
+
+#### Yang dikerjakan (urut)
+1. **Verifikasi ulang task terhenti**: `npx tsc --noEmit` EXIT 0, `npm run build` sukses, `npm run test` 1 passed, `node --check server/index.js` OK, dev server `localhost:8080` HTTP 200.
+2. **Audit null-safety halaman admin lain**: `Faqs.tsx` & `Testimonials.tsx` sudah aman (`editing: FAQ | null` + optional chaining); `Services.tsx` fix sebelumnya tetap.
+3. **Commit `f127463`** (45 file, +5590): seluruh admin panel Phase 3 + integrasi Supabase + fix blank screen. `.env` tidak ikut (gitignore); service role key hanya placeholder; anon key publik by-design (RLS).
+4. **Push GitHub** sukses `a188cb2..f127463`.
+5. **Build & deploy frontend**: `npm run build` → bundle `index-CSAjFWKB.js`; `scp dist/*` → `/tmp/ipanstore-dist` → bersihkan `/usr/share/nginx/html/*` di container `ipanstore` → `docker cp` → live terverifikasi.
+6. **Deploy backend**: `git pull` di VPS; `npm install` server (install `@supabase/supabase-js`); PM2 restart.
+7. **BUG DITEMUKAN & DIPERBAIKI**: `@supabase/supabase-js` v2.112 crash di Node 20 (`Error: Node.js detected but native WebSocket not found` dari `realtime-js`) karena WebSocket global hanya ada di Node 22+. Fix: commit `f98b6b5` — polyfill `import WebSocket from "ws"; globalThis.WebSocket = WebSocket` sebelum `createClient()` + dependensi `ws@^8.18.0`. (VPS `git pull` sempat konflik karena `npm install` saya modifikasi `package.json` lokal server — diselesaikan dengan `git stash` + pull ulang.)
+8. **Isi Supabase env di VPS**: `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` ditambahkan ke `server/.env` via scp (bukan git); PM2 restart → warning "belum diisi" hilang.
+9. **Verifikasi live lengkap**:
+   - Frontend: `/`, `/admin/login`, `/admin`, `/faq` → semua 200; bundle live `index-CSAjFWKB.js`.
+   - Backend: `https://api.ipanstore.id/api/health` → 200 `{"ok":true}`; CORS header `Access-Control-Allow-Origin: https://ipanstore.id` benar.
+   - Supabase: tabel `services` via REST anon → 200 dengan 7 paket seed (custom-ff 20k, standart 50k, set-pc 50k, app-settinx 75k, elite 100k, anti-cheat-laga 100k, extreme 150k); tabel `orders` anon → **401 ditolak RLS** (security benar).
+
+#### Catatan teknis penting
+- `supabase-js` v2.112+ butuh Node 22+; workaround polyfill `ws` (commit `f98b6b5`) membuatnya jalan di Node 20. Jika VPS upgrade ke Node 22 suatu saat, polyfill tetap aman (guard `typeof globalThis.WebSocket === "undefined"`).
+- Warning "Node.js 20 and below are deprecated" dari supabase-js masih muncul di log — informational saja.
+- Prasyarat admin login: buat user di Supabase Auth + whitelist `admin_users` (lihat `ADMIN_SETUP_GUIDE.md`); default seed `admin@ipanstore.id` sudah ada barisnya di `admin_users`.
 
 ### Sesi: Fix Blank Screen Admin Services (18 Agustus 2026)
 
@@ -908,7 +934,7 @@ karena browser memakai bundle cache lama (fallback WA memang by-design di `Order
 
 ## 🔴 MASALAH & CATATAN
 
-- **Admin Panel Phase 3 selesai lokal (24 Jan 2025)**: semua file admin (7 halaman, layout, hooks, Supabase client), migrasi backend `server/index.js` ke Supabase (saveOrder/getOrder/updateOrder/resolveServiceId), migration SQL, dan seed data 7 paket sudah dibuat & diverifikasi (tsc/build/test lulus). **Belum commit/push/deploy.** Prasyarat deploy: buat admin user di Supabase Auth + tabel `admin_users`, isi `SUPABASE_URL` & `SUPABASE_SERVICE_ROLE_KEY` di `server/.env` VPS, `VITE_SUPABASE_*` di `.env` frontend, lalu restart PM2 + deploy dist.
+- **Admin Panel Phase 3 selesai lokal (24 Jan 2025)**: semua file admin (7 halaman, layout, hooks, Supabase client), migrasi backend `server/index.js` ke Supabase (saveOrder/getOrder/updateOrder/resolveServiceId), migration SQL, dan seed data 7 paket sudah dibuat & diverifikasi (tsc/build/test lulus). **Sudah commit/push/deploy 18 Agt 2026** (`f127463`+`f98b6b5`, live di `ipanstore.id`). Prasyarat tersisa: buat admin user di Supabase Auth + tabel `admin_users` (panduan `ADMIN_SETUP_GUIDE.md`).
 - Domain dan API baru sudah live; `ipanstore.my.id` sudah redirect 301 dan route API lama sudah dihapus.
 - Performance blocker utama tetap: dua WebGL effect global, banyak animation loop, dan forced reflow. `LoadingScreen`, preload animation, query provider, font waterfall, aset carousel, logo, favicon, dan animasi non-composited sudah dioptimasi secara lokal; belum dideploy.
 - Lighthouse desktop terakhir: Performance 56 dengan TBT 22.910 ms. FCP/LCP/CLS sudah baik sehingga fokus pertama harus main-thread dan efek visual.
@@ -947,6 +973,15 @@ karena browser memakai bundle cache lama (fallback WA memang by-design di `Order
 ---
 
 ## ✅ CHECKLIST LANJUTAN
+- [x] Commit + push admin panel Phase 3 (`f127463`) — sukses 18 Agt.
+- [x] Deploy frontend admin panel ke live (bundle `index-CSAjFWKB.js` live).
+- [x] Deploy backend Supabase ke VPS + `npm install` + isi `SUPABASE_*` di `server/.env` + PM2 restart (health 200).
+- [x] Fix crash supabase-js di Node 20 (polyfill WebSocket `ws`) — commit `f98b6b5`, terverifikasi live.
+- [x] Verifikasi RLS: `services` anon 200 (7 paket), `orders` anon 401 (ditolak).
+- [ ] Buat user admin di Supabase Auth (email + password) agar login `/admin/login` bisa diuji end-to-end.
+- [ ] Test login admin live → cek Dashboard/Orders/Services/Testimonials/Faqs/Reports di production.
+- [ ] Migrasi data `server/orders.json` lama (jika ada order historis) via `server/migrations/migrate-json-to-supabase.js`.
+- [ ] Test transaksi DOKU sungguhan pasca-migrasi Supabase (pastikan order tersimpan ke DB + webhook update status).
 - [ ] (Jika perlu) daftarkan key `id_ed25519` ke GitHub untuk akun `ipanappsettinx`.
 - [x] Daftarkan domain target `ipanstore.id` dan tambahkan domain ke Cloudflare.
 - [x] Ubah nameserver registrar dan tambahkan Public Hostname Cloudflare untuk frontend/API.
