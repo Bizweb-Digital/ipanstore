@@ -7,7 +7,7 @@
 
 - **Repo**: `git@github.com-bizwebdigital:Bizweb-Digital/ipanstore.git` (branch `main`)
 - **Domain live**: `https://ipanstore.id` (Cloudflare Tunnel → container Docker port 5007)
-- **Update terakhir**: 17 Agustus 2026 — Google Search Console mengonfirmasi URL utama sudah diindeks dan sitemap sukses menemukan 8 URL; perbaikan OG image/`llms.txt` siap lokal, menunggu push/deploy
+- **Update terakhir**: 17 Agustus 2026 — deploy perbaikan OG image dan `llms.txt` ke live (commit `bf9f7e4`, bundle `index-DfWwNhiH.js`); endpoint SEO terverifikasi
 
 ---
 
@@ -30,13 +30,13 @@
 | GitHub remote (via `github.com-bizwebdigital`) | ✅ Terhubung & authenticated |
 | Server `sever-h81m-s2ph` (`100.89.140.16`) | ✅ Akses SSH root OK, path `/project/website/padel/IpanStore/ipanstore` |
 | Deploy pipeline | ✅ `deploy.sh` = `git pull` → `docker compose down` → `docker compose up --build -d` |
-| Commit/status git lokal | ✅ `0645acc` (fix flicker SettinX + optimasi performa + hapus debug-backend.html) |
-| Push terakhir | ✅ `0645acc` → GitHub (key `github.com-bizwebdigital`) |
-| Pull+deploy server | ✅ `git pull` di server fast-forward `0645acc`; `dist` di-scp + `docker cp` bersih (hapus file lama), container `ipanstore` up |
+| Commit/status git lokal | ✅ `bf9f7e4` (perbaikan OG image dan penambahan `llms.txt`) |
+| Push terakhir | ✅ `bf9f7e4` → GitHub (key `github.com-bizwebdigital`) |
+| Pull+deploy server | ✅ `git pull` di server fast-forward `bf9f7e4`; `dist` di-scp + `docker cp` bersih (hapus file lama), container `ipanstore` up |
 | Backend PM2 auto-start | ✅ `pm2 save` + systemd `pm2-root.service` enabled (auto-start saat reboot) |
-| Verifikasi live | ✅ `/` `/layanan` `/paket` `/order` `/testimoni` `/faq` `/kontak` `/sitemap.xml` → 200; `index-D4F5KOaI.js` live; `debug-backend.html` → 404 (terhapus) |
+| Verifikasi live | ✅ `/` `/layanan` `/paket` `/order` `/testimoni` `/faq` `/kontak` `/sitemap.xml` `/img/logo.png` `/llms.txt` → 200; `index-DfWwNhiH.js` live; `debug-backend.html` → 404 (terhapus) |
 | Audit performance terakhir | ⚠️ Lighthouse desktop Performance 56; FCP 0,8 s, LCP 1,3 s, TBT 22.910 ms, CLS 0 |
-| Audit SEO terakhir | ✅ SEO dasar 100; ⚠️ OG image `/logo.png` 404; `llms.txt` belum tersedia |
+| Audit SEO terakhir | ✅ SEO dasar 100; OG image valid dan `llms.txt` sudah live |
 | Audit accessibility terakhir | ⚠️ Skor 88; duplicate menu ID dan focusable element di dalam `aria-hidden` |
 
 > **Catatan server**: SSH config `~/.ssh/config` dibuat di server agar `git pull` memakai
@@ -79,6 +79,13 @@ src/
 - Karena `dist` di-gitignore, deploy frontend memakai alur dokumentasi: `scp dist/*` → `/tmp/ipanstore-dist`, lalu bersihkan `/usr/share/nginx/html/*` di container `ipanstore` dan `docker cp` isi baru (agar file lama & `debug-backend.html` benar-benar terhapus).
 - Verifikasi live `https://ipanstore.id`: `/` HTTP 200 dengan bundle `index-D4F5KOaI.js`; `/layanan`, `/paket`, `/sitemap.xml` 200; `/debug-backend.html` → **404** (risiko keamanan terhapus dari produksi); `https://api.ipanstore.id/api/health` 200.
 - `LASTACTIVITY.md` diperbarui dengan status commit/push/deploy terbaru.
+
+### Sesi: Deploy Perbaikan OG Image dan `llms.txt` (17 Agustus 2026)
+
+- Commit `bf9f7e4` dipush ke `origin/main`.
+- Server melakukan `git pull --ff-only`; karena `dist/` memang dikecualikan dari Docker build context, deploy frontend memakai alur resmi: upload `dist` ke `/tmp/ipanstore-dist`, start image frontend yang ada, bersihkan document root, lalu `docker cp` hasil build baru ke container `ipanstore`.
+- Container `ipanstore` aktif setelah restart.
+- Verifikasi live: `/` `200`, `/img/logo.png` `200`, `/llms.txt` `200`, `/sitemap.xml` `200`, metadata OG/Twitter menunjuk `/img/logo.png`, `/debug-backend.html` `404`, dan API health `200`.
 
 ### Sesi: Verifikasi Indexing Google Domain Baru (17 Agustus 2026)
 
@@ -679,10 +686,10 @@ karena browser memakai bundle cache lama (fallback WA memang by-design di `Order
 - Lighthouse desktop terakhir: Performance 56 dengan TBT 22.910 ms. FCP/LCP/CLS sudah baik sehingga fokus pertama harus main-thread dan efek visual.
 - Homepage secara lokal sudah memakai thumbnail WebP untuk carousel; gambar JPG penuh tetap dipakai saat lightbox.
 - Font Roboto Flex tetap dipertahankan untuk VariableProximity, tetapi `@import` CSS sudah dipindah ke link font utama dan range variable dipersempit.
-- Logo diperkecil dari sekitar 68 KiB menjadi sekitar 6,7 KiB; favicon baru PNG sekitar 1,3 KiB. Perubahan ini belum dideploy.
-- OG/Twitter/JSON-LD image sudah diperbaiki lokal ke `/img/logo.png`, tetapi perubahan belum live sampai deploy berikutnya.
-- `public/llms.txt` sudah ditambahkan lokal, tetapi endpoint publik belum berubah sampai deploy berikutnya.
-- `public/debug-backend.html` live dan menunjuk Tailnet lama serta endpoint test create order; hapus dari production sebelum perubahan berikutnya.
+- Logo diperkecil dari sekitar 68 KiB menjadi sekitar 6,7 KiB; favicon baru PNG sekitar 1,3 KiB. Perubahan logo/favikon sudah ada di live.
+- OG/Twitter/JSON-LD image sudah live dan menunjuk ke `/img/logo.png`.
+- `public/llms.txt` sudah live dan mengembalikan HTTP `200`.
+- `public/debug-backend.html` sudah tidak tersedia di production; endpoint live mengembalikan HTTP `404`.
 - Accessibility: dua StaggeredMenu aktif di DOM, duplicate ID, focusable descendant dalam `aria-hidden`, contrast rendah, dot carousel terlalu kecil, dan heading footer tidak berurutan.
 - Laporan mobile lengkap belum tersimpan di konteks sesi; rekomendasi mobile didasarkan pada source audit dan temuan desktop yang relevan lintas device.
 - Flicker preview/stacking SettinX di desktop sudah diperbaiki secara lokal dengan scroll lock dan koordinat layout statis; belum dideploy.
@@ -731,9 +738,9 @@ karena browser memakai bundle cache lama (fallback WA memang by-design di `Order
 - [x] Hentikan preload `animation-vendor` dan hapus QueryClientProvider/query-vendor yang tidak digunakan.
 - [x] Pertahankan Roboto Flex/VariableProximity dan pindahkan pemuatannya dari CSS `@import` ke link utama dengan range lebih sempit.
 - [x] Migrasikan `TestimoniPreview` ke thumbnail WebP; gambar penuh tetap untuk lightbox.
-- [x] Optimalkan logo dan favicon; perbaiki OG image dari `/logo.png` ke `/img/logo.png` (lokal, menunggu deploy).
-- [x] Tambahkan `public/llms.txt` untuk agentic browsing (lokal, menunggu deploy).
-- [ ] Push dan deploy perbaikan SEO, lalu verifikasi `/img/logo.png`, `/llms.txt`, dan metadata OG live.
+- [x] Optimalkan logo dan favicon; perbaiki OG image dari `/logo.png` ke `/img/logo.png` (sudah live).
+- [x] Tambahkan `public/llms.txt` untuk agentic browsing (sudah live).
+- [x] Push dan deploy perbaikan SEO; `/img/logo.png`, `/llms.txt`, dan metadata OG live sudah diverifikasi.
 - [x] Ubah shine dan dot carousel ke animasi berbasis transform/opacity tanpa menghilangkan efek visual.
 - [x] Kunci scroll background saat preview SettinX terbuka untuk mencegah flicker fixed lightbox.
 - [x] Perbaiki feedback loop `ScrollStackCards` yang menyebabkan flicker desktop di sekitar preview SettinX.
