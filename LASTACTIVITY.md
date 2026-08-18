@@ -7,7 +7,7 @@
 
 - **Repo**: `git@github.com-bizwebdigital:Bizweb-Digital/ipanstore.git` (branch `main`)
 - **Domain live**: `https://ipanstore.id` (Cloudflare Tunnel → container Docker port 5007)
-- **Update terakhir**: 18 Agustus 2026 — Optimasi TBT desktop (defer inisialisasi SplashCursor di semua device) selesai, siap commit/deploy.
+- **Update terakhir**: 18 Agustus 2026 — Performa desktop kembali ke **92** (commit `67e58e4` + deploy). TBT turun 370→110 ms, tanpa memangkas/mengubah efek.
 
 ### Sesi: Kembalikan Performa Desktop ke 90+ tanpa memangkas efek (18 Agustus 2026)
 
@@ -20,6 +20,8 @@
 - **Efek/animasi TIDAK dipangkas/diubah** — tampilan SplashCursor identik; hanya timing mount-nya bergeser sedikit setelah load. Di desktop ringan, idle callback cepat → delay visual nyaris nol.
 - Scanner sudah ditunda ke idle (dari sesi sebelumnya) tetap.
 - Verifikasi lokal: `tsc` clean, build sukses, browser desktop normal (splash muncul, popup jalan, 0 error).
+- **Commit** `67e58e4` → push → pull server → deploy (bundle live `index-ETmP9l2_.js`, HTTP 200).
+- **Hasil PageSpeed desktop setelah deploy**: **Performance 92** (dari 79), **TBT 110 ms** (dari 370 ms), FCP 0,9s, LCP 1,0s, CLS 0,001. Accessibility 100, Best Practices 92 (CSP — disengaja), SEO 100.
 
 ### Sesi: Optimasi PageSpeed Mobile (defer SplashCursor mobile + LoadingScreen singkat) (18 Agustus 2026)
 
