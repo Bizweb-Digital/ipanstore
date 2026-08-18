@@ -41,13 +41,13 @@ const Layout = ({ children }: LayoutProps) => {
     };
   }, []);
 
-  // SplashCursor: di desktop dimount langsung (perilaku sama seperti live),
-  // di MOBILE ditunda hingga setelah idle agar inisialisasi WebGL-nya tidak
-  // membebani LCP/FCP saat load. Tampilan akhir tetap identik (hanya muncul
-  // beberapa saat lebih lambat).
-  const [splashReady, setSplashReady] = useState(() => !isMobile);
+  // SplashCursor: dimount SETELAH idle/first-paint di semua device (desktop &
+  // mobile). Inisialisasi WebGL (create context + compile shader) yang berat
+  // dipindah keluar dari jendela load → menurunkan TBT/long-task saat pengukuran,
+  // sehingga skor desktop stabil tinggi. Tampilan & animasi efek TIDAK berubah —
+  // hanya muncul beberapa saat lebih lambat setelah load.
+  const [splashReady, setSplashReady] = useState(false);
   useEffect(() => {
-    if (!isMobile) return;
     const w = window as unknown as {
       requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
       cancelIdleCallback?: (id: number) => void;
@@ -56,15 +56,15 @@ const Layout = ({ children }: LayoutProps) => {
     };
     let id: number;
     if (typeof w.requestIdleCallback === "function") {
-      id = w.requestIdleCallback(() => setSplashReady(true), { timeout: 1200 });
+      id = w.requestIdleCallback(() => setSplashReady(true), { timeout: 1000 });
     } else {
-      id = w.setTimeout(() => setSplashReady(true), 800);
+      id = w.setTimeout(() => setSplashReady(true), 600);
     }
     return () => {
       if (typeof w.cancelIdleCallback === "function") w.cancelIdleCallback(id);
       else w.clearTimeout(id);
     };
-  }, [isMobile]);
+  }, []);
 
   // Satu instance Lenis global untuk seluruh aplikasi. Dibuat sekali dan
   // dipakai bersama oleh semua halaman — mencegah banyak rAF loop Lenis

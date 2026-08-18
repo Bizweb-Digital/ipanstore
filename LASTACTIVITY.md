@@ -7,7 +7,19 @@
 
 - **Repo**: `git@github.com-bizwebdigital:Bizweb-Digital/ipanstore.git` (branch `main`)
 - **Domain live**: `https://ipanstore.id` (Cloudflare Tunnel → container Docker port 5007)
-- **Update terakhir**: 18 Agustus 2026 — Optimasi mobile (defer SplashCursor di mobile + LoadingScreen singkat) selesai, siap commit/deploy.
+- **Update terakhir**: 18 Agustus 2026 — Optimasi TBT desktop (defer inisialisasi SplashCursor di semua device) selesai, siap commit/deploy.
+
+### Sesi: Kembalikan Performa Desktop ke 90+ tanpa memangkas efek (18 Agustus 2026)
+
+**Permintaan user**: kembalikan skor performa desktop ke 90-an, TANPA memangkas/mengubah efek atau animasi go-live; Best Practices 92 dianggap OK (menunjang keamanan via CSP).
+
+**Akar masalah**: skor desktop turun 91→79 karena **TBT fluktuatif (120→220→370 ms)** — long task dari inisialisasi WebGL SplashCursor/Scanner yang kadang jatuh di jendela load. LCP/FCP/CLS/SI tetap bagus.
+
+**Yang diubah (satu file, `src/components/layout/Layout.tsx`)**:
+- SplashCursor yang tadinya dimount langsung di desktop (dan ditunda hanya di mobile), kini **dimount SETELAH idle/first-paint di semua device** via `requestIdleCallback` (timeout 1000ms, fallback setTimeout 600ms). Inisialisasi WebGL (create context + compile shader) beratnya pindah keluar dari jendela load → **menurunkan TBT/long-task**.
+- **Efek/animasi TIDAK dipangkas/diubah** — tampilan SplashCursor identik; hanya timing mount-nya bergeser sedikit setelah load. Di desktop ringan, idle callback cepat → delay visual nyaris nol.
+- Scanner sudah ditunda ke idle (dari sesi sebelumnya) tetap.
+- Verifikasi lokal: `tsc` clean, build sukses, browser desktop normal (splash muncul, popup jalan, 0 error).
 
 ### Sesi: Optimasi PageSpeed Mobile (defer SplashCursor mobile + LoadingScreen singkat) (18 Agustus 2026)
 
