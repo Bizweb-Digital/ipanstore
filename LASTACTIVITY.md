@@ -7,14 +7,14 @@
 
 - **Repo**: `git@github.com-bizwebdigital:Bizweb-Digital/ipanstore.git` (branch `main`)
 - **Domain live**: `https://ipanstore.id` (Cloudflare Tunnel → container Docker port 5007)
-- **Update terakhir**: 18 Agustus 2026 — Structured data homepage diperkuat dengan alternate name `ipanstore` untuk membantu Google mengaitkan pencarian brand tanpa `.id`; perubahan lokal, belum deploy.
+- **Update terakhir**: 18 Agustus 2026 — Structured data homepage diperkuat dengan alternate name `ipanstore`; commit `d9c0386` sudah dipush, dipull di server, dan frontend live memakai bundle `index-TPnhp4Bw.js`.
 
 ### Sesi: Penguatan Brand Search `ipanstore` (18 Agustus 2026)
 
 - **Temuan**: Google sudah menampilkan `https://ipanstore.id` di posisi teratas untuk query domain lengkap, tetapi query `ipanstore` masih ditafsirkan sebagai istilah umum/"IPA Store". Ini bukan kegagalan indexing; homepage sudah terindeks dan sitemap Search Console sebelumnya sukses.
 - **Perubahan lokal**: `src/lib/seo.ts` menambahkan `alternateName: ["ipanstore", "IPAN Store"]` pada JSON-LD `WebSite` homepage. Tidak ada keyword stuffing atau perubahan visual.
 - **Verifikasi**: `npx tsc --noEmit`, `npm run build`, dan `git diff --check` lulus. Build hanya menampilkan peringatan Browserslist lama.
-- **Status**: belum commit, push, atau deploy. Setelah dipublikasikan, gunakan URL Inspection untuk request indexing homepage; Google menyatakan recrawl dapat memerlukan beberapa hari hingga dua minggu dan tidak menjamin posisi ranking.
+- **Status**: commit `d9c0386` sudah dibuat dan dipush ke `origin/main`, server sudah pull, build produksi sukses, dan frontend sudah dideploy. Setelah ini gunakan URL Inspection untuk request indexing homepage; Google menyatakan recrawl dapat memerlukan beberapa hari hingga dua minggu dan tidak menjamin posisi ranking.
 
 ### Sesi: Kembalikan Performa Desktop ke 90+ tanpa memangkas efek (18 Agustus 2026)
 
@@ -1290,7 +1290,7 @@ karena browser memakai bundle cache lama (fallback WA memang by-design di `Order
 - Logo diperkecil dari sekitar 68 KiB menjadi sekitar 6,7 KiB; favicon baru PNG sekitar 1,3 KiB. Perubahan logo/favikon sudah ada di live.
 - OG/Twitter/JSON-LD image sudah live dan menunjuk ke `/img/logo.png`.
 - `public/llms.txt` sudah live dan mengembalikan HTTP `200`.
-- **Pencarian brand tanpa `.id`**: `WebSite.alternateName` sudah ditambahkan lokal untuk `ipanstore`; belum live sampai ada deploy.
+- **Pencarian brand tanpa `.id`**: `WebSite.alternateName` untuk `ipanstore` sudah live di bundle `index-TPnhp4Bw.js`; ranking tetap perlu menunggu recrawl dan data tayangan.
 - `public/debug-backend.html` sudah tidak tersedia di production; endpoint live mengembalikan HTTP `404`.
 - Accessibility: dua StaggeredMenu aktif di DOM, duplicate ID, focusable descendant dalam `aria-hidden`, contrast rendah, dot carousel terlalu kecil, dan heading footer tidak berurutan.
 - Laporan mobile lengkap belum tersimpan di konteks sesi; rekomendasi mobile didasarkan pada source audit dan temuan desktop yang relevan lintas device.
@@ -1348,8 +1348,8 @@ karena browser memakai bundle cache lama (fallback WA memang by-design di `Order
   domain target aktif.
 - [ ] (Opsional) Optimasi lebih lanjut: preload kritis, `fetchpriority` hero image.
 - [x] Daftarkan properti `ipanstore.id` di Google Search Console, kirim `/sitemap.xml`, lalu request indexing URL utama; Search Console mengonfirmasi URL diindeks dan 8 URL ditemukan.
-- [x] Tambahkan `WebSite.alternateName` untuk brand `ipanstore` pada structured data homepage secara lokal; menunggu deploy dan recrawl Google.
-- [ ] Deploy perubahan `alternateName`, lalu request indexing homepage melalui URL Inspection dan pantau query `ipanstore` di Performance > Search results.
+- [x] Tambahkan `WebSite.alternateName` untuk brand `ipanstore` pada structured data homepage dan deploy ke live.
+- [ ] Request indexing homepage melalui URL Inspection dan pantau query `ipanstore` di Performance > Search results.
 - [x] Pendekkan `LoadingScreen` menjadi 200 ms; validasi LCP live masih perlu dilakukan setelah deploy.
 - [x] Optimasi runtime WebGL, offscreen loop, forced-reflow, canvas, dan input tanpa menghapus efek — selesai lokal, menunggu verifikasi live setelah deploy.
 - [x] Audit seluruh route frontend dan perbaiki duplikasi rAF Lenis pada desktop smooth-scroll — efek tetap dipertahankan.
