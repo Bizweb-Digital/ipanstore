@@ -101,15 +101,15 @@ const Layout = ({ children }: LayoutProps) => {
       <SplashCursor
         COLOR="#94A3B8"
         RAINBOW_MODE={false}
-        SIM_RESOLUTION={isMobile ? 32 : 48}
-        DYE_RESOLUTION={isMobile ? 256 : 320}
-        PRESSURE_ITERATIONS={2}
-        SHADING={false}
-        SPLAT_RADIUS={0.12}
-        SPLAT_FORCE={isMobile ? 2200 * 0.7 : 2200}
-        DENSITY_DISSIPATION={4}
-        VELOCITY_DISSIPATION={2.5}
-        CURL={isMobile ? 1.5 : 2}
+        SIM_RESOLUTION={isMobile ? 96 : 128}
+        DYE_RESOLUTION={isMobile ? 768 : 1440}
+        PRESSURE_ITERATIONS={isMobile ? 6 : 12}
+        SHADING={true}
+        SPLAT_RADIUS={0.2}
+        SPLAT_FORCE={6000}
+        DENSITY_DISSIPATION={3.5}
+        VELOCITY_DISSIPATION={2}
+        CURL={3}
       />
       {/* Latar animasi Scanner global — fixed, hadir di semua page dan tetap
           terlihat saat user scroll ke bagian manapun. z-0 agar konten yang

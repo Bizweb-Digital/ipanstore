@@ -296,12 +296,13 @@ const Scanner: React.FC<ScannerProps> = ({
     let idleTimer: number | null = null;
     let isScrolling = false;
     let menuOpen = false;
+    let modalOpen = false;
     let scrollIdleTimer: number | null = null;
     const t0 = performance.now();
 
     const loop = (t: number) => {
       raf = 0;
-      if (reducedMotion || !interactionActive || menuOpen) return;
+      if (reducedMotion || !interactionActive || menuOpen || modalOpen) return;
       if (t - lastRenderTime < frameInterval) {
         raf = requestAnimationFrame(loop);
         return;
@@ -325,7 +326,7 @@ const Scanner: React.FC<ScannerProps> = ({
     };
 
     const tryStart = () => {
-      if (!reducedMotion && interactionActive && !menuOpen && isVisible && isPageVisible && raf === 0) {
+      if (!reducedMotion && interactionActive && !menuOpen && !modalOpen && isVisible && isPageVisible && raf === 0) {
         raf = requestAnimationFrame(loop);
       }
     };
@@ -372,8 +373,16 @@ const Scanner: React.FC<ScannerProps> = ({
         tryStop();
       }
     };
+    const onModalState = (event: Event) => {
+      modalOpen = Boolean((event as CustomEvent<{ open?: boolean }>).detail?.open);
+      if (modalOpen) {
+        interactionActive = false;
+        tryStop();
+      }
+    };
     window.addEventListener('scroll', onScroll, { passive: true });
     document.addEventListener('ipan:menu-state', onMenuState);
+    document.addEventListener('ipan:modal-state', onModalState);
 
     const io = new IntersectionObserver(
       ([entry]) => {
@@ -400,6 +409,7 @@ const Scanner: React.FC<ScannerProps> = ({
       io.disconnect();
       document.removeEventListener('visibilitychange', onVisibility);
       document.removeEventListener('ipan:menu-state', onMenuState);
+      document.removeEventListener('ipan:modal-state', onModalState);
       canvas.removeEventListener('mousemove', onMouseMove);
       canvas.removeEventListener('mouseleave', onMouseLeave);
       window.removeEventListener('scroll', onScroll);

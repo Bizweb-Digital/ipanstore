@@ -61,19 +61,19 @@ function SplashCursor({
     }
 
     const pixelRatio = 1;
-    const frameInterval = 1000 / 24;
+    const frameInterval = 1000 / 60;
 
     // Adaptive quality based on platform - reduce simulation size for mobile devices
     const isMobile = typeof navigator !== 'undefined' && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     
     let config = {
-      SIM_RESOLUTION: Math.min(SIM_RESOLUTION, isMobile ? 32 : 48),
-      DYE_RESOLUTION: Math.min(DYE_RESOLUTION, isMobile ? 256 : 320),
+      SIM_RESOLUTION: Math.min(SIM_RESOLUTION, isMobile ? 96 : 128),
+      DYE_RESOLUTION: Math.min(DYE_RESOLUTION, isMobile ? 768 : 1440),
       CAPTURE_RESOLUTION,
       DENSITY_DISSIPATION,
       VELOCITY_DISSIPATION,
       PRESSURE,
-      PRESSURE_ITERATIONS: Math.min(PRESSURE_ITERATIONS, 2),
+      PRESSURE_ITERATIONS: Math.min(PRESSURE_ITERATIONS, isMobile ? 6 : 12),
       CURL,
       SPLAT_RADIUS,
       SPLAT_FORCE: isMobile ? SPLAT_FORCE * 0.7 : SPLAT_FORCE,
@@ -885,9 +885,9 @@ function SplashCursor({
       const color = generateColor();
       // Keep click splats visible without the white flash from the original
       // multiplier when using the slate palette.
-      color.r *= 2.5;
-      color.g *= 2.5;
-      color.b *= 2.5;
+      color.r *= 10.0;
+      color.g *= 10.0;
+      color.b *= 10.0;
       let dx = 10 * (Math.random() - 0.5);
       let dy = 30 * (Math.random() - 0.5);
       splat(pointer.texcoordX, pointer.texcoordY, dx, dy, color);
@@ -1142,9 +1142,16 @@ function SplashCursor({
         stopAnimation();
       }
     };
+    const handleModalState = (event: Event) => {
+      if ((event as CustomEvent<{ open?: boolean }>).detail?.open) {
+        interactionActive = false;
+        stopAnimation();
+      }
+    };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     document.addEventListener('ipan:menu-state', handleMenuState);
+    document.addEventListener('ipan:modal-state', handleModalState);
     window.addEventListener('scroll', handleScroll, { passive: true });
 
     // Cleanup function
@@ -1164,6 +1171,7 @@ function SplashCursor({
       window.removeEventListener('touchend', handleTouchEnd);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       document.removeEventListener('ipan:menu-state', handleMenuState);
+      document.removeEventListener('ipan:modal-state', handleModalState);
       window.removeEventListener('scroll', handleScroll);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

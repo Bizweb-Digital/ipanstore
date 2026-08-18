@@ -18,7 +18,7 @@ const CatalogAppSettinx = () => {
   const { ref, revealed } = useScrollReveal<HTMLDivElement>();
 
   return (
-    <section className="relative py-16 md:py-20 overflow-hidden border-t border-white/16">
+    <section id="app-settinx" className="relative py-16 md:py-20 overflow-hidden border-t border-white/16">
       <div className="container mx-auto px-4">
         <Reveal className="text-center max-w-2xl mx-auto mb-14">
           <span className="section-subheading">KATALOG PRODUK</span>

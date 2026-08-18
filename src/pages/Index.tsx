@@ -11,6 +11,7 @@ import CatalogAppSettinx from "@/components/sections/CatalogAppSettinx";
 import TestimoniPreview from "@/components/sections/TestimoniPreview";
 import Community from "@/components/sections/Community";
 import ClosingCTA from "@/components/sections/ClosingCTA";
+import LaunchPopup from "@/components/LaunchPopup";
 import { localBusinessJsonLd, websiteJsonLd } from "@/lib/seo";
 import { Zap, Cpu, MousePointer2, Laptop2 } from "lucide-react";
 
@@ -94,6 +95,9 @@ const Index = () => {
       <TestimoniPreview />
       <Community />
       <ClosingCTA />
+
+      {/* Popup Grand Launching SettinX V1 — tampil saat website dibuka */}
+      <LaunchPopup />
     </Layout>
   );
 };

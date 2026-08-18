@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import {
   ArrowRight,
@@ -153,33 +153,49 @@ const Order = () => {
     [selectedId, packages]
   );
 
-  const handleApplyPromo = async () => {
-    setPromoMsg(null);
-    setPromoApplied(null);
-    const code = promoInput.trim();
-    if (!code) {
-      setPromoMsg("Masukkan kode promo.");
-      return;
-    }
-    setCheckingPromo(true);
-    try {
-      const promo = await lookupPromoCode(code);
-      if (!promo) {
-        setPromoMsg("Kode promo tidak ditemukan atau tidak aktif.");
-        return;
+  // Auto-isi kode promo dari URL (?kode=HEMAT5) — dipakai CTA popup launching.
+  const promoParam = searchParams.get("kode");
+  const promoAutoRef = useRef(false);
+
+  const applyPromoByCode = useCallback(
+    async (code: string) => {
+      const c = code.trim().toUpperCase();
+      if (!c) return;
+      setPromoMsg(null);
+      setPromoApplied(null);
+      setCheckingPromo(true);
+      try {
+        const promo = await lookupPromoCode(c);
+        if (!promo) {
+          setPromoMsg("Kode promo tidak ditemukan atau tidak aktif.");
+          return;
+        }
+        const result = applyPromo(selected.price, promo);
+        if (!result.ok) {
+          setPromoMsg(result.message);
+          return;
+        }
+        setPromoApplied({ code: promo.code, discount: result.discount, total: result.total });
+        setPromoMsg(`Kode ${promo.code} berlaku! Anda hemat Rp ${result.discount.toLocaleString("id-ID")}.`);
+      } catch {
+        setPromoMsg("Gagal memeriksa kode promo. Coba lagi.");
+      } finally {
+        setCheckingPromo(false);
       }
-      const result = applyPromo(selected.price, promo);
-      if (!result.ok) {
-        setPromoMsg(result.message);
-        return;
-      }
-      setPromoApplied({ code: promo.code, discount: result.discount, total: result.total });
-      setPromoMsg(`Kode ${promo.code} berlaku! Anda hemat Rp ${result.discount.toLocaleString("id-ID")}.`);
-    } catch {
-      setPromoMsg("Gagal memeriksa kode promo. Coba lagi.");
-    } finally {
-      setCheckingPromo(false);
+    },
+    [selected.price]
+  );
+
+  useEffect(() => {
+    if (promoParam && !promoAutoRef.current) {
+      promoAutoRef.current = true;
+      setPromoInput(promoParam.toUpperCase());
+      void applyPromoByCode(promoParam);
     }
+  }, [promoParam, applyPromoByCode]);
+
+  const handleApplyPromo = () => {
+    void applyPromoByCode(promoInput);
   };
 
   const handleCheckout = async () => {
