@@ -7,7 +7,14 @@
 
 - **Repo**: `git@github.com-bizwebdigital:Bizweb-Digital/ipanstore.git` (branch `main`)
 - **Domain live**: `https://ipanstore.id` (Cloudflare Tunnel → container Docker port 5007)
-- **Update terakhir**: 18 Agustus 2026 — Structured data homepage diperkuat dengan alternate name `ipanstore`; commit `d9c0386` sudah dipush, dipull di server, dan frontend live memakai bundle `index-TPnhp4Bw.js`.
+- **Update terakhir**: 18 Agustus 2026 — Logo publik lokal diubah dari transparan menjadi background navy asli `#0D1625`; verifikasi lulus, belum deploy.
+
+### Sesi: Perbaikan Background Logo untuk Preview Google (18 Agustus 2026)
+
+- **Temuan**: `src/assets/logo.png` dan `public/img/logo.png` transparan pada sudut gambar. Google merender area transparan menjadi putih pada thumbnail hasil pencarian.
+- **Perubahan lokal**: kedua aset logo publik sekarang diflatten dengan warna background asli navy `#0D1625` (RGB 13, 22, 37). Logo admin transparan tidak diubah.
+- **Verifikasi**: `npx tsc --noEmit`, `npm run test` (1 passed), `npm run build`, dan `git diff --check` lulus. Build hanya menampilkan peringatan Browserslist lama.
+- **Status**: belum commit, push, pull, atau deploy. Setelah deploy, lakukan request indexing homepage agar Google mengambil aset logo terbaru.
 
 ### Sesi: Penguatan Brand Search `ipanstore` (18 Agustus 2026)
 
@@ -1291,6 +1298,7 @@ karena browser memakai bundle cache lama (fallback WA memang by-design di `Order
 - OG/Twitter/JSON-LD image sudah live dan menunjuk ke `/img/logo.png`.
 - `public/llms.txt` sudah live dan mengembalikan HTTP `200`.
 - **Pencarian brand tanpa `.id`**: `WebSite.alternateName` untuk `ipanstore` sudah live di bundle `index-TPnhp4Bw.js`; ranking tetap perlu menunggu recrawl dan data tayangan.
+- **Background logo publik**: aset logo lokal sudah memakai navy `#0D1625` agar tidak dirender putih oleh Google; menunggu deploy.
 - `public/debug-backend.html` sudah tidak tersedia di production; endpoint live mengembalikan HTTP `404`.
 - Accessibility: dua StaggeredMenu aktif di DOM, duplicate ID, focusable descendant dalam `aria-hidden`, contrast rendah, dot carousel terlalu kecil, dan heading footer tidak berurutan.
 - Laporan mobile lengkap belum tersimpan di konteks sesi; rekomendasi mobile didasarkan pada source audit dan temuan desktop yang relevan lintas device.
@@ -1349,6 +1357,8 @@ karena browser memakai bundle cache lama (fallback WA memang by-design di `Order
 - [ ] (Opsional) Optimasi lebih lanjut: preload kritis, `fetchpriority` hero image.
 - [x] Daftarkan properti `ipanstore.id` di Google Search Console, kirim `/sitemap.xml`, lalu request indexing URL utama; Search Console mengonfirmasi URL diindeks dan 8 URL ditemukan.
 - [x] Tambahkan `WebSite.alternateName` untuk brand `ipanstore` pada structured data homepage dan deploy ke live.
+- [x] Ubah background aset logo publik dari transparan ke navy asli `#0D1625` secara lokal; verifikasi tsc/test/build lulus.
+- [ ] Commit, push, pull, dan deploy perubahan background logo; lalu request indexing homepage.
 - [ ] Request indexing homepage melalui URL Inspection dan pantau query `ipanstore` di Performance > Search results.
 - [x] Pendekkan `LoadingScreen` menjadi 200 ms; validasi LCP live masih perlu dilakukan setelah deploy.
 - [x] Optimasi runtime WebGL, offscreen loop, forced-reflow, canvas, dan input tanpa menghapus efek — selesai lokal, menunggu verifikasi live setelah deploy.
