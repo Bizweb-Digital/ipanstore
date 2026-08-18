@@ -7,7 +7,17 @@
 
 - **Repo**: `git@github.com-bizwebdigital:Bizweb-Digital/ipanstore.git` (branch `main`)
 - **Domain live**: `https://ipanstore.id` (Cloudflare Tunnel → container Docker port 5007)
-- **Update terakhir**: 18 Agustus 2026 — Popup Grand Launching SettinX V1 dibuat & terverifikasi lokal (belum commit/push/deploy).
+- **Update terakhir**: 18 Agustus 2026 — Popup Grand Launching SettinX V1 + tuning SplashCursor near-original **commit `c5d8627`, push, pull server, dan deploy live sukses** (bundle live `index-DNkBRovD.js` HTTP 200).
+
+### Sesi: Commit, Push, Pull & Deploy Popup + Tuning SplashCursor (18 Agustus 2026)
+
+**Permintaan user**: commit, push GitHub, pull server via SSH Tailscale, deploy.
+
+- **Commit** `c5d8627` — `feat: popup grand launching SettinX V1 + optimasi efek SplashCursor/Scanner` (8 file, +254/-46): `LaunchPopup.tsx` baru, `Index.tsx`, `CatalogAppSettinx.tsx` (id anchor), `Order.tsx` (auto kode promo + fix TDZ), `Layout.tsx` (props SplashCursor), `SplashCursor.tsx` + `Scanner.tsx` (event `ipan:modal-state`), `LASTACTIVITY.md`.
+- **Push** `90637e2..c5d8627` → `origin/main` (key `github.com-bizwebdigital`).
+- **Pull server** `sever-h81m-s2ph` (`root@100.89.140.16`) fast-forward `90637e2..c5d8627`.
+- **Deploy frontend** (bind-mount flow, backend tidak berubah): `npm run build` lokal → tar dist → `scp` `/tmp/ipanstore-dist.tgz` → server: `rm -rf /tmp/ipanstore-dist/*` (folder dipertahankan) → `tar -xzf` → `docker restart ipanstore`.
+- **Verifikasi live**: `https://ipanstore.id/` HTTP 200, bundle baru `index-DNkBRovD.js` tersaji; penanda fitur di bundle ditemukan: `GRAND LAUNCHING`, `ipan:modal-state`, `BERAKHIR 31 AGUSTUS`, `HEMAT5`, `variable-proximity`, `eb-canvas`, `app-settinx`.
 
 ### Sesi: Popup Grand Launching SettinX V1 (18 Agustus 2026)
 

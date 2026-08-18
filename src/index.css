@@ -1450,3 +1450,8 @@
   font-family: 'Plus Jakarta Sans', sans-serif;
   color: #94A3B8;
 }
+
+/* ── Aksesibilitas: naikkan kontras teks muted agar lolos WCAG AA di latar gelap.
+   Warna tetap muted (abu-abu) tapi cukup terang vs #1a1a1a/#131314. ───────── */
+.text-zinc-500 { color: #8E8E97; }
+.text-zinc-600 { color: #87878F; }

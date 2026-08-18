@@ -10,10 +10,20 @@
     <link rel="canonical" href="https://ipanstore.id/" />
     <link rel="icon" href="/favicon.png" type="image/png" sizes="64x64" />
 
-    <!-- Fonts: hanya family dan range yang benar-benar dipakai -->
+    <!-- Fonts: hanya family dan range yang benar-benar dipakai.
+         Dimuat non-render-blocking (media=print → all) agar tidak menahan render.
+         display=swap sudah di URL sehingga teks tampil dulu dengan sistem font. -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&family=Roboto+Flex:opsz,wght@9..40,400..1000&display=swap" rel="stylesheet">
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&family=Roboto+Flex:opsz,wght@9..40,400..1000&display=swap"
+      rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
+    >
+    <noscript>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&family=Roboto+Flex:opsz,wght@9..40,400..1000&display=swap">
+    </noscript>
 
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="id_ID" />

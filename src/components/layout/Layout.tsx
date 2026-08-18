@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Lenis from "lenis";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
@@ -16,6 +16,30 @@ const Layout = ({ children }: LayoutProps) => {
 
   // Detect mobile device untuk optimasi performa
   const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  // Tunda mount Scanner WebGL (full-screen, shader compile berat) hingga
+  // setelah idle/first paint — memindahkan pekerjaan berat dari jalur kritis
+  // load agar tidak menambah long task / TBT saat pengukuran. Tampilan akhir
+  // tetap sama (Scanner hanya muncul beberapa saat lebih lambat).
+  const [scannerReady, setScannerReady] = useState(false);
+  useEffect(() => {
+    const w = window as unknown as {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+      setTimeout: (cb: () => void, ms: number) => number;
+      clearTimeout: (id: number) => void;
+    };
+    let id: number;
+    if (typeof w.requestIdleCallback === "function") {
+      id = w.requestIdleCallback(() => setScannerReady(true), { timeout: 900 });
+    } else {
+      id = w.setTimeout(() => setScannerReady(true), 400);
+    }
+    return () => {
+      if (typeof w.cancelIdleCallback === "function") w.cancelIdleCallback(id);
+      else w.clearTimeout(id);
+    };
+  }, []);
 
   // Satu instance Lenis global untuk seluruh aplikasi. Dibuat sekali dan
   // dipakai bersama oleh semua halaman — mencegah banyak rAF loop Lenis
@@ -113,8 +137,8 @@ const Layout = ({ children }: LayoutProps) => {
       />
       {/* Latar animasi Scanner global — fixed, hadir di semua page dan tetap
           terlihat saat user scroll ke bagian manapun. z-0 agar konten yang
-          memakai relative/z-10 tampil di atasnya. */}
-      <GlobalScannerBackground />
+          memakai relative/z-10 tampil di atasnya. Di-mount setelah idle. */}
+      {scannerReady && <GlobalScannerBackground />}
       <Navbar />
       <div id="main-content">
         <PageTransition>

@@ -20,7 +20,7 @@ const buttonVariants = cva(
         ghost: "text-zinc-300 hover:bg-white/5 hover:text-[#F4F4F5]",
         link: "text-zinc-50 underline-offset-4 hover:underline",
         whatsapp:
-          "bg-[#25D366] text-white font-semibold hover:bg-[#20bd5a] shadow-soft-sm",
+          "bg-[#25D366] text-[#052E16] font-semibold hover:bg-[#20bd5a] shadow-soft-sm",
         "gaming-outline":
           "border border-white/16 bg-transparent text-[#F4F4F5] hover:bg-white/5 hover:border-white/24",
         "gaming-glow":
