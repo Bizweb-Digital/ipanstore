@@ -41,6 +41,7 @@ const WEBSITE = {
   "@id": `${SITE_URL}/#website`,
   url: SITE_URL,
   name: SITE_NAME,
+  alternateName: ["ipanstore", "IPAN Store"],
   inLanguage: "id-ID",
   publisher: { "@id": `${SITE_URL}/#business` },
 };
