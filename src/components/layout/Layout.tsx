@@ -41,6 +41,31 @@ const Layout = ({ children }: LayoutProps) => {
     };
   }, []);
 
+  // SplashCursor: di desktop dimount langsung (perilaku sama seperti live),
+  // di MOBILE ditunda hingga setelah idle agar inisialisasi WebGL-nya tidak
+  // membebani LCP/FCP saat load. Tampilan akhir tetap identik (hanya muncul
+  // beberapa saat lebih lambat).
+  const [splashReady, setSplashReady] = useState(() => !isMobile);
+  useEffect(() => {
+    if (!isMobile) return;
+    const w = window as unknown as {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+      setTimeout: (cb: () => void, ms: number) => number;
+      clearTimeout: (id: number) => void;
+    };
+    let id: number;
+    if (typeof w.requestIdleCallback === "function") {
+      id = w.requestIdleCallback(() => setSplashReady(true), { timeout: 1200 });
+    } else {
+      id = w.setTimeout(() => setSplashReady(true), 800);
+    }
+    return () => {
+      if (typeof w.cancelIdleCallback === "function") w.cancelIdleCallback(id);
+      else w.clearTimeout(id);
+    };
+  }, [isMobile]);
+
   // Satu instance Lenis global untuk seluruh aplikasi. Dibuat sekali dan
   // dipakai bersama oleh semua halaman — mencegah banyak rAF loop Lenis
   // yang bertumpuk (penyebab scroll bergetar/tersendat).
@@ -122,19 +147,21 @@ const Layout = ({ children }: LayoutProps) => {
       >
         Skip to content
       </a>
-      <SplashCursor
-        COLOR="#94A3B8"
-        RAINBOW_MODE={false}
-        SIM_RESOLUTION={isMobile ? 96 : 128}
-        DYE_RESOLUTION={isMobile ? 768 : 1440}
-        PRESSURE_ITERATIONS={isMobile ? 6 : 12}
-        SHADING={true}
-        SPLAT_RADIUS={0.2}
-        SPLAT_FORCE={6000}
-        DENSITY_DISSIPATION={3.5}
-        VELOCITY_DISSIPATION={2}
-        CURL={3}
-      />
+      {splashReady && (
+        <SplashCursor
+          COLOR="#94A3B8"
+          RAINBOW_MODE={false}
+          SIM_RESOLUTION={isMobile ? 96 : 128}
+          DYE_RESOLUTION={isMobile ? 768 : 1440}
+          PRESSURE_ITERATIONS={isMobile ? 6 : 12}
+          SHADING={true}
+          SPLAT_RADIUS={0.2}
+          SPLAT_FORCE={6000}
+          DENSITY_DISSIPATION={3.5}
+          VELOCITY_DISSIPATION={2}
+          CURL={3}
+        />
+      )}
       {/* Latar animasi Scanner global — fixed, hadir di semua page dan tetap
           terlihat saat user scroll ke bagian manapun. z-0 agar konten yang
           memakai relative/z-10 tampil di atasnya. Di-mount setelah idle. */}

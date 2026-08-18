@@ -5,21 +5,32 @@ const LoadingScreen = ({ onComplete }: { onComplete: () => void }) => {
   const [progress, setProgress] = useState(0);
   const [fadeOut, setFadeOut] = useState(false);
 
+  // Di mobile persingkat durasi loading agar konten penting (hero) tampil lebih
+  // cepat → membantu FCP/LCP. Desktop memakai durasi normal.
+  const isMobile = typeof navigator !== 'undefined' && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const t = {
+    progress: isMobile ? 60 : 100,
+    fade: isMobile ? 70 : 120,
+    complete: isMobile ? 130 : 200,
+  };
+
   useEffect(() => {
-    const progressTimer = setTimeout(() => setProgress(100), 100);
+    const progressTimer = setTimeout(() => setProgress(100), t.progress);
 
     return () => clearTimeout(progressTimer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (progress >= 100) {
-      const timer = setTimeout(() => setFadeOut(true), 120);
-      const completeTimer = setTimeout(() => onComplete(), 200);
+      const timer = setTimeout(() => setFadeOut(true), t.fade);
+      const completeTimer = setTimeout(() => onComplete(), t.complete);
       return () => {
         clearTimeout(timer);
         clearTimeout(completeTimer);
       };
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [progress, onComplete]);
 
   return (

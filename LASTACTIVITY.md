@@ -7,7 +7,28 @@
 
 - **Repo**: `git@github.com-bizwebdigital:Bizweb-Digital/ipanstore.git` (branch `main`)
 - **Domain live**: `https://ipanstore.id` (Cloudflare Tunnel → container Docker port 5007)
-- **Update terakhir**: 18 Agustus 2026 — Popup Grand Launching SettinX V1 + tuning SplashCursor near-original **commit `c5d8627`, push, pull server, dan deploy live sukses** (bundle live `index-DNkBRovD.js` HTTP 200).
+- **Update terakhir**: 18 Agustus 2026 — Optimasi mobile (defer SplashCursor di mobile + LoadingScreen singkat) selesai, siap commit/deploy.
+
+### Sesi: Optimasi PageSpeed Mobile (defer SplashCursor mobile + LoadingScreen singkat) (18 Agustus 2026)
+
+**Permintaan user**: terapkan opsi #1 (tunda mount SplashCursor di mobile, tampilan identik) & #3 (perpendek LoadingScreen di mobile), tanpa #2; lalu commit, push, pull server, deploy.
+
+- **`src/components/layout/Layout.tsx`**: `splashReady` — SplashCursor tetap dimount langsung di **desktop** (perilaku identik live), tapi di **mobile** ditunda hingga idle (`requestIdleCallback` timeout 1200ms / setTimeout 800ms). Tampilan akhir tetap identik.
+- **`src/components/LoadingScreen.tsx`**: di mobile durasi loading diperpendek (progress 60ms, fade 70ms, complete 130ms) vs desktop (100/120/200ms) → konten hero tampil lebih cepat (FCP/LCP mobile).
+- Verifikasi: `tsc` clean, build sukses, test 1 passed, browser desktop normal (SplashCursor ada, popup jalan, 0 error).
+
+### Sesi: Perbaikan PageSpeed (perf + a11y + security headers) & Deploy (18 Agustus 2026)
+
+**Permintaan user**: perbaiki semua temuan PageSpeed; SplashCursor hasil akhir harus tetap identik dengan live (tidak diubah). Tanpa skill.
+
+- **`index.html`**: Google Fonts dimuat non-render-blocking (`media=print`→`all`, preconnect, display=swap) → kurangi render-blocking ~300ms.
+- **`Layout.tsx`**: Scanner WebGL (full-screen, paling berat) di-mount setelah idle/first-paint (`requestIdleCallback`, timeout 900ms) → kurangi main-thread/long-task saat load. **SplashCursor tidak disentuh** (visual identik live).
+- **`src/index.css`**: override `.text-zinc-500→#8E8E97` & `.text-zinc-600→#87878F` agar lolos kontras AA di latar gelap.
+- **`src/components/ui/button.tsx`**: tombol WhatsApp teks putih → hijau gelap `#052E16` (kontras lolos).
+- **`nginx.conf`**: tambah header keamanan di semua location — **CSP** (pragmatis), **HSTS**, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, **COOP**, `CORP`, `Permissions-Policy`.
+- **Commit** `36c43c7` → push `c5d8627..36c43c7` → pull server → build → scp dist + nginx.conf → `docker cp` + `nginx -t` OK → `docker restart ipanstore`.
+- **Verifikasi live**: HTTP 200; bundle baru `index-sYVuPnNA.js`; semua security header ada; situs jalan dengan CSP (0 error, 0 CSP violation, fonts loaded, popup & 4 canvas normal). Scan kontras homepage live = **0 gagal**.
+- **PageSpeed desktop (Lighthouse 13.4.1)**: **Performance 91** (sebelum 63), **LCP 0,9s** (1,4s), **TBT 120ms** (690ms), FCP 0,8s, CLS 0,001, SI 2,4s. Accessibility 92 (sebelum 96 — delta kemungkinan variasi run; scan kontras live 0 gagal, bukan regresi dari perubahan ini). Best Practices 100, SEO 100.
 
 ### Sesi: Commit, Push, Pull & Deploy Popup + Tuning SplashCursor (18 Agustus 2026)
 
