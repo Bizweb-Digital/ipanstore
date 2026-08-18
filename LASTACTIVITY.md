@@ -7,7 +7,7 @@
 
 - **Repo**: `git@github.com-bizwebdigital:Bizweb-Digital/ipanstore.git` (branch `main`)
 - **Domain live**: `https://ipanstore.id` (Cloudflare Tunnel → container Docker port 5007)
-- **Update terakhir**: 19 Agustus 2026 — logo admin diganti logo IPAN STORE transparan, preview WhatsApp memakai logo asli berlatar tema, lalu commit/push/deploy ke server live.
+- **Update terakhir**: 19 Agustus 2026 — commit `daaaae5` logo admin transparan + preview WhatsApp logo asli sudah di-commit, push, pull, dan deploy ke live; verifikasi HTTP 200 berhasil.
 
 ### Sesi: Logo Admin Transparan + Preview WhatsApp (19 Agustus 2026)
 
@@ -16,7 +16,7 @@
 - **Admin**: `src/components/admin/AdminLayout.tsx` sekarang memakai `/logo-transparent.png` pada sidebar desktop, sidebar mobile, dan mobile header; ikon `Store` diganti logo IPAN STORE.
 - **Preview link**: aset asli disalin ke `public/img/logo-og.png`; `index.html` dan `src/lib/seo.ts` memakai URL tersebut untuk Open Graph/Twitter, termasuk dimensi `1586x992`, sehingga WhatsApp tidak lagi mengompositkan logo transparan di atas putih.
 - **Verifikasi lokal**: `npx tsc --noEmit`, `npm run build`, `npm run test`, ESLint `AdminLayout.tsx`, dan `git diff --check` lulus.
-- **Status**: commit/push/pull/deploy sesi ini dilakukan setelah verifikasi dan dicatat pada entri lanjutan di bawah.
+- **Status**: commit `daaaae5` berhasil dibuat, push ke `origin/main`, pull di server `sever-h81m-s2ph`, dan deploy frontend selesai. Live root, metadata OG, aset logo asli, serta chunk AdminLayout terverifikasi HTTP 200.
 
 ### Sesi: Deploy Login Admin + Logo Transparan ke Live (19 Agustus 2026)
 
