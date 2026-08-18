@@ -7,7 +7,38 @@
 
 - **Repo**: `git@github.com-bizwebdigital:Bizweb-Digital/ipanstore.git` (branch `main`)
 - **Domain live**: `https://ipanstore.id` (Cloudflare Tunnel → container Docker port 5007)
-- **Update terakhir**: 18 Agustus 2026 — commit `00dd287` di-push & di-pull ke server; frontend live ter-update (bundle `index-CiLlonp7.js`); backend PM2 restart OK; **satu-satunya yang tersisa: user jalankan `supabase_migration_v2.sql` di Supabase SQL Editor**
+- **Update terakhir**: 19 Agustus 2026 — logo admin diganti logo IPAN STORE transparan, preview WhatsApp memakai logo asli berlatar tema, lalu commit/push/deploy ke server live.
+
+### Sesi: Logo Admin Transparan + Preview WhatsApp (19 Agustus 2026)
+
+**Permintaan user**: gunakan logo IPAN STORE asli dari `D:\LOGO IPAN STORE\LOGO IPAN STORE.png`; hilangkan background pada logo admin agar transparan sesuai tema; gunakan logo asli berlatar gelap untuk preview link WhatsApp; setelah selesai commit, push, pull, dan deploy.
+
+- **Admin**: `src/components/admin/AdminLayout.tsx` sekarang memakai `/logo-transparent.png` pada sidebar desktop, sidebar mobile, dan mobile header; ikon `Store` diganti logo IPAN STORE.
+- **Preview link**: aset asli disalin ke `public/img/logo-og.png`; `index.html` dan `src/lib/seo.ts` memakai URL tersebut untuk Open Graph/Twitter, termasuk dimensi `1586x992`, sehingga WhatsApp tidak lagi mengompositkan logo transparan di atas putih.
+- **Verifikasi lokal**: `npx tsc --noEmit`, `npm run build`, `npm run test`, ESLint `AdminLayout.tsx`, dan `git diff --check` lulus.
+- **Status**: commit/push/pull/deploy sesi ini dilakukan setelah verifikasi dan dicatat pada entri lanjutan di bawah.
+
+### Sesi: Deploy Login Admin + Logo Transparan ke Live (19 Agustus 2026)
+
+**Permintaan user**: bandingkan website `ipanstore.id` (live) dengan localhost; user melihat perbedaan yang belum ter-commit/push/pull ke server. Akses lewat SSH tailscale (`root@100.89.140.16`). User konfirmasi "lanjut" untuk deploy.
+
+- **Temuan perbandingan**: Server masih di commit `00dd287`, sedangkan local + `origin/main` sudah `1f31127` (1 commit ahead, sudah di-push). Live masih serve bundle lama `index-CiLlonp7.js` yang berisi "Admin Panel" (1 match) & `logo.png`; tanpa "Login Admin" maupun `logo-transparent.png`. Perbedaan = isi commit `1f31127`: (1) teks "Admin Panel"→"Login Admin" di navbar + halaman login, (2) logo transparan `logo-transparent.png`, (3) fix bug save service (`useServices.ts`/`Services.tsx`), (4) optimasi performa mobile (`SplashCursor`/`GlobalScannerBackground`/`Layout`).
+- **Deploy**:
+  1. `npm run build` lokal sukses → bundle baru `index-z2R_CSIR.js`.
+  2. `git pull --ff-only` di server `00dd287..1f31127` (9 file + logo).
+  3. `scp dist/*` → `/tmp/ipanstore-dist` di host server.
+  4. **⚠️ Kendala**: container `ipanstore` memakai bind-mount `ro` `/tmp/ipanstore-dist:/usr/share/nginx/html`. `rm -rf` + recreate folder host memutus bind mount (container menunjuk inode lama yang terhapus → kosong → HTTP 403). Fix: `docker restart ipanstore` agar bind mount re-resolve ke inode folder baru → HTTP 200.
+- **Verifikasi live**: root HTTP 200, bundle baru `index-z2R_CSIR.js` tersaji, "Login Admin" 1 match di bundle, `logo-transparent.png` HTTP 200 (1082923 bytes). Backend tidak berubah (commit `1f31127` hanya frontend).
+- **Catatan teknis**: bind mount source TIDAK boleh di-`rm -rf`+recreate; ganti isi di dalam folder (atau restart container) untuk menerapkan build baru.
+
+### Sesi: Copywriting Promo IPAN APP SettinX V1 (19 Agustus 2026)
+
+- User minta teks copywriting siap-copy untuk promosi seluruh paket, fokus ke **IPAN APP SettinX V1**, sekaligus menyebut promo **5%** yang sedang berjalan.
+- Cek DB `promo_codes` → kode aktif: **HEMAT5** (percent 5%, kuota 15x, berlaku s/d **19 Agustus 2026**).
+- Harga SettinX V1: normal Rp 100.000 → promo Rp 75.000 (hemat Rp 25.000); +5% kode HEMAT5 = **Rp 71.250**.
+- Buat file **`copywriting-promo-ipanstore.txt`** berisi 4 versi: caption pendek, caption feed panjang, WhatsApp broadcast, caption story "link in bio", plus ringkasan angka & info agar konsisten.
+- Buka otomatis via Notepad di PC user.
+- **Belum dilakukan**: tidak ada perubahan kode/repo/deploy pada sesi ini (murni copywriting).
 
 ### Sesi: Fix Bug Save Service + Optimasi Mobile Performance (19 Agustus 2026)
 
@@ -81,7 +112,7 @@
 | Item | Status |
 |---|---|
 | **Admin Panel (Phase 3 + Supabase)** | ✅ **LIVE 18 Agt** — 7 halaman admin + backend Supabase + fix blank screen; commit `f127463`+`f98b6b5`; bundle live `index-CSAjFWKB.js` |
-| Website live `https://ipanstore.id/` | ✅ Live |
+| Website live `https://ipanstore.id/` | ✅ Live — commit `1f31127` (Login Admin + logo transparan + fix save service + optimasi mobile) di-pull & di-deploy 19 Agt; bundle live `index-z2R_CSIR.js` |
 | Migrasi ke domain baru `.id` | ✅ Selesai 17 Agt; domain lama redirect 301 |
 | Konfigurasi source target `https://ipanstore.id` | ✅ Selesai dan ter-deploy |
 | Website baru `https://ipanstore.id/` | ✅ Live; bundle baru dan SEO baru terverifikasi |

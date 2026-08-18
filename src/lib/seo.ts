@@ -1,6 +1,6 @@
 export const SITE_URL = "https://ipanstore.id";
 export const SITE_NAME = "IPAN STORE";
-export const DEFAULT_OG_IMAGE = `${SITE_URL}/img/logo.png`;
+export const DEFAULT_OG_IMAGE = `${SITE_URL}/img/logo-og.png`;
 
 export interface FaqItem {
   q: string;

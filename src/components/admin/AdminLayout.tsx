@@ -13,7 +13,6 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
-  Store,
   ScrollText,
   BadgePercent,
 } from 'lucide-react';
@@ -65,6 +64,8 @@ const navigationItems = [
   },
 ];
 
+const ADMIN_LOGO = '/logo-transparent.png';
+
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const location = useLocation();
   const { user, adminUser, signOut } = useAdminAuth();
@@ -95,17 +96,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         <div className="flex items-center justify-between px-4 h-16 border-b border-white/8">
           {sidebarOpen ? (
             <Link to="/admin" className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
-                <Store className="w-4 h-4 text-primary" />
-              </div>
-              <span className="font-display font-semibold text-sm">
-                IPAN <span className="text-primary">STORE</span>
-              </span>
+              <img src={ADMIN_LOGO} alt="IPAN STORE" className="h-9 w-28 object-contain object-left" />
             </Link>
           ) : (
-            <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
-              <Store className="w-4 h-4 text-primary" />
-            </div>
+            <img src={ADMIN_LOGO} alt="IPAN STORE" className="h-8 w-9 object-cover object-left" />
           )}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -172,12 +166,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             {/* Header */}
             <div className="flex items-center justify-between px-4 h-16 border-b border-white/8">
               <Link to="/admin" className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
-                  <Store className="w-4 h-4 text-primary" />
-                </div>
-                <span className="font-display font-semibold text-sm">
-                  IPAN <span className="text-primary">STORE</span>
-                </span>
+                <img src={ADMIN_LOGO} alt="IPAN STORE" className="h-9 w-28 object-contain object-left" />
               </Link>
               <button
                 onClick={() => setMobileMenuOpen(false)}
@@ -245,9 +234,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             <Menu className="w-5 h-5" />
           </button>
           <div className="ml-4 flex items-center gap-2">
-            <Store className="w-4 h-4 text-primary" />
+            <img src={ADMIN_LOGO} alt="IPAN STORE" className="h-7 w-20 object-contain object-left" />
             <span className="font-display font-semibold text-sm">
-              IPAN <span className="text-primary">STORE</span> Admin
+              Admin
             </span>
           </div>
         </header>
