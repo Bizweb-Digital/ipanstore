@@ -308,9 +308,9 @@
 
 | Item | Status |
 |---|---|
-| **Admin Panel (Phase 3 + Supabase)** | ✅ **LIVE 18 Agt** — 7 halaman admin + backend Supabase + fix blank screen; commit `f127463`+`f98b6b5`; bundle live `index-CSAjFWKB.js` |
-| Website live `https://ipanstore.id/` | ✅ Live — commit `1f31127` (Login Admin + logo transparan + fix save service + optimasi mobile) di-pull & di-deploy 19 Agt; bundle live `index-z2R_CSIR.js` |
-| Popup Grand Launching SettinX V1 (halaman utama) | ⚠️ **Selesai lokal 18 Agt, belum commit/deploy** — menunggu konfirmasi; user perlu perpanjang kode promo HEMAT5 s/d 31 Agt di admin |
+| **Admin Panel (Phase 3 + Supabase)** | ✅ **LIVE** — 7 halaman admin + backend Supabase + fix blank screen + fitur 8 poin |
+| Website live `https://ipanstore.id/` | ✅ **Live — commit `58c78f8` di-pull & rebuild 20 Agt**; bundle live `index-B9zdmIS4.js`; canonical/OG/logo-og/favicon terbaru; 0 referensi `ipanstore.my.id` |
+| Popup Grand Launching SettinX V1 (halaman utama) | ✅ **LIVE** (commit `c5d8627`, ter-deploy 20 Agt); user perlu perpanjang kode promo HEMAT5 s/d 31 Agt di admin |
 | Migrasi ke domain baru `.id` | ✅ Selesai 17 Agt; domain lama redirect 301 |
 | Konfigurasi source target `https://ipanstore.id` | ✅ Selesai dan ter-deploy |
 | Website baru `https://ipanstore.id/` | ✅ Live; bundle baru dan SEO baru terverifikasi |
@@ -324,11 +324,11 @@
 | **Email otomatis SettinX** (link Drive + invoice setelah SUCCESS) | ✅ **Live & terverifikasi** — email test terkirim, webhook→email berhasil |
 | GitHub remote (via `github.com-bizwebdigital`) | ✅ Terhubung & authenticated |
 | Server `sever-h81m-s2ph` (`100.89.140.16`) | ✅ Akses SSH root OK, path `/project/website/padel/IpanStore/ipanstore` |
-| Deploy pipeline | ✅ `deploy.sh` = `git pull` → `docker compose down` → `docker compose up --build -d` |
-| Commit/status git lokal | ✅ `f98b6b5` (polyfill WebSocket Node 20 untuk supabase-js) di atas `f127463` (admin panel lengkap) |
-| Fitur 8 poin (CSV, notes, filter tanggal, audit, promo, testimoni submit, realtime Orders, grafik Dashboard) | ⚠️ **Selesai lokal 18 Agt, belum commit/deploy** — SQL migrasi sudah dijalankan user; tetap menunggu konfirmasi commit/deploy |
-| Push terakhir | ✅ `f127463..f98b6b5` → GitHub (key `github.com-bizwebdigital`) |
-| Pull+deploy server | ✅ `git pull` fast-forward `f98b6b5`; `npm install` server; PM2 restart; `dist` di-scp + `docker cp` (bundle `index-CSAjFWKB.js` live) |
+| Deploy pipeline | ✅ Build lokal → `scp dist` → server `git pull` → `docker compose up --build -d` (`.dockerignore` tidak boleh ignore `dist` sejak commit `58c78f8`) |
+| Commit/status git lokal | ✅ `58c78f8` (fix .dockerignore + docs) di atas `c8a06d3` (video overlay Remotion) |
+| Fitur 8 poin (CSV, notes, filter tanggal, audit, promo, testimoni submit, realtime Orders, grafik Dashboard) | ✅ **LIVE** — commit `00dd287`, SQL migrasi sudah dijalankan user |
+| Push terakhir | ✅ `c8a06d3..58c78f8` → GitHub (key `github.com-bizwebdigital`) |
+| Pull+deploy server | ✅ `git pull` fast-forward `c8a06d3..58c78f8`; rebuild Docker dengan `dist` terbaru; bundle `index-B9zdmIS4.js` live |
 | Backend PM2 + Supabase | ✅ `server/.env` VPS diisi `SUPABASE_URL`+`SUPABASE_SERVICE_ROLE_KEY`; warning "belum diisi" hilang; health 200; RLS orders menolak anon (401) ✅ |
 | Pull+deploy server | ✅ `git pull` di server fast-forward `bf9f7e4`; `dist` di-scp + `docker cp` bersih (hapus file lama), container `ipanstore` up |
 | Backend PM2 auto-start | ✅ `pm2 save` + systemd `pm2-root.service` enabled (auto-start saat reboot) |
