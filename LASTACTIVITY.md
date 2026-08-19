@@ -7,7 +7,114 @@
 
 - **Repo**: `git@github.com-bizwebdigital:Bizweb-Digital/ipanstore.git` (branch `main`)
 - **Domain live**: `https://ipanstore.id` (Cloudflare Tunnel → container Docker port 5007)
-- **Update terakhir**: 18 Agustus 2026 — Logo publik diubah dari transparan menjadi background navy asli `#0D1625`; commit `9d75cb3` sudah dipush, dipull, dan dideploy.
+- **Update terakhir**: 19 Agustus 2026 — Transisi teks disempurnakan: huruf berjatuhan sampai habis total baru ganti teks berikutnya (stagger dinamis per pesan); belum commit, push, atau deploy.
+
+### Sesi: Teks Berjatuhan Sampai Habis Baru Ganti (19 Agustus 2026)
+
+- **Masalah**: transisi sebelumnya terpotong — huruf yang masih jatuh langsung digantikan scene berikutnya sebelum selesai.
+- **Fix**: stagger exit dihitung dinamis per pesan `(EXIT_END - drop - EXIT_START) / (totalChars - 1)` dengan `EXIT_START=76`, `EXIT_END=118`, drop 16 frame, sehingga huruf terakhir (paling kiri) selalu selesai jatuh sebelum scene berakhir. Berlaku untuk seluruh 4 pesan, termasuk pesan 2-baris yang panjang.
+- **Verifikasi visual**: frame 119 & 359 (akhir scene) kosong total; frame 105 & 348 (tengah) menunjukkan huruf berjatuhan berurutan dari kanan.
+- **Output**: `video/out/ipanstore-live-overlay-greenscreen.mp4` (2,4 MB) + still dirender ulang; FFprobe 16,00 s / 1920x1080 / 30 FPS / video-only.
+- **Verifikasi teknis**: `video:typecheck`, ESLint targeted, `git diff --check` lulus.
+- **Status repo**: tidak ada commit, push, pull, deploy, atau perubahan server.
+
+### Sesi: Ribbon Lebih Kecil + Teks Berjatuhan Kanan→Kiri (19 Agustus 2026)
+
+- **Backup file lama**: `video/backup/IpanStorePromo.legacy.tsx`, `ipanstore-live-overlay-greenscreen.legacy.mp4`, dan `ipanstore-live-overlay-frame.legacy.png` disimpan sebelum perubahan.
+- **Ukuran kotak**: tinggi ribbon 316→200 px (posisi top 440), cap logo 318→224 px, logo 236x148→168x106, strip aksen disesuaikan.
+- **Ukuran teks**: 46/32/25/40 → 54/40/30/46 agar proporsional di ribbon yang lebih ramping; outline 3→2.5 px.
+- **Style loop baru**: teks masuk tetap seperti sebelumnya (slide/pop). Saat ganti pesan, huruf berjatuhan satu per satu dari kanan ke kiri (stagger per karakter + easing gravitasi + rotasi kecil), lalu pesan berikutnya langsung masuk.
+- **Output**: `video/out/ipanstore-live-overlay-greenscreen.mp4` (2,2 MB) dan still dirender ulang.
+- **Verifikasi**: `video:typecheck`, ESLint targeted, still hold/drop scene 1 & 3 diinspeksi visual, FFprobe (16,00 s / 1920x1080 / 30 FPS / video-only), `git diff --check` lulus.
+- **Status repo**: tidak ada commit, push, pull, deploy, atau perubahan server.
+
+### Sesi: Riset Penuh TikTok dan Scene-Swap Loop (19 Agustus 2026)
+
+- **Video referensi**: TikTok berhasil diambil melalui playback metadata publik dan diinspeksi penuh selama 19,4 detik, 576x1024, 30 FPS.
+- **Fokus riset**: pola lower-third pada “LANGSUNG KLIK LINK DI BIO!” dan “OPEN MABAR / DONATE”; teks Image 3 tetap diabaikan.
+- **Temuan**: ribbon tetap berada di lower-third, scene/tekstur berubah, satu pesan outlined tampil, lalu scene berikutnya menggantikan pesan. Ini bukan black-card text animation.
+- **Implementasi**: empat pesan IPAN sekarang memakai scene-based swap dengan empat tema monochrome ribbon; logo ikut slide/fade masuk pada setiap pergantian scene.
+- **Output**: `video/out/ipanstore-live-overlay-greenscreen.mp4` dan preview sudah dirender ulang.
+- **Verifikasi**: full build, typecheck, video typecheck, test, ESLint, FFprobe, frame inspection, dan `git diff --check` lulus.
+- **Status repo**: tidak ada commit, push, pull, deploy, atau perubahan server.
+
+### Sesi: Font Display Image 2 dan Background Monochrome Final (19 Agustus 2026)
+
+- **Font**: `Impact` diganti dengan `Bowlby One SC` dari Google Fonts karena bentuk rounded-display lebih dekat dengan huruf pada Image 1/Image 2. Fallback tetap `Impact/Arial Black`.
+- **Background**: warna hijau/kuning sebelumnya dibatalkan; ribbon kembali ke charcoal monochrome sesuai instruksi terakhir user.
+- **Style loop**: semua pesan memakai font yang sama, uppercase, fill putih, outline hitam, shadow, dan pop/slide/crossfade. Logo tetap memakai warna asli dan loop slide/fade.
+- **Asset baru**: `public/fonts/BowlbyOneSC-Regular.ttf` digunakan oleh Remotion melalui `@font-face`.
+- **Output**: MP4 dan still preview dirender ulang setelah font dan background final diterapkan.
+- **Status**: tidak ada commit, push, pull, deploy, atau perubahan server.
+
+### Sesi: Kembalikan Warna Asli Logo dan Warna Image 2 (19 Agustus 2026)
+
+- **Logo**: filter `grayscale/brightness/contrast` dihapus; logo IPAN STORE sekarang kembali cyan/putih asli dari aset transparan.
+- **Background**: ribbon diubah dari charcoal abu-abu menjadi tekstur hijau-kuning muted seperti Image 2, dengan cap hijau gelap dan pola diagonal statis.
+- **Font dan loop**: tetap memakai Impact/Arial Black uppercase, fill putih, outline hitam, shadow, pop/slide/crossfade teks, serta slide/fade loop logo.
+- **Output**: `video/out/ipanstore-live-overlay-greenscreen.mp4` dan `video/out/ipanstore-live-overlay-frame.png` sudah dirender ulang.
+- **Verifikasi**: video typecheck, still render, MP4 render, metadata 1920x1080/30 FPS/16 detik/video-only, build, test, ESLint, dan `git diff --check` lulus.
+- **Status repo**: tidak ada commit, push, pull, deploy, atau perubahan server.
+
+### Sesi: Revisi Akhir Mengikuti Image 2 dan Video Referensi (19 Agustus 2026)
+
+- **Instruksi Image 1**: teks pada Image 1 diabaikan sesuai prompt; fokus visual dipindahkan ke Image 2 dan banner pada video referensi.
+- **Desain**: black rounded card dihapus. Rail sekarang menjadi banner tekstur monochrome full-width dengan cap logo miring di kiri.
+- **Font**: teks memakai display font `Impact/Arial Black`, uppercase, fill putih, outline hitam, dan shadow pendek agar mengikuti gaya banner Image 2.
+- **Loop teks**: pesan tetap berganti satu per satu dengan pop/slide/crossfade di dalam banner.
+- **Loop logo**: logo transparan grayscale masuk/keluar dari cap kiri dengan siklus yang sama-sama berulang.
+- **Referensi**: video lokal tetap diverifikasi 1920x1080, 30 FPS, sekitar 11 detik; oEmbed dan thumbnail TikTok berhasil digunakan untuk memeriksa gaya stream overlay.
+- **Output final**: `video/out/ipanstore-live-overlay-greenscreen.mp4` sudah dirender ulang, 1920x1080, 30 FPS, 16 detik, tanpa audio.
+- **Status repo**: tidak ada commit, push, pull, deploy, atau perubahan server.
+
+### Sesi: Gaya Teks TikTok dan Penghapusan Shine Sweep (19 Agustus 2026)
+
+- **Riset TikTok**: oEmbed TikTok berhasil dibaca; thumbnail publik menunjukkan gaya stream overlay dengan teks sans-serif putih di dalam black rounded card. Gaya itu diterapkan tanpa menyalin identitas visualnya dan tetap memakai palet monochrome IPAN STORE.
+- **Teks**: kartu pesan sekarang memakai font sans putih, background hitam, rounded corner, shadow ringan, pop/slide, dan loop empat pesan.
+- **Background**: rail diubah ke warm charcoal `#1A1A1A`; elemen dekoratif berwarna tetap dibatasi pada slate monochrome dan logo brand.
+- **Shine dihapus**: beam scan kiri-ke-kanan dan garis sweep bawah dihapus dari `video/IpanStorePromo.tsx`. Tidak ada lagi pola `scanX`, `scanPhase`, atau sweep transform horizontal.
+- **Efek dipertahankan**: electric edge dan spark sudut tetap berjalan karena itu diminta sebagai adaptasi efek katalog SettinX; animasi logo slide/fade tetap berjalan sebagai loop identitas.
+- **Output final**: `video/out/ipanstore-live-overlay-greenscreen.mp4`, 1920x1080, 30 FPS, 16 detik, video-only tanpa audio.
+- **Verifikasi**: `npx tsc --noEmit`, `npm run build`, `npm run test`, `video:typecheck`, ESLint targeted, render, FFprobe, inspeksi frame, pencarian source shine, dan `git diff --check` lulus.
+- **Status repo**: tidak ada commit, push, pull, deploy, atau perubahan server.
+
+### Sesi: Electric Border dan Logo Loop Overlay (19 Agustus 2026)
+
+- **Masalah diperbaiki**: logo sebelumnya memakai `img/logo-og.png` yang berlatar solid sehingga terlihat sebagai kotak. Template sekarang memakai `public/logo-transparent.png` dengan alpha.
+- **Efek katalog SettinX**: `ElectricBorder.tsx` dan `CatalogAppSettinx.tsx` diriset; versi Remotion frame-deterministic ditambahkan ke rail berupa irregular stroke, glow, moving dash, dan corner sparks.
+- **Motion baru**: logo masuk/keluar dengan slide + fade setiap 240 frame; teks memakai masked reveal, slide, dan crossfade; seluruh siklus tetap loop 480 frame.
+- **Referensi**: video lokal `D:\KEBUTUHAN LIVE OVERLAY BIRU\IPAN(REVISI) #2 [2484FC9].mp4` berhasil dianalisis. TikTok `7656781753335516434` timeout dari environment, jadi tidak ada klaim observasi langsung terhadap TikTok.
+- **Output final**: `video/out/ipanstore-live-overlay-greenscreen.mp4`, 1920x1080, 30 FPS, 16 detik, video-only tanpa audio. Preview utama diperbarui di `video/out/ipanstore-live-overlay-frame.png`.
+- **Verifikasi**: `video:typecheck`, `npx tsc --noEmit`, `npm run build`, `npm run test`, targeted ESLint, still render, MP4 render, FFprobe metadata, inspeksi logo/electric frame, dan `git diff --check` lulus.
+- **Status repo**: tidak ada commit, push, pull, deploy, atau perubahan server.
+
+### Sesi: Revisi Template Live Overlay Horizontal (19 Agustus 2026)
+
+- **Prompt ditinjau ulang lengkap**: output diubah dari template vertikal menjadi overlay horizontal full-width untuk OBS 1920x1080.
+- **Riset referensi**: video contoh diverifikasi dengan Remotion FFprobe sebagai 1920x1080, 30 FPS, sekitar 11 detik. Frame contoh dipakai hanya untuk memahami pergantian teks dan greenscreen, bukan untuk menyalin posisi atau desain.
+- **Desain baru**: rail full-width di tengah, palet website warm charcoal/deep navy/slate, garis tipis dan geometri restrained, area tengah hanya untuk pesan, logo resmi di rail kanan. Tidak memakai emoji, sprinkle, atau copy dekoratif.
+- **Teks loop**: empat pesan dari prompt tampil bergantian dengan crossfade berbasis frame selama 16 detik; seluruh loop mengulang di OBS.
+- **Logo**: `D:\LOGO IPAN STORE\LOGO IPAN STORE.png` diverifikasi SHA-256 identik dengan `public/img/logo-og.png`, lalu dipakai melalui aset publik resmi.
+- **Output final**: `video/out/ipanstore-live-overlay-greenscreen.mp4`, 1920x1080, 30 FPS, 16 detik, video-only tanpa track audio; still preview `video/out/ipanstore-live-overlay-frame.png`.
+- **Verifikasi**: `video:typecheck`, `npx tsc --noEmit`, `npm run build`, `npm run test`, targeted ESLint, still render, MP4 render, FFprobe metadata, frame inspection pada 0/4/8/12/akhir detik, dan `git diff --check` lulus.
+- **Cleanup**: artefak vertikal lama di `video/out/` dihapus agar tidak tertukar dengan output final. Tidak ada commit, push, pull, deploy, atau perubahan server.
+
+### Sesi: Template Video Greenscreen IPAN APP SettinX V1 (19 Agustus 2026)
+
+- **Output**: vertical marketing motion graphic / animated lower-third untuk OBS, 1080x1920, 30 fps, durasi 9 detik.
+- **Produk diaudit** dari `supabase_seed_data.sql`, `Paket.tsx`, `Order.tsx`, dan section SettinX: 7 paket aktif; SettinX konsisten di harga normal `Rp 100.000` dan harga jual `Rp 75.000`, lisensi lifetime.
+- **Template Remotion** ditambahkan di `video/`: banner biru beveled bergaya referensi, animasi frame-deterministic, harga, lisensi lifetime, dan CTA `KUNJUNGI WEBSITE ipanstore.id`.
+- **Greenscreen wajib**: seluruh background menggunakan warna solid `#00FF00` agar dapat di-key di OBS.
+- **Output lokal**: `video/out/ipanstore-settinx-greenscreen.mp4` (3,3 MB) dan still preview `video/out/ipanstore-settinx-frame.png`; artefak render di-ignore Git.
+- **Dependensi**: `remotion`, `@remotion/cli`, Node/npm, Chromium headless dan FFmpeg untuk render lokal. HeyGen/HyperFrames tidak digunakan karena skill tersebut tidak tersedia dan template ini tidak membutuhkan avatar/voice AI.
+- **Verifikasi**: `video:typecheck`, `npx tsc --noEmit`, `npm run build`, `npm run test`, targeted ESLint, composition listing, still render, MP4 render, dan `git diff --check` lulus.
+- **Status repo**: tidak ada commit/push/pull/deploy. Perubahan uncommitted lain yang sudah ada sebelum sesi ini tidak disentuh.
+
+### Sesi: Request Indexing Homepage (18 Agustus 2026)
+
+- User mengirim request indexing untuk `https://ipanstore.id/` melalui URL Inspection dan menerima konfirmasi hijau **"Pengindeksan diminta"**.
+- Request sempat diklik dua kali; tidak merusak apa pun, tetapi tidak perlu dikirim ulang karena request berulang tidak mempercepat antrean crawl.
+- Status berikutnya: tunggu Google melakukan recrawl dan memperbarui thumbnail/logo hasil pencarian; tidak ada perubahan kode pada sesi ini.
 
 ### Sesi: Perbaikan Background Logo untuk Preview Google (18 Agustus 2026)
 
@@ -1322,6 +1429,9 @@ karena browser memakai bundle cache lama (fallback WA memang by-design di `Order
 - **SSH akun sekunder** (`github.com-ipanappsettinx`, key `id_ed25519`) belum terdaftar di GitHub
   → `Permission denied`. Ini hanya perlu jika push dari akun sekunder.
 - **Lint**: ada ±59 error pre-existing di `src/components/ui/*` (file shadcn/ui), bukan dari perubahan terakhir.
+- **Template video**: `hyperframes` dan `remotion-best-practices` tidak tersedia sebagai skill di sesi ini; alur dan struktur Remotion diterapkan langsung. Audit live `https://ipanstore.id` mengembalikan `502` dari environment, sehingga data produk dicocokkan dari source repo.
+- **Overlay final**: komposisi baru memakai 1920x1080 sesuai setting OBS dan bukan lagi format vertikal. Set `Loop` pada Media Source OBS agar siklus 16 detik berulang.
+- **Electric Border dan logo**: frame listrik video memakai algoritma deterministik yang meniru bahasa visual `ElectricBorder` katalog SettinX; aset transparan dipakai agar logo tidak memiliki kotak.
 - **`.gitignore`** mengecualikan: `.env`, log, `dist`, `opencode.json`, screenshot lokal.
 - Info server: `sever-h81m-s2ph` Tailscale `100.89.140.16`; project `/project/website/padel/IpanStore/ipanstore`
   (SSH root). Server kedua `server` `100.70.48.103` (port 22 tidak merespons).
@@ -1329,6 +1439,15 @@ karena browser memakai bundle cache lama (fallback WA memang by-design di `Order
 ---
 
 ## ✅ CHECKLIST LANJUTAN
+- [x] Baca ulang prompt lengkap dan history todo sebelum melanjutkan revisi overlay.
+- [x] Ganti template vertikal menjadi overlay horizontal full-width 1920x1080.
+- [x] Implementasikan empat pesan prompt dengan crossfade loop berulang dan logo IPAN STORE di sisi kanan.
+- [x] Render final video-only MP4 dan verifikasi metadata tanpa audio.
+- [ ] (Menunggu konfirmasi user) Commit + push perubahan template overlay ke GitHub.
+- [x] Audit 7 produk aktif dan harga SettinX dari seed, fallback order, dan halaman paket.
+- [x] Buat template Remotion greenscreen 1080x1920 untuk OBS dengan CTA `ipanstore.id`.
+- [x] Render still preview dan MP4 lokal; verifikasi composition 30 fps, 1080x1920, 270 frame.
+- [ ] (Menunggu konfirmasi user) Commit + push template video ke GitHub atau deploy ke server.
 - [x] Implementasi 8 poin fitur admin + integrasi frontend (CSV, notes, filter tanggal, audit log, promo, testimoni submit, realtime Orders, grafik Dashboard) — selesai lokal & terverifikasi (tsc/build/test).
 - [x] Buat `supabase_migration_v2.sql` (promo_codes, kolom promo orders, RLS testimoni publik, realtime publication).
 - [x] Backend `doku-create-order` validasi kode promo server-authoritative.
@@ -1358,7 +1477,7 @@ karena browser memakai bundle cache lama (fallback WA memang by-design di `Order
 - [x] Daftarkan properti `ipanstore.id` di Google Search Console, kirim `/sitemap.xml`, lalu request indexing URL utama; Search Console mengonfirmasi URL diindeks dan 8 URL ditemukan.
 - [x] Tambahkan `WebSite.alternateName` untuk brand `ipanstore` pada structured data homepage dan deploy ke live.
 - [x] Ubah background aset logo publik dari transparan ke navy asli `#0D1625`; verifikasi tsc/test/build lulus dan deploy selesai.
-- [ ] Request indexing homepage melalui URL Inspection agar Google mengambil asset logo terbaru.
+- [x] Request indexing homepage melalui URL Inspection agar Google mengambil asset logo terbaru; user menerima konfirmasi "Pengindeksan diminta".
 - [ ] Request indexing homepage melalui URL Inspection dan pantau query `ipanstore` di Performance > Search results.
 - [x] Pendekkan `LoadingScreen` menjadi 200 ms; validasi LCP live masih perlu dilakukan setelah deploy.
 - [x] Optimasi runtime WebGL, offscreen loop, forced-reflow, canvas, dan input tanpa menghapus efek — selesai lokal, menunggu verifikasi live setelah deploy.

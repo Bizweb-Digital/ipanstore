@@ -37,3 +37,6 @@ dist-ssr
 
 # opencode config lokal
 opencode.json
+
+# Rendered video artifacts
+/video/out/

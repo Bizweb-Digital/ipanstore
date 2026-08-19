@@ -10,7 +10,12 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "video:studio": "remotion studio video/index.ts --public-dir public",
+    "video:render": "remotion render video/index.ts IPANSTORE-LIVE-OVERLAY video/out/ipanstore-live-overlay-greenscreen.mp4 --public-dir public --codec=h264 --muted --overwrite",
+    "video:render-jihad": "remotion render video/index.ts PANGGILAN-JIHAD-OVERLAY video/out/panggilan-jihad-overlay-greenscreen.mp4 --public-dir public --codec=h264 --muted --overwrite",
+    "video:still": "remotion still video/index.ts IPANSTORE-LIVE-OVERLAY video/out/ipanstore-live-overlay-frame.png --public-dir public --frame=60 --overwrite",
+    "video:typecheck": "tsc -p video/tsconfig.json --noEmit"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -69,7 +74,7 @@
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.9",
     "yet-another-react-lightbox": "^3.32.2",
-    "zod": "^3.25.76"
+    "zod": "4.4.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
@@ -89,6 +94,8 @@
     "lovable-tagger": "^1.1.13",
     "playwright": "^1.62.1",
     "postcss": "^8.5.6",
+    "@remotion/cli": "latest",
+    "remotion": "latest",
     "sharp": "^0.35.3",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.3",
