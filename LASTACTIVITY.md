@@ -7,7 +7,22 @@
 
 - **Repo**: `git@github.com-bizwebdigital:Bizweb-Digital/ipanstore.git` (branch `main`)
 - **Domain live**: `https://ipanstore.id` (Cloudflare Tunnel → container Docker port 5007)
-- **Update terakhir**: 19 Agustus 2026 — Transisi teks disempurnakan: huruf berjatuhan sampai habis total baru ganti teks berikutnya (stagger dinamis per pesan); belum commit, push, atau deploy.
+- **Update terakhir**: 20 Agustus 2026 — **Fix rollback live (12→19 Agu): dist di-build ulang, commit c8a06d3 dipush, .dockerignore diperbaiki (dist dikeluarkan dari ignore), server di-pull & rebuild Docker, live kembali ke ipanstore.id (bundle B9zdmIS4).**
+
+### Sesi: Fix Rollback Live — Deploy Versi Terbaru (20 Agustus 2026)
+
+- **Laporan user**: `https://ipanstore.id` kembali ke versi lama (canonical/og:image masih `ipanstore.my.id`, bundle `BXjl2dm0.js` 12 Agu).
+- **Diagnosis**: Git lokal & `origin/main` sudah `28f887f` (sinkron), tapi `dist/` di server masih 12 Agu. Rebuild Docker `Created 2026-08-19T16:42` meng-`COPY dist` lama karena `.dockerignore` meng-ignore `dist` sehingga `docker build` selalu `not found`/`stale` (error `failed to calculate checksum... "/dist": not found` saat `dist` ignored). Host `dist/index.html` kanonik `my.id` menguatkan ini.
+- **Build lokal**: `npm run build` sukses (29,53s, `index-B9zdmIS4.js` 358kB, `index-DE29QBVs.css` 115kB), `npx tsc --noEmit` clean, `dist/index.html` kanonik `https://ipanstore.id/`, `og:image https://ipanstore.id/img/logo-og.png`, `favicon.png`.
+- **Commit & push**: staged `.gitignore` (`/video/out/`), `package.json`/`package-lock.json` (remotion+sharp), `public/fonts/BowlbyOneSC-Regular.ttf`, `video/*` + `video/backup/*`, `LASTACTIVITY.md` → commit `c8a06d3` `feat: video live overlay Remotion + Bowlby One SC font + deps remotion/sharp` → `git push origin main` `28f887f..c8a06d3`.
+- **Deploy server** (`root@100.89.140.16:/project/website/padel/IpanStore/ipanstore`):
+  1. `scp -r dist/*` ke `dist/` + `scp nginx.conf`.
+  2. `git pull` fast-forward `28f887f..c8a06d3`.
+  3. Fix `.dockerignore`: hapus baris `dist` (awalnya ignore `dist`) agar `COPY dist` di `Dockerfile:4` terbawa build context. Hapus bundle stale `BXjl2dm0.js`/`Bi5SEX5_.js`.
+  4. `docker compose down && docker compose up --build -d` — build 20,98MB context, `COPY dist`/`COPY nginx.conf` done, container `ipanstore` Up.
+  5. Lokal `.dockerignore` juga diperbaiki sama (hapus `dist`) untuk konsistensi.
+- **Verifikasi live**: `https://ipanstore.id/` HTTP 200, `canonical https://ipanstore.id/`, `og:image https://ipanstore.id/img/logo-og.png`, `favicon.png`, bundle `index-B9zdmIS4.js` 358kB (marker `GRAND LAUNCHING`/`Login Admin`/`logo-og`), `logo-og.png` 982kB, font `BowlbyOneSC-Regular.ttf` 55kB — semua 200. Live tidak lagi `my.id`.
+- **Sisa**: `copywriting-promo-ipanstore.txt` sengaja tidak di-commit (artefak lokal); `ipanstore/` di server dan `server/orders.json` adalah untracked lokal server.
 
 ### Sesi: Teks Berjatuhan Sampai Habis Baru Ganti (19 Agustus 2026)
 
