@@ -257,9 +257,9 @@ export default function AdminReports() {
                 <p>Error: {error}</p>
               </div>
             ) : filteredOrders.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <Clock className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Tidak ada data untuk periode ini.</p>
+              <div className="w-full flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <Clock className="w-12 h-12 mb-4 opacity-50" />
+                <p className="text-center">Tidak ada data untuk periode ini.</p>
               </div>
             ) : (
               <>

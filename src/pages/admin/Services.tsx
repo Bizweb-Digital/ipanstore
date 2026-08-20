@@ -36,7 +36,7 @@ import {
   Download,
 } from 'lucide-react';
 import { useServices, Service } from '@/hooks/useServices';
-import { toast } from 'react-hot-toast';
+import { toastService, showErrorToast } from '@/lib/admin/toast';
 import { exportToCsv } from '@/lib/admin/csv';
 import { useAuditLogger } from '@/hooks/useAuditLog';
 
@@ -98,7 +98,7 @@ export default function AdminServices() {
 
   const handleSave = async () => {
     if (!editingService?.name.trim()) {
-      toast.error('Nama layanan wajib diisi');
+      showErrorToast('Validasi gagal', 'Nama layanan wajib diisi');
       return;
     }
 
@@ -118,7 +118,7 @@ export default function AdminServices() {
           slug: editingService.slug, 
           price: editingService.price 
         });
-        toast.success('Layanan berhasil diperbarui');
+        toastService.updated();
       } else {
         // Create new service
         serviceData = editingService as Omit<Service, 'id' | 'created_at' | 'updated_at'>;
@@ -129,14 +129,14 @@ export default function AdminServices() {
           slug: editingService.slug, 
           price: editingService.price 
         });
-        toast.success('Layanan berhasil dibuat');
+        toastService.created();
       }
 
       handleCloseDialog();
       await refetch();
     } catch (error: unknown) {
       console.error('Failed to save service:', error);
-      toast.error(error instanceof Error ? error.message : 'Gagal menyimpan layanan');
+      showErrorToast('Gagal menyimpan layanan', error instanceof Error ? error.message : undefined);
     } finally {
       setIsSaving(false);
     }
@@ -150,11 +150,11 @@ export default function AdminServices() {
     try {
       await deleteService(id);
       await logAudit('service.delete', id);
-      toast.success('Layanan berhasil dihapus');
+      toastService.deleted();
       await refetch();
     } catch (error: unknown) {
       console.error('Failed to delete service:', error);
-      toast.error(error instanceof Error ? error.message : 'Gagal menghapus layanan');
+      showErrorToast('Gagal menghapus layanan', error instanceof Error ? error.message : undefined);
     }
   };
 

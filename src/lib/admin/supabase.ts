@@ -217,6 +217,7 @@ export type Database = {
           name: string;
           rating: number;
           message: string;
+          image_url: string | null;
           service_id: string | null;
           testimonial_id: string | null; // Reference ke testimonial_parent untuk review produk
           is_approved: boolean;
@@ -228,6 +229,7 @@ export type Database = {
           name: string;
           rating: number;
           message: string;
+          image_url?: string | null;
           service_id?: string | null;
           testimonial_id?: string | null;
           is_approved?: boolean;
@@ -239,6 +241,7 @@ export type Database = {
           name?: string;
           rating?: number;
           message?: string;
+          image_url?: string | null;
           service_id?: string | null;
           testimonial_id?: string | null;
           is_approved?: boolean;

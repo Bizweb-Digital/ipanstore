@@ -72,9 +72,15 @@ const Faq = () => {
           .order('sort_order', { ascending: true });
 
         if (!error && data && data.length > 0) {
-          // Sort by sort_order
-          const sorted = data.sort((a, b) => a.sort_order - b.sort_order);
-          setFaqs(sorted.map(faq => ({ q: faq.question, a: faq.answer })));
+          // Gabungkan: FAQ hardcoded (fallback) dulu di atas, FAQ baru dari
+          // database masuk di urutan TERBAWAH.
+          const dbFaqs = data.map(faq => ({ q: faq.question, a: faq.answer }));
+          const dbQuestions = new Set(dbFaqs.map(f => f.q));
+
+          // Fallback yang belum ada di database tetap tampil di atas
+          const baseFaqs = FALLBACK_FAQS.filter(f => !dbQuestions.has(f.q));
+
+          setFaqs([...baseFaqs, ...dbFaqs]);
         } else {
           console.log("No active FAQs from Supabase, using fallback");
           setFaqs(FALLBACK_FAQS);

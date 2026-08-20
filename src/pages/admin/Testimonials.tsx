@@ -4,16 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import {
   Dialog,
   DialogContent,
@@ -22,8 +13,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { MessageSquare, Plus, Search, Edit, Trash2, Eye, XCircle, Download, CheckCircle2 } from 'lucide-react';
-import { toast } from 'react-hot-toast';
+import { MessageSquare, Plus, Search, Edit, Trash2, Eye, XCircle, Download, CheckCircle2, ImagePlus, Loader2 } from 'lucide-react';
+import { toastTestimonial, showSuccessToast, showErrorToast } from '@/lib/admin/toast';
 import { supabase } from '@/lib/admin/supabase';
 import { exportToCsv } from '@/lib/admin/csv';
 import { useAuditLogger } from '@/hooks/useAuditLog';
@@ -33,6 +24,7 @@ export interface Testimonial {
   name: string;
   rating: number;
   message: string;
+  image_url: string | null;
   service_id: string | null;
   testimonial_id: string | null;
   is_approved: boolean;
@@ -48,6 +40,8 @@ export default function AdminTestimonials() {
   const [editing, setEditing] = useState<Testimonial | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const logAudit = useAuditLogger();
 
   const fetchTestimonials = async () => {
@@ -87,6 +81,7 @@ export default function AdminTestimonials() {
         { header: 'Nama', value: (r) => r.name },
         { header: 'Rating', value: (r) => r.rating },
         { header: 'Pesan', value: (r) => r.message },
+        { header: 'Foto', value: (r) => r.image_url || '-' },
         { header: 'Disetujui', value: (r) => (r.is_approved ? 'Ya' : 'Belum') },
         { header: 'Dibuat', value: (r) => r.created_at },
       ],
@@ -104,70 +99,152 @@ export default function AdminTestimonials() {
       await logAudit('testimonial.approval', testimonial.id, {
         is_approved: !testimonial.is_approved,
       });
-      toast.success(testimonial.is_approved ? 'Testimoni tidak ditampilkan' : 'Testimoni disetujui');
+      testimonial.is_approved ? toastTestimonial.rejected() : toastTestimonial.approved();
       await fetchTestimonials();
     } catch (error: any) {
       console.error('Failed to toggle approval:', error);
-      toast.error(error.message || 'Gagal mengubah status persetujuan');
+      showErrorToast('Gagal mengubah status', error.message);
     }
   };
 
   const handleOpenEdit = (testimonial: Testimonial) => {
     setEditing(testimonial);
+    setImagePreview(testimonial.image_url || null);
+    setImageFile(null);
     setShowDialog(true);
   };
 
   const handleOpenCreate = () => {
     setEditing({
       id: '',
-      name: '',
+      name: 'Customer',
       rating: 5,
       message: '',
+      image_url: null,
       service_id: null,
       testimonial_id: null,
       is_approved: false,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });
+    setImagePreview(null);
+    setImageFile(null);
     setShowDialog(true);
   };
 
   const handleCloseDialog = () => {
     setShowDialog(false);
     setEditing(null);
+    setImageFile(null);
+    setImagePreview(null);
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      showErrorToast('Validasi gagal', 'File harus berupa gambar');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      showErrorToast('Validasi gagal', 'Ukuran gambar maksimal 5MB');
+      return;
+    }
+
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const uploadImage = async (file: File): Promise<string | null> => {
+    const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('testimonial-images')
+      .upload(filePath, file, { cacheControl: '3600', upsert: false });
+
+    if (uploadError) {
+      console.error('Upload error:', uploadError);
+      // Pesan error yang jelas ke admin
+      if (uploadError.message.toLowerCase().includes('bucket')) {
+        throw new Error('Bucket storage "testimonial-images" belum dibuat di Supabase. Jalankan SQL setup dulu.');
+      }
+      throw new Error(uploadError.message);
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('testimonial-images')
+      .getPublicUrl(filePath);
+
+    return publicUrl;
   };
 
   const handleSave = async () => {
-    if (!editing?.name.trim() || !editing.message.trim()) {
-      toast.error('Nama dan pesan testimonial wajib diisi');
+    // Foto wajib diupload
+    if (!imageFile && !editing?.image_url) {
+      showErrorToast('Validasi gagal', 'Foto testimonial wajib diupload');
       return;
     }
 
     try {
       setIsSaving(true);
 
-      // Untuk insert, buang id kosong agar database generate UUID sendiri.
-      const { id, created_at, updated_at, ...rest } = editing;
-      const payload: Record<string, unknown> = { ...rest };
+      let imageUrl = editing.image_url;
+
+      // Upload new image if selected
+      if (imageFile) {
+        try {
+          imageUrl = await uploadImage(imageFile);
+          showSuccessToast({ type: 'testimonial', action: 'create', customTitle: 'Foto berhasil diupload' });
+        } catch (uploadErr: any) {
+          showErrorToast('Gagal upload foto', uploadErr.message);
+          setIsSaving(false);
+          return;
+        }
+      }
+
+      // Prepare payload - HANYA kolom yang benar-benar ada di tabel DB
+      // (testimonial_id tidak ada di skema DB → jangan dikirim, sebabkan PGRST204)
+      const payload = {
+        name: 'Customer',
+        rating: 5,
+        message: '',
+        image_url: imageUrl,
+        is_approved: editing.is_approved,
+      };
+
+      console.log('Saving testimonial payload:', payload);
 
       const { error } = editing.id
         ? await supabase.from('testimonials').update(payload).eq('id', editing.id)
         : await supabase.from('testimonials').insert([payload]);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
 
       await logAudit(
         editing.id ? 'testimonial.update' : 'testimonial.create',
         editing.id || null,
-        { name: editing.name, rating: editing.rating, is_approved: editing.is_approved }
+        { name: payload.name, rating: payload.rating, is_approved: payload.is_approved, has_image: !!imageUrl }
       );
 
-      toast.success(editing.id ? 'Testimoni berhasil diperbarui' : 'Testimoni berhasil dibuat');
+      editing.id ? toastTestimonial.updated() : toastTestimonial.created();
       handleCloseDialog();
       await fetchTestimonials();
     } catch (error: any) {
       console.error('Failed to save testimonial:', error);
-      toast.error(error.message || 'Gagal menyimpan testimonial');
+      showErrorToast('Gagal menyimpan testimonial', error.message);
     } finally {
       setIsSaving(false);
     }
@@ -179,14 +256,29 @@ export default function AdminTestimonials() {
     }
 
     try {
+      // Get image URL before deleting to optionally delete from storage
+      const testimonial = testimonials.find(t => t.id === id);
+
       const { error } = await supabase.from('testimonials').delete().eq('id', id);
       if (error) throw error;
+
+      // Try to delete image from storage if exists
+      if (testimonial?.image_url) {
+        try {
+          const urlParts = testimonial.image_url.split('/');
+          const fileName = urlParts[urlParts.length - 1];
+          await supabase.storage.from('testimonial-images').remove([fileName]);
+        } catch (imgErr) {
+          console.warn('Failed to delete image from storage:', imgErr);
+        }
+      }
+
       await logAudit('testimonial.delete', id);
-      toast.success('Testimonial berhasil dihapus');
+      toastTestimonial.deleted();
       await fetchTestimonials();
     } catch (error: any) {
       console.error('Failed to delete testimonial:', error);
-      toast.error(error.message || 'Gagal menghapus testimonial');
+      showErrorToast('Gagal menghapus testimonial', error.message);
     }
   };
 
@@ -293,34 +385,38 @@ export default function AdminTestimonials() {
                 <p>Error: {error}</p>
               </div>
             ) : filteredTestimonials.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Tidak ada testimonial ditemukan.</p>
+              <div className="w-full flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <MessageSquare className="w-12 h-12 mb-4 opacity-50" />
+                <p className="text-center">Tidak ada testimonial ditemukan.</p>
               </div>
             ) : (
               <div className="rounded-md border border-white/10 overflow-hidden">
-                <Table>
-                  <TableHeader className="bg-white/5">
-                    <TableRow>
-                      <TableHead>Nama</TableHead>
-                      <TableHead>Rating</TableHead>
-                      <TableHead>Pesan</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Dibuat</TableHead>
-                      <TableHead className="text-right">Aksi</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <table className="w-full text-sm">
+                  <thead className="bg-white/5">
+                    <tr>
+                      <th className="text-left p-3">Foto</th>
+                      <th className="text-left p-3">Status</th>
+                      <th className="text-left p-3">Dibuat</th>
+                      <th className="text-right p-3">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody>
                     {filteredTestimonials.map((testimonial) => (
-                      <TableRow key={testimonial.id}>
-                        <TableCell className="font-medium">{testimonial.name}</TableCell>
-                        <TableCell>
-                          {'★'.repeat(testimonial.rating)}{'☆'.repeat(5 - testimonial.rating)}
-                        </TableCell>
-                        <TableCell className="max-w-xs truncate">
-                          {testimonial.message.substring(0, 60)}...
-                        </TableCell>
-                        <TableCell>
+                      <tr key={testimonial.id} className="border-t border-white/10">
+                        <td className="p-3">
+                          {testimonial.image_url ? (
+                            <img
+                              src={testimonial.image_url}
+                              alt="Testimonial"
+                              className="w-12 h-12 object-cover rounded-lg border border-white/10"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center">
+                              <MessageSquare className="w-5 h-5 text-muted-foreground" />
+                            </div>
+                          )}
+                        </td>
+                        <td className="p-3">
                           {testimonial.is_approved ? (
                             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-500/10 text-green-400 border border-green-500/20">
                               Disetujui
@@ -330,11 +426,11 @@ export default function AdminTestimonials() {
                               Pending
                             </span>
                           )}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
+                        </td>
+                        <td className="p-3 text-sm text-muted-foreground">
                           {formatDate(testimonial.created_at)}
-                        </TableCell>
-                        <TableCell className="text-right">
+                        </td>
+                        <td className="p-3 text-right">
                           <div className="flex items-center justify-end gap-2">
                             <Button
                               variant="ghost"
@@ -357,11 +453,11 @@ export default function AdminTestimonials() {
                               <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
-                        </TableCell>
-                      </TableRow>
+                        </td>
+                      </tr>
                     ))}
-                  </TableBody>
-                </Table>
+                  </tbody>
+                </table>
               </div>
             )}
           </CardContent>
@@ -381,45 +477,47 @@ export default function AdminTestimonials() {
 
             {editing && (
               <div className="space-y-4">
-                {/* Name */}
+                {/* Image Upload */}
                 <div className="space-y-2">
-                  <Label htmlFor="name">Nama Customer *</Label>
-                  <Input
-                    id="name"
-                    placeholder="Contoh: Budi Santoso"
-                    value={editing.name}
-                    onChange={(e) => setEditing({ ...editing, name: e.target.value })}
-                  />
-                </div>
-
-                {/* Rating */}
-                <div className="space-y-2">
-                  <Label htmlFor="rating">Rating (1-5)</Label>
-                  <Input
-                    id="rating"
-                    type="number"
-                    min="1"
-                    max="5"
-                    value={editing.rating ?? ''}
-                    onChange={(e) =>
-                      setEditing({
-                        ...editing,
-                        rating: Math.max(1, Math.min(5, parseInt(e.target.value) || 5)),
-                      })
-                    }
-                  />
-                </div>
-
-                {/* Message */}
-                <div className="space-y-2">
-                  <Label htmlFor="message">Pesan Testimonial *</Label>
-                  <Textarea
-                    id="message"
-                    placeholder="Tulis pengalaman customer dengan layanan IPAN STORE..."
-                    className="min-h-[120px]"
-                    value={editing.message || ''}
-                    onChange={(e) => setEditing({ ...editing, message: e.target.value })}
-                  />
+                  <Label>Foto Testimonial</Label>
+                  <div className="border-2 border-dashed border-white/10 rounded-lg p-6 text-center hover:border-white/20 transition-colors">
+                    {imagePreview ? (
+                      <div className="relative">
+                        <img
+                          src={imagePreview}
+                          alt="Preview"
+                          className="max-h-48 mx-auto rounded-lg object-contain"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="absolute top-2 right-2"
+                          onClick={() => {
+                            setImageFile(null);
+                            setImagePreview(null);
+                          }}
+                        >
+                          <XCircle className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <label className="cursor-pointer block">
+                        <ImagePlus className="w-10 h-10 mx-auto mb-2 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground mb-1">
+                          Klik untuk upload foto
+                        </p>
+                        <p className="text-xs text-muted-foreground/60">
+                          PNG, JPG, WebP (max 5MB)
+                        </p>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageChange}
+                          className="hidden"
+                        />
+                      </label>
+                    )}
+                  </div>
                 </div>
 
                 {/* Is Approved */}
@@ -447,7 +545,7 @@ export default function AdminTestimonials() {
               <Button onClick={handleSave} disabled={isSaving}>
                 {isSaving ? (
                   <>
-                    <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Menyimpan...
                   </>
                 ) : (

@@ -12,14 +12,6 @@ import Reveal from "@/components/effects/Reveal";
 import { breadcrumbJsonLd } from "@/lib/seo";
 import { supabase } from "@/lib/admin/supabase";
 
-interface Review {
-  id: string;
-  name: string;
-  rating: number;
-  message: string;
-  created_at: string;
-}
-
 type TestiPhoto = {
   /** Nama file tanpa ekstensi. */
   id: string;
@@ -28,9 +20,8 @@ type TestiPhoto = {
   badge?: string;
 };
 
-// Sumber gambar: thumbnail WebP (480px) untuk carousel, full WebP (1080px)
-// untuk lightbox. JPG asli tetap ada sebagai fallback manual bila dibutuhkan.
-const testiPhotos: TestiPhoto[] = [
+// Foto statis yang sudah ada (dari folder public)
+const staticPhotos: TestiPhoto[] = [
   { id: "Screenshot_2025-12-23-23-15-30-787_com.whatsapp.w4b", featured: true, customer: "Raxzy MJ", badge: "ELITE CUSTOMER" },
   { id: "Screenshot_2025-12-25-13-18-55-378_com.whatsapp.w4b" },
   { id: "Screenshot_2025-12-28-20-32-03-375_com.whatsapp.w4b" },
@@ -56,16 +47,23 @@ const THUMB_H = 1067;
 const thumbSrc = (p: TestiPhoto) => `/img/testimoni/thumbs/${p.id}.webp`;
 const fullSrc = (p: TestiPhoto) => `/img/testimoni/${p.id}.webp`;
 
-const lightboxSlides = testiPhotos.map((p) => ({ src: fullSrc(p) }));
-const featuredPhoto = testiPhotos.find((p) => p.featured) ?? testiPhotos[0];
+const featuredPhoto = staticPhotos.find((p) => p.featured) ?? staticPhotos[0];
+
+// Tipe untuk item carousel (gabungan statis + database)
+interface CarouselItem {
+  image: string;
+  alt: string;
+  width: number;
+  height: number;
+}
 
 const TestimoniPage = () => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
 
-  // ── Review dari Supabase (yang sudah disetujui admin) ─────────────────────
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [reviewsLoading, setReviewsLoading] = useState(true);
+  // ── Testimoni dari Supabase (yang sudah disetujui admin) ─────────────────
+  const [dbPhotos, setDbPhotos] = useState<CarouselItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
@@ -73,23 +71,48 @@ const TestimoniPage = () => {
       try {
         const { data, error } = await supabase
           .from("testimonials")
-          .select("id, name, rating, message, created_at")
+          .select("id, name, image_url, created_at")
           .eq("is_approved", true)
+          .not("image_url", "is", null)
           .order("created_at", { ascending: false })
-          .limit(12);
-        if (!error && mounted) {
-          setReviews((data as Review[]) || []);
+          .limit(20);
+
+        if (!error && mounted && data) {
+          const items: CarouselItem[] = data.map((t) => ({
+            image: t.image_url!,
+            alt: `Testimoni ${t.name || "customer"} IPAN STORE`,
+            width: THUMB_W,
+            height: THUMB_H,
+          }));
+          setDbPhotos(items);
         }
       } catch {
         // Senyap — halaman tetap tampil walau fetch gagal.
       } finally {
-        if (mounted) setReviewsLoading(false);
+        if (mounted) setLoading(false);
       }
     })();
     return () => {
       mounted = false;
     };
   }, []);
+
+  // Gabungkan foto statis + foto dari database
+  const allPhotos: CarouselItem[] = [
+    ...staticPhotos.map((p) => ({
+      image: thumbSrc(p),
+      alt: `Testimoni ${p.customer ?? 'pelanggan'} IPAN STORE - hasil optimasi PC & boost FPS`,
+      width: THUMB_W,
+      height: THUMB_H,
+    })),
+    ...dbPhotos,
+  ];
+
+  // Lightbox slides
+  const lightboxSlides = [
+    ...staticPhotos.map((p) => ({ src: fullSrc(p) })),
+    ...dbPhotos.map((p) => ({ src: p.image })),
+  ];
 
   // ── Form submit testimoni publik (perlu moderasi admin) ───────────────────
   const [form, setForm] = useState({ name: "", message: "", rating: 5 });
@@ -220,7 +243,7 @@ const TestimoniPage = () => {
                     <button
                       type="button"
                       onClick={() => {
-                        const idx = testiPhotos.findIndex((p) => p.id === featuredPhoto.id);
+                        const idx = staticPhotos.findIndex((p) => p.id === featuredPhoto.id);
                         setLightboxIndex(idx >= 0 ? idx : 0);
                         setLightboxOpen(true);
                       }}
@@ -286,33 +309,34 @@ const TestimoniPage = () => {
                 </h2>
               </div>
 
-              {/* Depth Carousel */}
+              {/* Depth Carousel — gabungan foto statis + dari database */}
               <div className="relative w-full h-[400px] sm:h-[480px] md:h-[540px] max-w-7xl mx-auto" aria-label="Galeri foto testimoni pelanggan IPAN STORE">
-                <DepthCarousel
-                  items={testiPhotos.map((p) => ({
-                    image: thumbSrc(p),
-                    alt: `Testimoni ${p.customer ?? 'pelanggan'} IPAN STORE - hasil optimasi PC & boost FPS`,
-                    width: THUMB_W,
-                    height: THUMB_H,
-                  }))}
-                  cardWidth={240}
-                  cardHeight={420}
-                  radius={16}
-                  tint="#0C0C0C"
-                  depth={220}
-                  spread={85}
-                  tilt={20}
-                  perspective={1300}
-                  visibleCards={4}
-                  falloff={0.2}
-                  blur={5}
-                  duration={650}
-                  autoplay={false}
-                  loop={true}
-                  showControls={true}
-                  showIndicators={true}
-                  onCardClick={(idx) => openLightbox(idx)}
-                />
+                {loading ? (
+                  <div className="flex items-center justify-center h-full">
+                    <Loader2 className="w-8 h-8 animate-spin text-[#94A3B8]" />
+                  </div>
+                ) : (
+                  <DepthCarousel
+                    items={allPhotos}
+                    cardWidth={240}
+                    cardHeight={420}
+                    radius={16}
+                    tint="#0C0C0C"
+                    depth={220}
+                    spread={85}
+                    tilt={20}
+                    perspective={1300}
+                    visibleCards={4}
+                    falloff={0.2}
+                    blur={5}
+                    duration={650}
+                    autoplay={false}
+                    loop={true}
+                    showControls={true}
+                    showIndicators={true}
+                    onCardClick={(idx) => openLightbox(idx)}
+                  />
+                )}
               </div>
 
               <div className="mt-14 max-w-3xl mx-auto text-center px-4">
@@ -322,47 +346,6 @@ const TestimoniPage = () => {
               </div>
             </div>
           </section>
-
-      {/* Review dari pelanggan (Supabase) */}
-      {!reviewsLoading && reviews.length > 0 && (
-        <section className="relative py-16 md:py-20">
-          <PageBackground opacity={0.12} />
-          <div className="container mx-auto px-4 relative z-10">
-            <div className="max-w-3xl mx-auto text-center mb-12">
-              <span className="section-subheading">REVIEW CUSTOMER</span>
-              <h2 className="h2-clamp font-bold tracking-tight text-[#F4F4F5] mb-4">
-                Apa Kata Mereka
-              </h2>
-            </div>
-            <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto">
-              {reviews.map((r) => (
-                <div key={r.id} className="gaming-card p-6 flex flex-col animate-fade-up">
-                  <div className="flex items-center gap-0.5 mb-3">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`h-4 w-4 ${i < r.rating ? "fill-zinc-300 text-[#94A3B8]" : "text-zinc-700"}`}
-                      />
-                    ))}
-                  </div>
-                  <p className="flex-1 text-sm text-zinc-400 leading-relaxed mb-4">
-                    "{r.message}"
-                  </p>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="w-7 h-7 rounded-full bg-[#1a1a1a] border border-white/16 flex items-center justify-center text-[11px] font-bold text-[#94A3B8]">
-                        {r.name.charAt(0).toUpperCase()}
-                      </span>
-                      <span className="text-sm font-medium text-[#F4F4F5]">{r.name}</span>
-                    </div>
-                    <span className="gaming-badge">Verified</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* Form kirim testimoni */}
       <section className="relative py-16 md:py-20">
@@ -473,4 +456,3 @@ const TestimoniPage = () => {
 };
 
 export default TestimoniPage;
-

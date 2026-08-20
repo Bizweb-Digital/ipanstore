@@ -23,7 +23,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { HelpCircle, Plus, Search, Edit, Trash2, CheckCircle2, XCircle, Download } from 'lucide-react';
-import { toast } from 'react-hot-toast';
+import { toastFaq, showErrorToast } from '@/lib/admin/toast';
 import { supabase } from '@/lib/admin/supabase';
 import { exportToCsv } from '@/lib/admin/csv';
 import { useAuditLogger } from '@/hooks/useAuditLog';
@@ -118,7 +118,7 @@ export default function AdminFaqs() {
 
   const handleSave = async () => {
     if (!editing?.question.trim() || !editing.answer.trim()) {
-      toast.error('Pertanyaan dan jawaban wajib diisi');
+      showErrorToast('Validasi gagal', 'Pertanyaan dan jawaban wajib diisi');
       return;
     }
 
@@ -140,12 +140,12 @@ export default function AdminFaqs() {
         { question: editing.question, is_active: editing.is_active }
       );
 
-      toast.success(editing.id ? 'FAQ berhasil diperbarui' : 'FAQ berhasil dibuat');
+      editing.id ? toastFaq.updated() : toastFaq.created();
       handleCloseDialog();
       await fetchFaqs();
     } catch (error: any) {
       console.error('Failed to save FAQ:', error);
-      toast.error(error.message || 'Gagal menyimpan FAQ');
+      showErrorToast('Gagal menyimpan FAQ', error.message);
     } finally {
       setIsSaving(false);
     }
@@ -160,11 +160,11 @@ export default function AdminFaqs() {
       const { error } = await supabase.from('faqs').delete().eq('id', id);
       if (error) throw error;
       await logAudit('faq.delete', id);
-      toast.success('FAQ berhasil dihapus');
+      toastFaq.deleted();
       await fetchFaqs();
     } catch (error: any) {
       console.error('Failed to delete FAQ:', error);
-      toast.error(error.message || 'Gagal menghapus FAQ');
+      showErrorToast('Gagal menghapus FAQ', error.message);
     }
   };
 
@@ -271,9 +271,9 @@ export default function AdminFaqs() {
                 <p>Error: {error}</p>
               </div>
             ) : filteredFaqs.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <HelpCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Tidak ada FAQ ditemukan.</p>
+              <div className="w-full flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <HelpCircle className="w-12 h-12 mb-4 opacity-50" />
+                <p className="text-center">Tidak ada FAQ ditemukan.</p>
               </div>
             ) : (
               <div className="rounded-md border border-white/10 overflow-hidden">

@@ -27,7 +27,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { BadgePercent, Plus, Search, Edit, Trash2, Loader2, XCircle, Download } from 'lucide-react';
-import { toast } from 'react-hot-toast';
+import { toastPromo, showErrorToast } from '@/lib/admin/toast';
 import { supabase } from '@/lib/admin/supabase';
 import { PromoCode } from '@/lib/admin/promo';
 import { exportToCsv } from '@/lib/admin/csv';
@@ -99,15 +99,15 @@ export default function AdminPromos() {
 
   const handleSave = async () => {
     if (!editing?.code.trim()) {
-      toast.error('Kode promo wajib diisi');
+      showErrorToast('Validasi gagal', 'Kode promo wajib diisi');
       return;
     }
     if (editing.type === 'percent' && (editing.value <= 0 || editing.value > 100)) {
-      toast.error('Diskon persen harus antara 1-100');
+      showErrorToast('Validasi gagal', 'Diskon persen harus antara 1-100');
       return;
     }
     if (editing.type === 'fixed' && editing.value <= 0) {
-      toast.error('Diskon nominal harus lebih dari 0');
+      showErrorToast('Validasi gagal', 'Diskon nominal harus lebih dari 0');
       return;
     }
 
@@ -135,12 +135,12 @@ export default function AdminPromos() {
         { code, type: editing.type, value: editing.value }
       );
 
-      toast.success(editing.id ? 'Promo berhasil diperbarui' : 'Promo berhasil dibuat');
+      editing.id ? toastPromo.updated() : toastPromo.created();
       handleClose();
       await fetchPromos();
     } catch (err: any) {
       console.error('Failed to save promo:', err);
-      toast.error(err.message || 'Gagal menyimpan promo');
+      showErrorToast('Gagal menyimpan promo', err.message);
     } finally {
       setIsSaving(false);
     }
@@ -152,11 +152,11 @@ export default function AdminPromos() {
       const { error } = await supabase.from('promo_codes').delete().eq('id', id);
       if (error) throw error;
       await logAudit('promo.delete', id);
-      toast.success('Promo berhasil dihapus');
+      toastPromo.deleted();
       await fetchPromos();
     } catch (err: any) {
       console.error('Failed to delete promo:', err);
-      toast.error(err.message || 'Gagal menghapus promo');
+      showErrorToast('Gagal menghapus promo', err.message);
     }
   };
 
@@ -171,7 +171,7 @@ export default function AdminPromos() {
       await fetchPromos();
     } catch (err: any) {
       console.error('Failed to toggle promo:', err);
-      toast.error(err.message || 'Gagal mengubah status promo');
+      showErrorToast('Gagal mengubah status promo', err.message);
     }
   };
 

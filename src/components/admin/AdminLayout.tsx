@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
+import { Toaster } from 'react-hot-toast';
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -86,6 +87,21 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background flex">
+      {/* Toast notifications untuk semua page admin */}
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          style: {
+            background: 'linear-gradient(135deg, #0a0a0a 0%, #111111 100%)',
+            color: '#f4f4f5',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: '12px',
+            padding: '16px',
+            fontFamily: "'Inter', system-ui, sans-serif",
+            boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+          },
+        }}
+      />
       {/* Sidebar Desktop */}
       <aside
         className={`hidden lg:flex flex-col fixed left-0 top-0 h-full z-40 transition-all duration-300 bg-[#1a1a1a] border-r border-white/8 ${

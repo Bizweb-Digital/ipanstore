@@ -1,13 +1,15 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
-import { Images } from "lucide-react";
+import { Images, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "../ui/button";
 import Lightbox from "yet-another-react-lightbox";
 import "yet-another-react-lightbox/styles.css";
 import Reveal from "../effects/Reveal";
 import SplitText from "../effects/SplitText";
+import { supabase } from "@/lib/admin/supabase";
 
-const testiPhotos = [
+// Foto statis yang sudah ada (dari folder public)
+const staticPhotos = [
   { image: "/img/testimoni/thumbs/Screenshot_2025-12-23-23-15-30-787_com.whatsapp.w4b.webp", full: "/img/testimoni/Screenshot_2025-12-23-23-15-30-787_com.whatsapp.w4b.jpg", alt: "Testimoni 1" },
   { image: "/img/testimoni/thumbs/Screenshot_2025-12-25-13-18-55-378_com.whatsapp.w4b.webp", full: "/img/testimoni/Screenshot_2025-12-25-13-18-55-378_com.whatsapp.w4b.jpg", alt: "Testimoni 2" },
   { image: "/img/testimoni/thumbs/Screenshot_2025-12-28-20-32-03-375_com.whatsapp.w4b.webp", full: "/img/testimoni/Screenshot_2025-12-28-20-32-03-375_com.whatsapp.w4b.jpg", alt: "Testimoni 3" },
@@ -19,7 +21,6 @@ const testiPhotos = [
   { image: "/img/testimoni/thumbs/Screenshot_2026-02-08-13-41-09-236_com.whatsapp.w4b.webp", full: "/img/testimoni/Screenshot_2026-02-08-13-41-09-236_com.whatsapp.w4b.jpg", alt: "Testimoni 9" },
 ];
 
-const lightboxSlides = testiPhotos.map((p) => ({ src: p.full }));
 const DepthCarousel = lazy(() => import("../carousel/DepthCarousel"));
 
 const DeferredDepthCarousel = (props: React.ComponentProps<typeof DepthCarousel>) => {
@@ -49,6 +50,47 @@ const DeferredDepthCarousel = (props: React.ComponentProps<typeof DepthCarousel>
 const TestimoniPreview = () => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [dbPhotos, setDbPhotos] = useState<Array<{ image: string; full: string; alt: string }>>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from("testimonials")
+          .select("id, name, image_url")
+          .eq("is_approved", true)
+          .not("image_url", "is", null)
+          .order("created_at", { ascending: false })
+          .limit(10);
+
+        if (!error && mounted && data) {
+          const items = data.map((t) => ({
+            image: t.image_url!,
+            full: t.image_url!,
+            alt: `Testimoni ${t.name || "customer"} IPAN STORE`,
+          }));
+          setDbPhotos(items);
+        }
+      } catch {
+        // Senyap — fallback ke foto statis saja
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Gabungkan foto statis + dari database
+  const allPhotos = [
+    ...staticPhotos,
+    ...dbPhotos,
+  ];
+
+  const lightboxSlides = allPhotos.map((p) => ({ src: p.full }));
 
   const openLightbox = (index: number) => {
     setLightboxIndex(index);
@@ -75,27 +117,33 @@ const TestimoniPreview = () => {
 
       {/* Depth Carousel Gallery */}
       <div className="relative w-full h-[380px] sm:h-[460px] md:h-[520px] mb-10">
-        <DeferredDepthCarousel
-          items={testiPhotos}
-          cardWidth={230}
-          cardHeight={400}
-          radius={16}
-          tint="#0C0C0C"
-          depth={200}
-          spread={80}
-          tilt={18}
-          perspective={1200}
-          visibleCards={4}
-          falloff={0.2}
-          blur={4}
-          duration={600}
-          autoplay={!lightboxOpen}
-          autoplayDelay={3500}
-          loop={true}
-          showControls={false}
-          showIndicators={true}
-          onCardClick={(idx) => openLightbox(idx)}
-        />
+        {loading ? (
+          <div className="flex items-center justify-center h-full">
+            <Loader2 className="w-8 h-8 animate-spin text-[#94A3B8]" />
+          </div>
+        ) : (
+          <DeferredDepthCarousel
+            items={allPhotos}
+            cardWidth={230}
+            cardHeight={400}
+            radius={16}
+            tint="#0C0C0C"
+            depth={200}
+            spread={80}
+            tilt={18}
+            perspective={1200}
+            visibleCards={4}
+            falloff={0.2}
+            blur={4}
+            duration={600}
+            autoplay={!lightboxOpen}
+            autoplayDelay={3500}
+            loop={true}
+            showControls={false}
+            showIndicators={true}
+            onCardClick={(idx) => openLightbox(idx)}
+          />
+        )}
       </div>
 
       <div className="container mx-auto px-4">

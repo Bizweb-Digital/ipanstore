@@ -51,6 +51,39 @@
    - Skill lain yang tidak relevan telah dipindahkan ke `skills_backup` dan tidak
      boleh di-load.
 
+8. **⚠️ PAHAMI DULU SEBELUM PAKAI MCP/SKILL/TOOL BERAT (PENTING)**:
+   - Di **setiap task atau sesi baru**, saat user memberi prompt, AI **WAJIB memahami
+     dulu situasinya**: apakah prompt itu benar-benar **mengharuskan** penggunaan MCP,
+     skill, agent browser, atau tool berat lainnya.
+   - **Kalau tidak butuh → JANGAN dipakai.** Kerjakan langsung dengan alat dasar
+     (read/edit/bash/build). Jangan load MCP/skill hanya karena "tersedia" atau
+     "kelihatannya berguna".
+   - **Kalau memang butuh → baru dipakai**, dan pilih yang paling ringan/tepat untuk
+     tugas itu.
+   - Contoh tidak butuh: edit kode, baca file, jalankan build/test, query Supabase
+     via script Node, cek file — semua cukup dengan alat dasar.
+   - Contoh butuh: user minta test visual di browser (→ agent browser), user sebut
+     nama skill secara eksplisit (→ load skill itu saja).
+
+9. **⚠️ BROWSER UNTUK AGENT BROWSER / PLAYWRIGHT (PENTING)**:
+   - Jika task/sesi memerlukan **agent browser** atau **Playwright** (buka halaman,
+     screenshot, klik, test UI), **WAJIB cek dulu browser apa yang tersedia di PC user**
+     sebelum mencoba launch. Jangan asumsikan Chrome ada.
+   - **Urutan prioritas yang direkomendasikan user**:
+     1. **Brave** — coba dulu percobaan pertama
+        (`C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe`)
+     2. **MS Edge** — fallback kalau Brave gagal
+        (`C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`)
+   - **JANGAN install Chrome atau Chromium** (jangan jalankan `npx playwright install
+     chrome/chromium`). User tidak ingin browser baru di-install di PC-nya.
+   - **JANGAN copy/rename .exe browser** (mis. rename `msedge.exe` → `chrome.exe` atau
+     copy `brave.exe` ke folder lain) — browser modern butuh folder instalasi lengkap
+     dengan DLL & resource-nya; meng-copy .exe saja menghasilkan error "side-by-side
+     configuration is incorrect" dan justru merusak konfigurasi.
+   - Kalau tool browser sedang rusak/ter-konfigurasi ke path Chrome yang tidak ada,
+     laporkan ke user dan tanya mau pakai browser mana — jangan utak-atik instalasi
+     browser sendiri tanpa izin.
+
 ## Perintah Penting
 
 | Perintah | Arti |
