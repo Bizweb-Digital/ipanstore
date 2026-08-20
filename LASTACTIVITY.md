@@ -7,7 +7,24 @@
 
 - **Repo**: `git@github.com-bizwebdigital:Bizweb-Digital/ipanstore.git` (branch `main`)
 - **Domain live**: `https://ipanstore.id` (Cloudflare Tunnel → container Docker port 5007)
-- **Update terakhir**: 20 Agustus 2026 — **Fix rollback live (12→19 Agu): dist di-build ulang, commit c8a06d3 dipush, .dockerignore diperbaiki (dist dikeluarkan dari ignore), server di-pull & rebuild Docker, live kembali ke ipanstore.id (bundle B9zdmIS4).**
+- **Update terakhir**: 21 Agustus 2026 — **Admin panel improvements: logo transparan, toast notifications, testimonial photo upload, FAQ merge, fix black screen, commit 4d2c2f2 dipush & server di-pull via SSH Tailscale.**
+
+### Sesi: Admin Panel Improvements (21 Agustus 2026)
+
+- **Logo transparan**: `src/assets/logo.png` dan `public/img/logo.png` diganti dari background biru navy menjadi RGBA transparan (dari `logo-transparent.png`). Semua komponen (Navbar, Footer, LoadingScreen, AdminLayout, Login) otomatis pakai versi transparan.
+- **Toast notifications**: Tambah `src/lib/admin/toast.ts` — helper popup sukses/error dengan design IPAN STORE (gradient dark, border glow, font Inter). Pasang `<Toaster />` dari react-hot-toast di `AdminLayout.tsx`. Semua page admin (Services, Testimonials, FAQs, Promos) sekarang pakai toast custom.
+- **Testimonial photo upload**: Admin bisa upload foto testimoni ke Supabase Storage bucket `testimonial-images`. Hapus form nama/rating/message — hanya butuh foto. Fix button simpan yang stuck (karena bucket belum ada + RLS policy).
+- **TestimoniPage**: Testimoni dari admin masuk ke carousel (bukan section "Apa Kata Mereka"). Gabungkan 17 foto statis + foto dari database.
+- **TestimoniPreview (homepage)**: Fetch foto dari Supabase, gabungkan dengan 9 foto statis.
+- **FAQ merge**: FAQ hardcoded (01-10) tetap di atas, FAQ baru dari admin masuk di urutan terbawah.
+- **Fix black screen**: 4 page admin (Services, Testimonials, FAQs, Promos) sempat black screen karena file `toast.tsx` dengan JSX. Fix: tulis ulang tanpa JSX (emoji icon), rename ke `.ts`.
+- **Fix empty state**: "Tidak ada testimonial/FAQ/data" sekarang centered dengan `w-full flex flex-col items-center justify-center`.
+- **AGENTS.md**: Tambah aturan #8 (pahami dulu sebelum pakai MCP/skill/tool berat) dan #9 (browser priority: Brave > Edge, jangan install Chrome/Chromium, jangan copy/rename .exe browser).
+- **Supabase SQL yang dijalankan user**: `ALTER TABLE testimonials ADD COLUMN image_url`, bucket `testimonial-images`, policy SELECT/INSERT/DELETE untuk storage.
+- **Commit & push**: `4d2c2f2` → `git push origin main` `d68dfc3..4d2c2f2` (17 file, +727/-253).
+- **Pull server**: `ssh root@100.89.140.16` → `git pull` fast-forward `d68dfc3..4d2c2f2` — sukses.
+- **Deploy live**: `npm run build` lokal (bundle `index-jRYNr2gD.js` 579kB) → tar dist → `scp /tmp/ipanstore-dist.tgz` → server `rm -rf dist/* && tar -xzf` → `docker compose down && up --build -d` → container `ipanstore` Started.
+- **Verifikasi live**: `https://ipanstore.id/` HTTP 200, bundle `index-jRYNr2gD.js` live. Chunk admin `Testimonials-CTepyRRv.js`, `Faqs-Ca-hT8i0.js`, `Services-In09KGWV.js`, `Promos-CO_6pfcn.js`, `AdminRoutes-xNpad4CB.js`, dan `toast-oESZY0UY.js` semua tersaji (marker `berhasil`, `linear-gradient` ditemukan).
 
 ### Sesi: Fix Rollback Live — Deploy Versi Terbaru (20 Agustus 2026)
 
