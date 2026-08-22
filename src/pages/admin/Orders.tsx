@@ -41,6 +41,7 @@ import {
   Download,
   Save,
   BadgePercent,
+  Plus,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -67,6 +68,24 @@ const SORT_OPTIONS = [
 
 const ITEMS_PER_PAGE = 10;
 
+const MANUAL_STATUS_OPTIONS = STATUS_OPTIONS.filter((s) => s.value !== 'ALL');
+
+function generateInvoiceNumber() {
+  const d = new Date();
+  const ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let rand = '';
+  for (let i = 0; i < 5; i++) rand += chars[Math.floor(Math.random() * chars.length)];
+  return `IPN-${ymd}-${rand}`;
+}
+
+interface ServiceOption {
+  id: string;
+  name: string;
+  slug: string;
+  price: number;
+}
+
 export default function AdminOrders() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -79,6 +98,19 @@ export default function AdminOrders() {
   const [showDetail, setShowDetail] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [savingNotes, setSavingNotes] = useState<string | null>(null);
+  const [showManual, setShowManual] = useState(false);
+  const [services, setServices] = useState<ServiceOption[]>([]);
+  const [manualSaving, setManualSaving] = useState(false);
+  const [manualForm, setManualForm] = useState({
+    customer_name: '',
+    customer_email: '',
+    customer_phone: '',
+    service_id: '',
+    amount: '',
+    status: 'PAID',
+    order_date: format(new Date(), 'yyyy-MM-dd'),
+    notes: '',
+  });
   const logAudit = useAuditLogger();
 
   const { orders, total, loading, error, refetch } = useOrders({
@@ -254,6 +286,93 @@ export default function AdminOrders() {
     return channel.replace(/_/g, ' ').toUpperCase();
   };
 
+  // ── Order Manual ───────────────────────────────────────────────────────────
+  const openManual = async () => {
+    setShowManual(true);
+    try {
+      const { data, error } = await supabase
+        .from('services')
+        .select('id, name, slug, price')
+        .order('name', { ascending: true });
+      if (error) throw error;
+      setServices((data as ServiceOption[]) || []);
+    } catch (err: any) {
+      console.error('Failed to fetch services:', err);
+      toast.error('Gagal memuat daftar layanan');
+    }
+  };
+
+  const handleManualServiceChange = (serviceId: string) => {
+    const svc = services.find((s) => s.id === serviceId);
+    setManualForm((f) => ({
+      ...f,
+      service_id: serviceId,
+      amount: svc ? String(svc.price) : f.amount,
+    }));
+  };
+
+  const handleManualSubmit = async () => {
+    if (!manualForm.customer_name.trim() || !manualForm.service_id || !manualForm.amount) {
+      toast.error('Nama customer, layanan, dan jumlah wajib diisi');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(manualForm.customer_email.trim())) {
+      toast.error('Email customer tidak valid');
+      return;
+    }
+    setManualSaving(true);
+    try {
+      const invoice = generateInvoiceNumber();
+      const dateIso = new Date(`${manualForm.order_date}T${format(new Date(), 'HH:mm:ss')}`).toISOString();
+      const row: Record<string, unknown> = {
+        invoice_number: invoice,
+        customer_name: manualForm.customer_name.trim(),
+        customer_email: manualForm.customer_email.trim(),
+        customer_phone: manualForm.customer_phone.trim() || null,
+        service_id: manualForm.service_id,
+        amount: Number(manualForm.amount),
+        status: manualForm.status,
+        created_at: dateIso,
+        notes: manualForm.notes.trim() || null,
+      };
+      if (['PAID', 'COMPLETED'].includes(manualForm.status)) row.paid_at = dateIso;
+      if (manualForm.status === 'COMPLETED') row.completed_at = dateIso;
+
+      const { data, error } = await supabase
+        .from('orders')
+        .insert(row)
+        .select()
+        .single();
+      if (error) throw error;
+
+      await logAudit('order.manual.create', (data as Order).id, {
+        invoice_number: invoice,
+        amount: row.amount,
+        status: manualForm.status,
+      });
+
+      toast.success(`Order manual ${invoice} berhasil dibuat`);
+      setShowManual(false);
+      setManualForm({
+        customer_name: '',
+        customer_email: '',
+        customer_phone: '',
+        service_id: '',
+        amount: '',
+        status: 'PAID',
+        order_date: format(new Date(), 'yyyy-MM-dd'),
+        notes: '',
+      });
+      setPage(1);
+      await refetch();
+    } catch (err: any) {
+      console.error('Failed to create manual order:', err);
+      toast.error('Gagal membuat order: ' + err.message);
+    } finally {
+      setManualSaving(false);
+    }
+  };
+
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -266,6 +385,10 @@ export default function AdminOrders() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <Button size="sm" onClick={openManual}>
+              <Plus className="w-4 h-4 mr-2" />
+              Tambah Order Manual
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -745,6 +868,142 @@ export default function AdminOrders() {
                 </div>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Manual Order Dialog */}
+        <Dialog open={showManual} onOpenChange={setShowManual}>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Tambah Order Manual</DialogTitle>
+              <DialogDescription>
+                Catat order customer yang masuk di luar website (WA, DM, dll).
+                Invoice number dibuat otomatis.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="manual-name">Nama Customer *</Label>
+                  <Input
+                    id="manual-name"
+                    placeholder="Nama customer"
+                    value={manualForm.customer_name}
+                    onChange={(e) => setManualForm((f) => ({ ...f, customer_name: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="manual-email">Email Customer *</Label>
+                  <Input
+                    id="manual-email"
+                    type="email"
+                    placeholder="email@customer.com"
+                    value={manualForm.customer_email}
+                    onChange={(e) => setManualForm((f) => ({ ...f, customer_email: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="manual-phone">No. WhatsApp / Telepon</Label>
+                <Input
+                  id="manual-phone"
+                  placeholder="08xxxxxxxxxx (opsional)"
+                  value={manualForm.customer_phone}
+                  onChange={(e) => setManualForm((f) => ({ ...f, customer_phone: e.target.value }))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="manual-service">Produk / Layanan *</Label>
+                <select
+                  id="manual-service"
+                  value={manualForm.service_id}
+                  onChange={(e) => handleManualServiceChange(e.target.value)}
+                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">Pilih layanan...</option>
+                  {services.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2 md:col-span-1">
+                  <Label htmlFor="manual-amount">Jumlah (Rp) *</Label>
+                  <Input
+                    id="manual-amount"
+                    type="number"
+                    min={0}
+                    placeholder="75000"
+                    value={manualForm.amount}
+                    onChange={(e) => setManualForm((f) => ({ ...f, amount: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="manual-status">Status Order *</Label>
+                  <select
+                    id="manual-status"
+                    value={manualForm.status}
+                    onChange={(e) => setManualForm((f) => ({ ...f, status: e.target.value }))}
+                    className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    {MANUAL_STATUS_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="manual-date">Tanggal Order *</Label>
+                  <Input
+                    id="manual-date"
+                    type="date"
+                    value={manualForm.order_date}
+                    onChange={(e) => setManualForm((f) => ({ ...f, order_date: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="manual-notes">Catatan</Label>
+                <textarea
+                  id="manual-notes"
+                  className="w-full h-20 px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  placeholder="Contoh: order via WA, bayar transfer BCA..."
+                  value={manualForm.notes}
+                  onChange={(e) => setManualForm((f) => ({ ...f, notes: e.target.value }))}
+                />
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                Invoice number: <span className="font-mono">{generateInvoiceNumber()}</span> (contoh — final dibuat saat simpan)
+              </p>
+
+              <div className="flex gap-3 pt-2">
+                <Button className="flex-1" onClick={handleManualSubmit} disabled={manualSaving}>
+                  {manualSaving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Menyimpan...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Simpan Order
+                    </>
+                  )}
+                </Button>
+                <Button variant="outline" onClick={() => setShowManual(false)} disabled={manualSaving}>
+                  Batal
+                </Button>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       </div>

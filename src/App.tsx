@@ -18,6 +18,7 @@ const Order = lazy(() => import("./pages/Order"));
 const TestimoniPage = lazy(() => import("./pages/TestimoniPage"));
 const Faq = lazy(() => import("./pages/Faq"));
 const Kontak = lazy(() => import("./pages/Kontak"));
+const Garansi = lazy(() => import("./pages/Garansi"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Keep auth, Supabase, and the admin bundle out of the public homepage.
@@ -48,6 +49,7 @@ const App = () => {
               <Route path="/testimoni" element={<TestimoniPage />} />
               <Route path="/faq" element={<Faq />} />
               <Route path="/kontak" element={<Kontak />} />
+              <Route path="/garansi" element={<Garansi />} />
               
               {/* Admin routes are isolated so public pages do not initialize auth. */}
               <Route path="/admin/*" element={<AdminRoutes />} />

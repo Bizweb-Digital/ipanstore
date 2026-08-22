@@ -9,6 +9,7 @@ const quickLinks = [
   { to: "/paket", label: "Paket" },
   { to: "/testimoni", label: "Testimoni" },
   { to: "/order", label: "Order" },
+  { to: "/garansi", label: "Garansi" },
   { to: "/faq", label: "FAQ" },
   { to: "/kontak", label: "Kontak" },
 ];

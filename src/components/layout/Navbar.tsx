@@ -12,6 +12,7 @@ const links = [
   { to: "/paket", label: "Paket" },
   { to: "/testimoni", label: "Testimoni" },
   { to: "/order", label: "Order" },
+  { to: "/garansi", label: "Garansi" },
   { to: "/faq", label: "FAQ" },
   { to: "/kontak", label: "Kontak" },
   { to: "/admin/login", label: "Login Admin", variant: "primary" },

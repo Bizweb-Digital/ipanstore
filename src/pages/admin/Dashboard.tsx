@@ -26,6 +26,33 @@ type OrderRow = {
   services?: { name: string | null; slug: string | null } | null;
 };
 
+const ALL_STATUSES = ['PENDING', 'PAID', 'COMPLETED', 'REFUNDED', 'EXPIRED'] as const;
+
+async function fetchStats() {
+  const { count, error } = await supabase
+    .from('orders')
+    .select('id', { count: 'exact', head: true });
+  if (error) throw error;
+  const { count: converted } = await supabase
+    .from('orders')
+    .select('id', { count: 'exact', head: true })
+    .in('status', ['PAID', 'COMPLETED']);
+  const { data: revenueRows, error: revErr } = await supabase
+    .from('orders')
+    .select('amount, status, created_at, paid_at, services(name)')
+    .in('status', ['PAID', 'COMPLETED']);
+  if (revErr) throw revErr;
+  return {
+    totalOrders: count || 0,
+    convertedCount: converted || 0,
+    paidRows: (revenueRows || []).map((r) => ({
+      amount: Number(r.amount),
+      date: new Date(r.paid_at || r.created_at),
+      serviceName: r.services?.name || null,
+    })),
+  };
+}
+
 const formatCurrency = (v: number) =>
   new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(v);
 
@@ -39,10 +66,19 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function AdminDashboard() {
   const [orders, setOrders] = useState<OrderRow[]>([]);
+  const [stats, setStats] = useState({ totalOrders: 0, convertedCount: 0, paidRows: [] as { amount: number; date: Date; serviceName: string | null }[] });
   const [loading, setLoading] = useState(true);
   const [live, setLive] = useState(false);
 
-  const fetchOrders = useCallback(async () => {
+  const fetchAll = useCallback(async () => {
+    const [statsRes] = await Promise.all([
+      fetchStats().catch((e) => {
+        console.error('Failed to fetch stats:', e);
+        return null;
+      }),
+    ]);
+    if (statsRes) setStats(statsRes);
+
     const { data, error } = await supabase
       .from('orders')
       .select('id, invoice_number, customer_name, customer_email, amount, status, created_at, paid_at, services(name, slug)')
@@ -57,48 +93,49 @@ export default function AdminDashboard() {
   }, []);
 
   useEffect(() => {
-    fetchOrders();
+    fetchAll();
     const channel = supabase
       .channel('admin-dashboard-orders')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
         setLive(true);
-        fetchOrders();
+        fetchAll();
       })
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchOrders]);
+  }, [fetchAll]);
 
-  const paidOrCompleted = orders.filter((o) => ['PAID', 'COMPLETED'].includes(o.status));
+  const paidOrCompleted = stats.paidRows;
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const startOfWeek = new Date(now); startOfWeek.setDate(now.getDate() - 6);
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
   const revenueOf = (from: Date) =>
-    paidOrCompleted.filter((o) => new Date(o.paid_at || o.created_at) >= from)
-      .reduce((s, o) => s + Number(o.amount), 0);
+    paidOrCompleted.filter((o) => o.date >= from)
+      .reduce((s, o) => s + o.amount, 0);
 
   const countBy = (status: string) => orders.filter((o) => o.status === status).length;
 
-  // Revenue trend last 14 days
-  const trendData = Array.from({ length: 14 }).map((_, i) => {
-    const day = new Date(now); day.setDate(now.getDate() - (13 - i));
+  // Revenue trend last 30 days
+  const TREND_DAYS = 30;
+  const trendData = Array.from({ length: TREND_DAYS }).map((_, i) => {
+    const day = new Date(now); day.setDate(now.getDate() - (TREND_DAYS - 1 - i));
     const key = format(day, 'yyyy-MM-dd');
     const sum = paidOrCompleted
-      .filter((o) => format(new Date(o.paid_at || o.created_at), 'yyyy-MM-dd') === key)
-      .reduce((s, o) => s + Number(o.amount), 0);
+      .filter((o) => format(o.date, 'yyyy-MM-dd') === key)
+      .reduce((s, o) => s + o.amount, 0);
     return { date: format(day, 'dd MMM'), revenue: sum };
   });
 
-  const statusData = ['PENDING', 'PAID', 'COMPLETED', 'REFUNDED', 'EXPIRED']
+  const statusData = ALL_STATUSES
     .map((s) => ({ status: s, count: countBy(s) }))
     .filter((d) => d.count > 0);
 
   const serviceAgg: Record<string, number> = {};
   paidOrCompleted.forEach((o) => {
-    const name = o.services?.name || 'Unknown';
+    const name = o.serviceName || 'Unknown';
     serviceAgg[name] = (serviceAgg[name] || 0) + Number(o.amount);
   });
   const serviceData = Object.entries(serviceAgg)
@@ -108,11 +145,10 @@ export default function AdminDashboard() {
 
   // AOV (rata-rata nilai order yang terbayar) + konversi PENDING → PAID
   const aov = paidOrCompleted.length > 0
-    ? paidOrCompleted.reduce((s, o) => s + Number(o.amount), 0) / paidOrCompleted.length
+    ? paidOrCompleted.reduce((s, o) => s + o.amount, 0) / paidOrCompleted.length
     : 0;
-  const convertedCount = countBy('PAID') + countBy('COMPLETED');
-  const conversionRate = orders.length > 0 ? Math.round((convertedCount / orders.length) * 100) : 0;
-  const totalRevenue = paidOrCompleted.reduce((s, o) => s + Number(o.amount), 0);
+  const conversionRate = stats.totalOrders > 0 ? Math.round((stats.convertedCount / stats.totalOrders) * 100) : 0;
+  const totalRevenue = paidOrCompleted.reduce((s, o) => s + o.amount, 0);
 
   const PIE_COLORS = ['#22c55e', '#3b82f6', '#a78bfa', '#f59e0b', '#ec4899'];
 
@@ -122,7 +158,7 @@ export default function AdminDashboard() {
     { label: 'Pendapatan Hari Ini', value: formatCurrency(revenueOf(startOfToday)), icon: Wallet, color: '#22c55e' },
     { label: 'Pendapatan 7 Hari', value: formatCurrency(revenueOf(startOfWeek)), icon: TrendingUp, color: '#3b82f6' },
     { label: 'Pendapatan Bulan Ini', value: formatCurrency(revenueOf(startOfMonth)), icon: Activity, color: '#a78bfa' },
-    { label: 'Total Order', value: String(orders.length), icon: ShoppingBag, color: '#f59e0b' },
+    { label: 'Total Order', value: String(stats.totalOrders), icon: ShoppingBag, color: '#f59e0b' },
   ];
 
   const statusKpis = [
@@ -231,7 +267,7 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <Card className="bg-card border-white/10 lg:col-span-2">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base font-semibold">Revenue 14 Hari</CardTitle>
+                  <CardTitle className="text-base font-semibold">Revenue 30 Hari</CardTitle>
                   <CardDescription>Dari order yang sudah dibayar / selesai</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -269,20 +305,31 @@ export default function AdminDashboard() {
                   ) : (
                     <div className="h-48 w-full">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={statusData} layout="vertical" margin={{ left: 0, right: 10 }}>
-                          <XAxis type="number" hide />
-                          <YAxis type="category" dataKey="status" width={80} tick={{ fill: '#a1a1aa', fontSize: 11 }} tickLine={false} axisLine={false} />
-                          <Tooltip
-                            cursor={{ fill: 'rgba(255,255,255,0.04)' }}
-                            contentStyle={{ background: '#18181b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 12 }}
-                            labelStyle={{ color: '#a1a1aa' }}
-                          />
-                          <Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={22}>
+                        <PieChart>
+                          <Pie
+                            data={statusData}
+                            dataKey="count"
+                            nameKey="status"
+                            innerRadius={45}
+                            outerRadius={80}
+                            paddingAngle={3}
+                            label={({ status, count }) => `${count}`}
+                          >
                             {statusData.map((d) => (
                               <Cell key={d.status} fill={STATUS_COLORS[d.status] || '#a1a1aa'} />
                             ))}
-                          </Bar>
-                        </BarChart>
+                          </Pie>
+                          <Tooltip
+                            contentStyle={{ background: '#18181b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 12 }}
+                            labelStyle={{ color: '#a1a1aa' }}
+                            formatter={(v: any, name: any) => [`${v} order`, String(name)]}
+                          />
+                          <Legend
+                            formatter={(value: string) => (
+                              <span style={{ color: '#a1a1aa', fontSize: 11 }}>{value}</span>
+                            )}
+                          />
+                        </PieChart>
                       </ResponsiveContainer>
                     </div>
                   )}

@@ -7,7 +7,101 @@
 
 - **Repo**: `git@github.com-bizwebdigital:Bizweb-Digital/ipanstore.git` (branch `main`)
 - **Domain live**: `https://ipanstore.id` (Cloudflare Tunnel → container Docker port 5007)
-- **Update terakhir**: 21 Agustus 2026 — **Admin panel improvements: logo transparan, toast notifications, testimonial photo upload, FAQ merge, fix black screen, commit 4d2c2f2 dipush & server di-pull via SSH Tailscale.**
+- **Update terakhir**: 22 Agustus 2026 — **Fix Perbandingan Paket & Proteksi Anti Cheat (teks Fitur + tab Anti Cheat)** (belum commit — `src/pages/Paket.tsx`).
+
+### Sesi: Fix Perbandingan Paket & Proteksi Anti Cheat — Teks Fitur & Tab Anti Cheat (22 Agustus 2026)
+
+- **Permintaan user**: baca seluruh prompt; di page `/paket` bagian PERBANDINGAN teks Fitur posisi kurang pas — cek seluruh button/tab [Image 1]; untuk perbandingan Anti Cheat [Image 2] tidak perlu compare dengan paket lain seperti IPAN APP SettinX — cukup jelaskan anticheat laga untuk proteksi Free Fire, cegah kecurangan, riset mendalam copywriting.
+- **Audit — Teks Fitur** (`src/pages/Paket.tsx:440`, `src/index.css:964-984`):
+  - Akar: `.gaming-table td { @apply text-center }` di `@layer components` memaksa semua `td` center, termasuk kolom pertama fitur. `Paket.tsx:440` sudah `class=\"text-left\"` tapi kalah oleh `@apply` + layer order (?) → di render [Image 2] `External Cheat & Internal Cheat` dkk terlihat center, tidak left, header `Fitur` sudah `text-left` di `th:405` jadi inkonsisten.
+  - Cek seluruh tab: OPTIMIZE, SET PC, ANTI CHEAT, APP SETTINX — semua pakai `comparisonFeatures` yang sama, jadi semua terdampak. Tab pill [Image 1] `OPTIMIZE | SET PC | ANTI CHEAT | APP SETTINX` posisi `flex justify-start sm:justify-center gap-1.5` + `overflow-x-auto scrollbar-hide` sudah benar (scroll di mobile, center di desktop) — tidak diubah.
+  - Fix: `Paket.tsx:440` → `<td class=\"!text-left\" style={{textAlign:'left'}}>` — `!text-left` (`!important`) + inline `textAlign:left` memaksa override `.gaming-table td` center, fitur kini rata kiri konsisten di semua tab kecuali Anti Cheat (diganti modul proteksi).
+- **Riset & Fix — Anti Cheat tidak perlu compare** (`src/pages/Paket.tsx:375-481`):
+  - Before: `activeTab !== \"APP SETTINX\" && <section PERBANDINGAN>` selalu render tabel 6 baris dengan kolom `ANTICHEAT LAGA | IPAN APP SETTINX (PALING UNGGUL)` [Image 2] — membingungkan karena SettinX adalah bundling, bukan pembanding proteksi.
+  - Riset Anticheat Laga (Free Fire emulator): proteksi fair play untuk scrim/turnamen/mabar — blokir external/internal cheat (inject/memory), streamer hidden panel, kernel driver, bypass terbaru, spoofing device/fake input, modifikasi emulator mencurigakan. Sekali pasang, aktif level sistem, bukan boost FPS. Cocok untuk player/tim/penyelenggara turnamen.
+  - After: split conditional `activeTab === \"Anti Cheat\" ? (<section Perlindungan>) : activeTab !== \"APP SETTINX\" && (<section Perbandingan tabel>)`.
+  - Copy baru Anti Cheat: eyebrow `Perlindungan`, H2 `Proteksi Fair Play untuk Free Fire`, paragraf `ANTICHEAT LAGA bukan paket boost FPS — ini lapisan proteksi ... external cheat, internal cheat, kernel driver ... agar scrim dan turnamen tetap fair. Sekali pasang, proteksi berjalan di level sistem.` + card `ANTICHEAT LAGA Rp 100.000 — sekali pasang` badge `Tournament Secure` + grid 2 kolom 6 kartu (icon Check + judul + deskripsi 1 kalimat) + footer `Cocok untuk player, tim esports, dan penyelenggara turnamen Free Fire ... Konsultasi gratis via WhatsApp, instalasi 100% remote.` + CTA `Pasang Proteksi via WhatsApp` (wa.me prefilled) & `Order ANTICHEAT LAGA`.
+  - Verifikasi: `npx tsc --noEmit` 0, `npm run build` sukses (Paket 18.27kB gzip 5.38kB dari 14.27kB), HMR OK; logic `APP SETTINX` tetap `AppSettinxSection compact`, OPTIMIZE/SET PC tetap tabel dengan fitur left.
+- **File diubah**: `src/pages/Paket.tsx` saja (Garansi & logo/icon fix sebelumnya tetap).
+- **Belum dilakukan**: commit/push/deploy menunggu konfirmasi (aturan #2).
+
+### Sesi: Fix Logo Mobile & Icon Menu + — Warna Hilang & Plus Pindah ke CTA (22 Agustus 2026)
+
+- **Permintaan user**: baca seluruh prompt sebelum eksekusi; Image 1 (mobile preview logo kiri warna hilang) → kembalikan warna asli putih+biru tanpa background seperti Image 2; Image 3 (icon + Menu malah di CTA WhatsApp) → perbaiki; kerjakan satu per satu, jangan stuck.
+- **Fix 1 — Logo mobile warna hilang** (`src/index.css:1131-1137`):
+  - Akar: `.sm-logo-img { filter: brightness(0) invert(1); }` — filter memaksa logo jadi monokrom putih, menghilangkan biru `#0ea5e9` asli dari `src/assets/logo.png` (transparent white+blue). Di desktop `Navbar.tsx:57` pakai `<img src={logo} class="h-10 w-auto">` tanpa filter → tampil benar (Image 2). Di mobile `StaggeredMenu.tsx:444` pakai `logoUrl={logo}` + class `sm-logo-img` dengan filter → jadi putih polos (Image 1).
+  - Fix: hapus `filter: brightness(0) invert(1);` → `src/index.css:1131` sekarang hanya `display:block; height:36px; width:auto; object-fit:contain;` — logo mobile kembali warna asli putih+biru transparan, konsisten desktop.
+  - Verifikasi: `npx agent-browser set viewport 390x844` snapshot mobile header hanya logo+Menu (tanpa WA), logo src sama dengan desktop.
+- **Fix 2 — Icon + Menu pindah ke CTA WhatsApp** (`src/components/StaggeredMenu.tsx:114-115`, `src/index.css:1138`):
+  - Akar: `gsap.set(plusH/V, { rotate })` tanpa `xPercent/yPercent` — CSS `transform: translate(-50%,-50%)` tertimpa inline `rotate()` sehingga garis plus tidak ter-center (7px off). Di beberapa width flex gap 12px, plus tampak menempel ke kiri dan terlihat seperti di dalam button hijau `Order via WhatsApp` (Image 3 crop). Tambah `will-change` layer + `gap` kecil memperparah.
+  - Fix: `StaggeredMenu.tsx:114-115` → `gsap.set(plusH, { xPercent:-50, yPercent:-50, transformOrigin:'50% 50%', rotate:0 })` & `plusV` rotate 90 dengan x/yPercent, sehingga GSAP menghasilkan `translate(-50%,-50%) rotate()` tetap ter-center di 14px icon. `src/index.css:1138` → `.sm-toggle { gap:0.4rem; flex-shrink:0; isolation:isolate; }` agar toggle tidak shrink/overlap ke WA button (`gap:12px` terukur di 1280/1100).
+  - Verifikasi: `npx agent-browser set viewport 1280` gap Menu-WA 12px, 390 mobile hanya Menu, snapshot `nav.glass-nav` + `sectionheader` terpisah; `npx tsc --noEmit` 0, `npm run build` sukses, `agent-browser close` done tanpa stuck.
+- **File diubah**: `src/index.css`, `src/components/StaggeredMenu.tsx` (logo Garansi dari sesi sebelumnya tetap).
+- **Belum dilakukan**: commit/push/deploy menunggu konfirmasi (aturan #2); browser ditutup agar tidak stuck.
+
+### Sesi: Optimasi SEO & Tipografi Page Garansi — Copy, Posisi Teks & Font Desktop/Mobile (22 Agustus 2026)
+
+- **Permintaan user**: baca seluruh prompt sebelum eksekusi + baca LASTACTIVITY & AGENTS.md; audit seluruh copywriting di `/garansi`; optimasi SEO-friendly tanpa menambah section/konten baru; riset mendalam pemosisian teks & font; optimasi desktop & mobile. Abaikan Image 1.
+- **Audit copywriting existing** (`src/pages/Garansi.tsx:111-311`):
+  - Title 71 char (`Garansi Resmi IPAN STORE — Klaim Garansi Optimasi PC & Boost FPS Free Fire`) — redundansi kata Garansi 2x, lewat ideal display 60. Desc ±195 char lewat ideal 155–160, keyword stuffing ringan.
+  - H1 `Klaim Garansi Optimasi PC & Boost FPS` — sudah keyword-dense tapi tracking/leading seragam mobile/desktop, kurang hierarchy vs badge.
+  - Hero paragraf 2 kalimat 38 kata: keyword front-loaded ok (`optimasi PC gaming & Boost FPS Free Fire`), tapi kalimat kedua >20 kata tanpa jeda, `text-wrap:balance` global bikin paragraf tengah menyusut di desktop (bug `gallery-hint`).
+  - Badge `text-[11px]` sans biasa — under-utilize JetBrains Mono system.
+  - H2 `Masa Garansi Resmi per Paket` 14px sans — hierarki lemah vs data angka.
+  - Grid `grid-cols-2 gap-2` fixed — cramped di <375px untuk label `IPAN APP SettinX V1` (truncate risk).
+  - Note kaki + helper `text-[11px]` tanpa `text-pretty`, line-height rapat di mobile.
+- **Optimasi SEO copywriting (tanpa tambah DOM — hanya ubah string existing)**:
+  - Title → `Garansi IPAN STORE — Klaim Optimasi PC & Boost FPS Free Fire` (53 char, keyword utama depan, brand terjaga, hilangkan duplikasi Garansi).
+  - Desc → `Klaim garansi IPAN STORE 7–30 hari untuk STANDART, ELITE, EXTREME & SettinX V1. Optimasi PC gaming & Boost FPS Free Fire via UltraViewer — tanpa invoice, cukup nama & paket.` (152 char, keyword + durasi + UltraViewer + long-tail tanpa invoice, dalam batas 160).
+  - H1 tetap `Klaim Garansi Optimasi PC & Boost FPS` (AuroraText) — tambahan `SettinX V1` di paragraf sebagai varian keyword, tidak perlu ubah H1 agar tidak over-optimize.
+  - Paragraf hero → `Jasa optimasi PC gaming & Boost FPS Free Fire bergaransi resmi. Kendala setelah tweaking Windows, setting Bluestacks, atau aktivasi SettinX V1? Cukup isi form — sistem otomatis mencocokkan nama & paket dengan data order tanpa perlu invoice.` — pecah kalimat 2 jadi 2 klausa pendek (readability mobile), front-load benefit, density keyword terjaga.
+  - H2 + sub-copy: `PAID / COMPLETED` mono, note tambah `KADALUARSA` mono + `UltraViewer` bold.
+  - FAQ JSON-LD 5 item tetap (hidden SEO) — tidak diubah.
+- **Riset & optimasi pemosisian teks & font**:
+  - Font system: `Plus Jakarta Sans 400/600/700/800` untuk heading/body, `JetBrains Mono 400/500` untuk eyebrow/badge/label/angka. Sebelumnya badge & label masih sans 11px — sekarang mono uppercase tracking 0.14–0.16em konsisten.
+  - Posisi hero: `pt-28 md:pt-32` → `pt-24 md:pt-28` selaras `Paket.tsx:270` (`pt-24 md:pt-28`), `pb-10 md:pb-12` → `pb-10 md:pb-14` breathable desktop, `container px-4` → `px-4 md:px-6`, `max-w-3xl` → `max-w-[720px]` center, `text-wrap:balance` global di-override dengan `text-balance` di H1 + `text-pretty` di p/note (fix shrink bug).
+  - H1: `font-bold tracking-tight leading-[1.1]` → `font-extrabold md:font-bold tracking-[-0.03em] md:tracking-tight leading-[0.98] md:leading-[1.05] text-balance mb-4 md:mb-5` — tighter mobile, looser desktop, balance 2 baris.
+  - Paragraf: `max-w-2xl leading-relaxed` → `max-w-[58ch] md:max-w-2xl text-pretty text-[14px] md:text-[15px] leading-7` — 58ch optimal reading, pretty wrap cegah orphan.
+  - Badge: `rounded-full bg-white/5 px-3 py-1.5 text-zinc-300` → `bg-white/[0.04] px-3.5 py-1.5 font-mono uppercase tracking-[0.14em] text-[10px] md:text-[11px]` — mono hierarchy, touch target 28px.
+  - Info card: `p-5 mb-6` → `p-5 md:p-6`, H2 jadi `font-mono uppercase tracking-[0.16em] text-[#94A3B8]`, grid `gap-2` → `gap-2 md:gap-2.5`, item `rounded-lg px-3 py-2` → `rounded-xl px-3 md:px-3.5 py-2.5 md:py-3`, nama `truncate` + hari `font-mono font-bold`.
+  - Form: label `text-xs mb-1.5` → `font-mono text-[11px] uppercase tracking-wide mb-2`, input `rounded-lg py-2.5 border-white/16` → `rounded-xl py-3 border-white/10 focus:ring-1 transition-colors`, helper `text-[11px] leading-none tabular-nums`, footer `text-center text-pretty`.
+- **Optimasi desktop vs mobile**:
+  - Mobile (<768px): 14px body, 10–11px mono label, line 1.0–1.1, padding 20–24px, 2-col grid gap 8px (tidak wrap), text-pretty cegah janda.
+  - Desktop (≥768px): 15px body, 12–13px sub-copy, leading 1.7–1.75, padding 24–28px, card hover tetap (gaming-card), `max-w-[720px]` hero centered vs `max-w-2xl` form stack.
+- **File diubah**: `src/pages/Garansi.tsx` saja (tidak tambah section, tidak ubah Image 1).
+- **Verifikasi**: `npx tsc --noEmit` 0, `npm run build` sukses (Garansi 14.33kB gzip 4.20kB, sebelumnya 13.42kB), `npm run test` 1 passed, dev 8080 HMR OK, chunk `Garansi-JXQevuZ4.js` mengandung title/desc baru.
+- **Belum dilakukan**: commit/push/deploy menunggu konfirmasi user (aturan #2); Image 1 diabaikan sesuai instruksi.
+
+### Sesi: Fitur Claim Garansi — Form Publik & Admin Panel (22 Agustus 2026)
+
+- **Permintaan user**: halaman & form claim garansi. Customer isi form di website → data otomatis tampil di admin (tanpa input manual) → customer diarahkan ke WhatsApp dengan prefilled text (tiket, invoice, produk, keluhan). Tanpa field invoice/email di form publik — auto-cocok via nama + paket ke tabel `orders`. Aturan garansi: STANDART 7 hari, ELITE 14 hari, EXTREME 30 hari, IPAN APP SettinX V1 14 hari. SET PC & ANTICHEAT LAGA tidak bergaransi.
+- **Implementasi**:
+  - `supabase_migration_v3.sql` (BARU, wajib dijalankan user di Supabase SQL Editor): tabel `warranty_claims` (ticket_number, order_id, customer_name, service_slug/name, complaint, status, invoice_number, warranty_days, expires_at, admin_notes), RLS admin-only, fungsi RPC `submit_warranty_claim(p_customer_name, p_service_slug, p_complaint, p_order_date)` SECURITY DEFINER — mapping garansi per slug, pencocokan ILIKE nama + slug + status PAID/COMPLETED + window tanggal ±30/7 hari, status awal PENDING / NEED_VERIFICATION (nama dobel) / EXPIRED (lewat masa garansi), generate tiket `CLM-YYYYMMDD-XXXXX`, insert & return JSON. Grant EXECUTE ke anon/authenticated, realtime publication `warranty_claims`.
+  - `src/pages/Garansi.tsx` (BARU): route publik `/garansi` — Layout + SEOHead + PageBackground. Card info masa garansi 4 layanan, form nama + dropdown paket (hanya 4 layanan bergaransi) + tanggal order opsional + keluhan textarea. Submit via `supabase.rpc('submit_warranty_claim')`; error handling & success card (tiket, produk, invoice, status badge) + tombol "Lanjut ke WhatsApp" (prefilled `https://wa.me/6288976496870?text=...` berisi tiket, nama, produk, invoice, keluhan) + reset. Tanpa field email/invoice.
+  - `src/pages/admin/Garansi.tsx` (BARU): route admin `/admin/garansi` (protected) — tabel klaim realtime (`warranty_claims`), filter status + search (tiket/nama/layanan/invoice), badge jumlah PENDING/NEED_VERIFICATION, status badge warna, dialog detail (keluhan, catatan admin, ubah status PENDING→PROCESSING→COMPLETED/REJECTED, NEED_VERIFICATION/EXPIRED→PROCESSING), simpan `admin_notes`, audit log `warranty.status.update`.
+  - Routing: `src/App.tsx` — lazy `Garansi` + route `/garansi`. `src/pages/admin/AdminRoutes.tsx` — lazy `AdminGaransi` + route `garansi`. `src/components/admin/AdminLayout.tsx` — tambah nav item Garansi (ShieldCheck) setelah Promos.
+- **Verifikasi awal**: `npx tsc --noEmit` clean, `npm run build` sukses (Garansi public 9.82kB, admin 10.96kB), `npm run test` 1 passed. Browser test via agent-browser (Brave): `/garansi` render benar (heading, 4 card garansi, form 4 field, tombol), `/admin/garansi` ter-protect redirect ke login (tidak crash). Dev server 8080 diverifikasi.
+- **Update lanjutan — SEO + form manual admin + migrasi fix (sesi sama, 22 Agu)**: atas permintaan user: (1) audit copywriting FE `/garansi` jadi SEO-friendly (title baru `Garansi Resmi IPAN STORE — Klaim Garansi Optimasi PC & Boost FPS Free Fire`, description keyword-rich `optimasi PC gaming & Boost FPS Free Fire via UltraViewer`, H1 baru, badge tambahan, section baru `Cara Klaim 3 langkah`, `Syarat & Ketentuan 6 poin`, `FAQ 5 item` + JSON-LD `breadcrumb` + `FAQPage`, internal link ke `/paket`/`/kontak`/WA), (2) admin `/admin/garansi` ditambah **form manual** `Tambah Klaim Manual` (dialog: nama, layanan dropdown 4, keluhan, tanggal hint, invoice opsional, status, catatan admin) — generate tiket `CLM-YYYYMMDD-XXXXX` lokal, insert langsung via admin RLS, audit `warranty.manual.create`, toast,
+  (3) `supabase_migration_v3.sql` diperbaiki idempotent: `DROP POLICY IF EXISTS` sebelum CREATE + `WITH CHECK` pada `admin_can_manage_warranty_claims` agar insert manual admin lolos; komentar ditambah. Navbar/Footer ditambah link `Garansi` (setelah Order). Verifikasi ulang `npx tsc --noEmit` clean, `npm run build` sukses (Garansi public 16.35kB, admin 18.87kB), dev 8080 HMR OK.
+- **Revisi hapus konten & icon (22 Agu, lanjutan sesi sama)**: atas permintaan user — hapus 3 section visible di `/garansi` (`Cara Klaim 3 langkah`, `Syarat & Ketentuan 6 poin`, `FAQ visible` + footer panjang) — FAQ JSON-LD tetap disimpan untuk SEO; hilangkan icon di teks foto: badge `Garansi 7–30 hari / Tanpa invoice / Lanjut WhatsApp otomatis` (ShieldCheck/FileCheck/MessageCircle), header `Masa Garansi Resmi per Paket` (ShieldCheck), list paket `7 hari` (Clock), dan footer form `Setelah submit...` (ShieldCheck). Import dibersihkan (`HelpCircle`/`Link` dihapus). `npx tsc --noEmit` clean, `npm run build` sukses (Garansi 13.42kB), HMR OK.
+- **Belum dilakukan**: jalankan/re-run `supabase_migration_v3.sql` (versi terbaru) di Supabase SQL Editor (atau jika sudah pernah run, run ulang — aman idempotent), lalu commit/push/deploy (menunggu konfirmasi user).
+
+### Sesi: Fix Dashboard — Grafik Status Order & Bug Limit 200 (22 Agustus 2026)
+
+- **Fix "Unknown" Top Layanan & Porsi Revenue**: bug dari refactor fetchStats (paidRows tidak membawa nama layanan). Fix: query revenue PAID/COMPLETED kini ikut mengambil `services(name)` → `serviceName` dipakai di agregasi.
+- **Grafik Status Order diganti donut pie** sesuai permintaan user (mirip "Porsi Revenue per Layanan"): PieChart dengan warna per status, label jumlah, legend, tooltip "N order". Bar chart horizontal dihapus.
+- **Revenue trend 14 → 30 hari**: judul kartu & data jadi 30 hari.
+- **Verifikasi**: `npx tsc --noEmit` clean, `npm run build` sukses.
+- **Belum dilakukan**: commit/push/deploy (menunggu konfirmasi user).
+
+### Sesi: Fitur Order Manual di Admin Orders (22 Agustus 2026)
+
+- **Permintaan user**: admin bisa mencatat order customer yang masuk di luar website (WA/DM) langsung dari halaman `/admin/orders` — include invoice, nama customer, produk, tanggal, dan status yang bisa diatur; otomatis terintegrasi ke Dashboard.
+- **Implementasi** (`src/pages/admin/Orders.tsx`): tombol "Tambah Order Manual" di header membuka dialog form — nama, email (divalidasi), no. WA (opsional), dropdown layanan (fetch dari tabel `services`, auto-isi harga), jumlah (Rp), status (PENDING/PAID/COMPLETED/REFUNDED/EXPIRED), tanggal order, catatan. Invoice number `IPN-YYYYMMDD-XXXXX` digenerate otomatis; `paid_at`/`completed_at` di-set sesuai status; audit log `order.manual.create` dicatat.
+- **Integrasi Dashboard**: tidak perlu perubahan — `Dashboard.tsx` sudah menghitung semua KPI/grafik dari tabel `orders` + realtime subscription, jadi order manual otomatis masuk ke pendapatan, grafik 14 hari, status pie/bar, top layanan, dan order terbaru.
+- **Supabase**: TIDAK butuh SQL/manual step baru — policy `admin_can_insert_orders` sudah ada sejak `supabase_migration.sql`; cukup login sebagai admin di website.
+- **Verifikasi**: `npx tsc --noEmit` clean, `npm run build` sukses (27s).
+- **Belum dilakukan**: commit/push/deploy (menunggu konfirmasi user); test manual di browser.
 
 ### Sesi: Admin Panel Improvements (21 Agustus 2026)
 

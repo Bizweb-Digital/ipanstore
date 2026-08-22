@@ -372,8 +372,69 @@ const Paket = () => {
             </div>
           </section>
 
-          {/* Comparison Table */}
-        {activeTab !== "APP SETTINX" && (
+          {/* Comparison / Anti Cheat Protection */}
+        {activeTab === "Anti Cheat" ? (
+            <section className="relative py-16 md:py-20">
+              <PageBackground opacity={0.12} />
+              <div className="container mx-auto px-4 relative z-10">
+                <div className="max-w-3xl mx-auto text-center mb-12">
+                  <span className="section-subheading">Perlindungan</span>
+                  <h2 className="h2-clamp font-bold tracking-tight text-[#F4F4F5] mb-4">
+                    Proteksi Fair Play untuk Free Fire
+                  </h2>
+                  <p className="text-pretty max-w-2xl mx-auto text-zinc-400 leading-relaxed">
+                    <strong className="text-zinc-200 font-medium">ANTICHEAT LAGA</strong> bukan paket boost FPS — ini lapisan proteksi saat kamu bermain Free Fire di emulator. Mencegah kecurangan <em className="text-zinc-300 not-italic">external cheat, internal cheat, kernel driver, hidden panel & manipulasi emulator</em> agar scrim dan turnamen tetap fair. Sekali pasang, proteksi berjalan di level sistem.
+                  </p>
+                </div>
+                <div className="max-w-4xl mx-auto">
+                  <div className="gaming-card p-6 md:p-8">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+                      <div>
+                        <h3 className="text-lg font-semibold tracking-tight text-[#F4F4F5]">ANTICHEAT LAGA</h3>
+                        <p className="font-mono text-xs tracking-wide text-zinc-500 mt-1">Rp 100.000 — sekali pasang, proteksi aktif</p>
+                      </div>
+                      <span className="inline-flex self-start md:self-auto rounded-full bg-[#94A3B8]/10 border border-[#94A3B8]/20 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-[#94A3B8]">Tournament Secure</span>
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-4 md:gap-6">
+                      {[
+                        { t: "External & Internal Cheat", d: "Blokir inject dan memory tampering yang menyusup lewat aplikasi luar maupun di dalam proses emulator." },
+                        { t: "Streamer Cheat & Hidden Panel", d: "Deteksi panel tersembunyi yang biasa dipakai saat live/stream — cegah toggle cheat tanpa jejak." },
+                        { t: "Kernel Driver Cheat", d: "Proteksi level driver yang menghalau cheat berbasis kernel yang lolos dari scan user-mode biasa." },
+                        { t: "Metode bypass terbaru", d: "Update signature untuk teknik bypass emulator & patch anti-detect terbaru di komunitas." },
+                        { t: "Manipulasi emulator tidak wajar", d: "Cegah spoofing device, fake input, dan modifikasi properti emulator yang memicu flag sistem." },
+                        { t: "Modifikasi emulator mencurigakan", d: "Alert saat ada perubahan file/config emulator yang mengarah ke exploit atau auto-aim." },
+                      ].map((f) => (
+                        <div key={f.t} className="flex gap-3 rounded-xl bg-[#131314] border border-white/10 p-4">
+                          <Check className="h-4 w-4 text-[#94A3B8] mt-0.5 shrink-0" strokeWidth={2.5} />
+                          <div>
+                            <p className="text-sm font-medium leading-tight text-[#F4F4F5]">{f.t}</p>
+                            <p className="text-xs leading-relaxed text-zinc-500 mt-1">{f.d}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="mt-6 text-pretty text-xs leading-relaxed text-zinc-500">
+                      Cocok untuk player, tim esports, dan penyelenggara turnamen Free Fire yang butuh pertandingan bersih — tanpa khawatir lawan pakai program curang. Konsultasi gratis via WhatsApp, instalasi 100% remote.
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center items-center">
+                  <Button asChild variant="default" size="lg" className="w-full sm:w-auto">
+                    <a href={`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent("Halo min, saya mau pasang ANTICHEAT LAGA untuk proteksi Free Fire")}`} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center">
+                      Pasang Proteksi via WhatsApp
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </a>
+                  </Button>
+                  <Button asChild variant="outline" size="lg" className="w-full sm:w-auto">
+                    <Link to="/order?paket=anti-cheat-laga" className="flex items-center justify-center">
+                      Order ANTICHEAT LAGA
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            </section>
+        ) : activeTab !== "APP SETTINX" && (
             <section className="relative py-16 md:py-20">
               <PageBackground opacity={0.12} />
               <div className="container mx-auto px-4 relative z-10">
@@ -437,7 +498,7 @@ const Paket = () => {
                       <tbody>
                         {filteredComparison.map((f) => (
                           <tr key={f.name}>
-                            <td className="text-left font-medium text-[#94A3B8]">{f.name}</td>
+                            <td className="!text-left font-medium text-[#94A3B8]" style={{ textAlign: 'left' }}>{f.name}</td>
                             {filteredPackages.map((p) => (
                               <td key={p.name}><FeatureCheck ok={f[p.name]} /></td>
                             ))}
