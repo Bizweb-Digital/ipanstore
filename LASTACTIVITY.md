@@ -7,7 +7,17 @@
 
 - **Repo**: `git@github.com-bizwebdigital:Bizweb-Digital/ipanstore.git` (branch `main`)
 - **Domain live**: `https://ipanstore.id` (Cloudflare Tunnel → container Docker port 5007)
-- **Update terakhir**: 22 Agustus 2026 — **Fix Desktop 88→91 + Scroll Stack & Galeri LIVE** (commit `5996bc5` push `08c02bb..5996bc5`, live `index-BSLbwrpZ.js`).
+- **Update terakhir**: 22 Agustus 2026 — **PSI 59/88 Fix — Logo WebP + Supabase Idle + Forced Reflow** (belum commit — `logo.png/webp`, `Navbar/Footer`, `TestimoniPreview.tsx`).
+
+### Sesi: PSI 59/88 Fix — Logo WebP + Supabase Idle + Forced Reflow (22 Agustus 2026)
+
+- **Permintaan user**: analisa detail PSI mobile 59 (FCP 4.3 LCP 6.5 TBT 300 CLS 0.001 SI 4.8) & desktop 88 (FCP 0.9 LCP 1.2 TBT 180 CLS 0.002 SI 1.9) — bahasa mudah, baru eksekusi setelah setuju; lalu gas dengan brave/msedge.
+- **Analisa mudah**: 1) Logo `logo-BeA5ZUhu.png 363kB 1058×405` tampil `293×112` → boros 359kB LCP; 2) CSS `index-DLnUej59.css 28kB` render-blocking 160ms; 3) Forced reflow `react-ven 213ms` + `index 97ms` dari `DepthCarousel ResizeObserver` + `ScrollStack offsetTop`; 4) Rantai kritis `1740ms` Supabase `testimonials?select=*` blokir LCP; 5) Main-thread 2.6s (`Script Eval 961ms`), Unused JS 162kB (`index 113kB` + `animation-vendor 48kB`).
+- **Eksekusi tanpa pangkas efek**:
+  - Logo: `src/assets/logo.png 1058×405 → 600×230` via `sharp` `png 95kB` + `webp 28kB` + `293w 13kB` → `Navbar.tsx`/`Footer.tsx` pakai `<picture><source webp 293/600w>`, header `fetchPriority=high` (`Navbar.tsx:5,63`), footer `loading=lazy`. Hemat `~330kB` est PSI.
+  - Supabase: `src/components/sections/TestimoniPreview.tsx:57-84` fetch dibungkus `requestIdleCallback timeout 2000 / setTimeout 800` → tidak ikut rantai kritis `1740ms` LCP.
+  - Forced reflow & scroll: sudah fix `ScrollStack k 0.32→0.16` + `DepthCarousel blur 4/5→2 mobile` di sesi sebelumnya; `content-visibility` dibatasi hanya `gaming-table-wrapper`.
+- **Verifikasi**: `npx tsc` 0, build `index-Cw0DJ93O.js` 580kB + webp `logo-BryJf5zc 28kB` live, `brave` check setelah deploy.
 
 ### Sesi: Fix Desktop 88→91 + Scroll Stack Cepat & Galeri Lag (22 Agustus 2026)
 

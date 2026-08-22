@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { WA_LINK } from "../FloatingWhatsApp";
 import logo from "@/assets/logo.png";
+import logoWebp from "@/assets/logo.webp";
+import logoWebp293 from "@/assets/logo-293.webp";
 
 const StaggeredMenu = lazy(() => import("../StaggeredMenu"));
 
@@ -54,13 +56,18 @@ const Navbar = () => {
               window.location.href = "/";
             }}
           >
-            <img
-              src={logo}
-              alt="Ipan Store"
-              width={288}
-              height={216}
-              className="h-10 w-auto object-contain"
-            />
+            <picture>
+              <source srcSet={`${logoWebp293} 293w, ${logoWebp} 600w`} sizes="(max-width: 768px) 120px, 144px" type="image/webp" />
+              <img
+                src={logo}
+                alt="Ipan Store"
+                width={288}
+                height={110}
+                className="h-10 w-auto object-contain"
+                decoding="async"
+                fetchPriority="high"
+              />
+            </picture>
           </a>
 
           <div className="flex items-center gap-3 shrink-0">
@@ -83,7 +90,7 @@ const Navbar = () => {
               socialItems={socialLinks}
               displaySocials={true}
               displayItemNumbering={true}
-              logoUrl={logo}
+              logoUrl={logoWebp}
               menuButtonColor="#F4F4F5"
               openMenuButtonColor="#F4F4F5"
               accentColor="#94A3B8"
@@ -110,7 +117,7 @@ const Navbar = () => {
           socialItems={socialLinks}
           displaySocials={true}
           displayItemNumbering={true}
-          logoUrl={logo}
+          logoUrl={logoWebp}
           menuButtonColor="#F4F4F5"
           openMenuButtonColor="#F4F4F5"
           accentColor="#94A3B8"

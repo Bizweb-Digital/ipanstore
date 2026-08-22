@@ -56,7 +56,8 @@ const TestimoniPreview = () => {
 
   useEffect(() => {
     let mounted = true;
-    (async () => {
+    let idleId: number | undefined;
+    const run = async () => {
       try {
         const { data, error } = await supabase
           .from("testimonials")
@@ -79,9 +80,16 @@ const TestimoniPreview = () => {
       } finally {
         if (mounted) setLoading(false);
       }
-    })();
+    };
+    const w = window as unknown as { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number; cancelIdleCallback?: (id: number) => void };
+    if (typeof w.requestIdleCallback === 'function') {
+      idleId = w.requestIdleCallback(() => { run(); }, { timeout: 2000 });
+    } else {
+      setTimeout(run, 800);
+    }
     return () => {
       mounted = false;
+      if (idleId !== undefined && typeof w.cancelIdleCallback === 'function') w.cancelIdleCallback(idleId);
     };
   }, []);
 
