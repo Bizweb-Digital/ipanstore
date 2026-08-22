@@ -7,7 +7,7 @@
 
 - **Repo**: `git@github.com-bizwebdigital:Bizweb-Digital/ipanstore.git` (branch `main`)
 - **Domain live**: `https://ipanstore.id` (Cloudflare Tunnel → container Docker port 5007)
-- **Update terakhir**: 22 Agustus 2026 — **Fix Desktop 88→91 + Scroll Stack Cepat & Galeri Lag** (belum commit — `src/index.css`, `ScrollStackCards.tsx`, `TestimoniPreview.tsx`, `TestimoniPage.tsx`).
+- **Update terakhir**: 22 Agustus 2026 — **Fix Desktop 88→91 + Scroll Stack & Galeri LIVE** (commit `5996bc5` push `08c02bb..5996bc5`, live `index-BSLbwrpZ.js`).
 
 ### Sesi: Fix Desktop 88→91 + Scroll Stack Cepat & Galeri Lag (22 Agustus 2026)
 
