@@ -111,7 +111,9 @@ const ScrollStackCards = ({
       "ontouchstart" in window ||
       (navigator.maxTouchPoints ?? 0) > 0 ||
       window.matchMedia?.("(pointer: coarse)").matches;
-    const k = isTouch ? 0.32 : 0.22;
+    // Touch native scroll cepat (momentum) → lerp lebih halus 0.16 agar
+    // kartu tidak tiba-tiba kejar scroll dan terasa "ngebut" di tengah stack.
+    const k = isTouch ? 0.16 : 0.20;
 
     let moving = false;
     for (let i = 0; i < cards.length; i++) {

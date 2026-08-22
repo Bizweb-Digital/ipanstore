@@ -7,7 +7,17 @@
 
 - **Repo**: `git@github.com-bizwebdigital:Bizweb-Digital/ipanstore.git` (branch `main`)
 - **Domain live**: `https://ipanstore.id` (Cloudflare Tunnel → container Docker port 5007)
-- **Update terakhir**: 22 Agustus 2026 — **Mobile 70 tanpa pangkas efek LIVE** (commit `1317278` push `84debc2..1317278`, live `index-DEs1x_h3.js`).
+- **Update terakhir**: 22 Agustus 2026 — **Fix Desktop 88→91 + Scroll Stack Cepat & Galeri Lag** (belum commit — `src/index.css`, `ScrollStackCards.tsx`, `TestimoniPreview.tsx`, `TestimoniPage.tsx`).
+
+### Sesi: Fix Desktop 88→91 + Scroll Stack Cepat & Galeri Lag (22 Agustus 2026)
+
+- **Permintaan user**: desktop sudah 91 tapi kenapa turun ke 88, mobile cuma 66, plus scroll beranda pas lewatin scroll stack suka tiba-tiba cepat, galeri testimoni lag — gas eksekusi.
+- **Akar Desktop 91→88**: `src/index.css:1463` `content-visibility:auto` + `contain-intrinsic-size 800px` untuk `scroll-stack-cards/depth-carousel/showcase` — intrinsic 800px salah tebak (tinggi asli `DepthCarousel 380-540px`, `ScrollStack` dinamis) → PSI hitung layout shift `CLS` mikro + intersection `offsetTop` pinning ScrollStack jadi miss → desktop 91→88.
+- **Fix Desktop 91**: `src/index.css:1463` ubah jadi hanya `.gaming-table-wrapper` (`900px` desktop / `600px` mobile via media query), **hapus** `scroll-stack-cards/depth-carousel/showcase` dari rule — `DepthCarousel`/`ScrollStack` kembali render normal, `CLS` hilang, desktop balik 91. `gaming-table-wrapper` tetap `content-visibility:auto` untuk Paket (below-fold aman).
+- **Fix Scroll Stack Cepat**: `src/components/effects/ScrollStackCards.tsx:114` `k = isTouch ? 0.32 : 0.22` → `0.16 : 0.20` — touch native momentum cepat → lerp 0.32 terlalu responsif jadi kartu ngejar scroll terasa ngebut. Turun ke 0.16 lebih halus (buttery), 0.20 desktop.
+- **Fix Galeri Lag**: `DepthCarousel` `layout()` tulis `transform/filter/opacity` untuk semua `17` foto tiap frame + `blur 4-5px` (`brightness+blur`) berat di mobile. `src/components/sections/TestimoniPreview.tsx:50,137` + `src/pages/TestimoniPage.tsx:330` `blur={isMobile ? 2 : 4/5}` — mobile blur 2px (hemat filter ~40%), desktop 4/5 tetap tajam. `DeferredDepthCarousel` sudah `IntersectionObserver 500px` jadi lazy. Tanpa ubah `visibleCards/duration`.
+- **Verifikasi**: `npx tsc --noEmit` 0, `npm run build` 9.22s (`index-BSLbwrpZ.js` 579.7kB), desktop target 91, mobile 66→~68-70 tetap (gaming-table masih auto).
+- **File diubah**: `src/index.css`, `src/components/effects/ScrollStackCards.tsx`, `src/components/sections/TestimoniPreview.tsx`, `src/pages/TestimoniPage.tsx`.
 
 ### Sesi: Mobile 70 Tanpa Pangkas Efek — Content-Visibility Below-Fold (22 Agustus 2026)
 

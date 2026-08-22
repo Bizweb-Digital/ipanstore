@@ -1457,12 +1457,16 @@ Warna tetap muted (abu-abu) tapi cukup terang vs #1a1a1a/#131314. ────�
 .text-zinc-500 { color: #8E8E97; }
 .text-zinc-600 { color: #87878F; }
 
-/* ── Mobile 70 tanpa pangkas efek: content-visibility untuk below-fold agar LCP tidak blok render.
-    Visual tetap identik setelah scroll, hanya mengurangi render cost awal di PSI mobile throttled. */
-.gaming-table-wrapper,
-.scroll-stack-cards,
-.depth-carousel,
-.showcase-card {
+/* ── Mobile 70 tanpa pangkas efek: hanya tabel perbandingan (below-fold aman).
+    scroll-stack / depth-carousel / showcase JANGAN pakai content-visibility —
+    merusak offsetTop pinning ScrollStack & filter DepthCarousel (penyebab scroll cepat & lag).
+    Desktop 91 kembali karena intrinsic 800px salah tebak untuk DepthCarousel. */
+.gaming-table-wrapper {
   content-visibility: auto;
-  contain-intrinsic-size: 800px;
+  contain-intrinsic-size: 900px;
+}
+@media (max-width: 768px) {
+  .gaming-table-wrapper {
+    contain-intrinsic-size: 600px;
+  }
 }

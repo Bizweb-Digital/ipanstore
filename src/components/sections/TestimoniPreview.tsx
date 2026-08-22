@@ -48,6 +48,7 @@ const DeferredDepthCarousel = (props: React.ComponentProps<typeof DepthCarousel>
 };
 
 const TestimoniPreview = () => {
+  const isMobile = typeof navigator !== 'undefined' && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [dbPhotos, setDbPhotos] = useState<Array<{ image: string; full: string; alt: string }>>([]);
@@ -134,7 +135,7 @@ const TestimoniPreview = () => {
             perspective={1200}
             visibleCards={4}
             falloff={0.2}
-            blur={4}
+            blur={isMobile ? 2 : 4}
             duration={600}
             autoplay={!lightboxOpen}
             autoplayDelay={3500}

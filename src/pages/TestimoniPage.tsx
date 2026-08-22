@@ -328,7 +328,7 @@ const TestimoniPage = () => {
                     perspective={1300}
                     visibleCards={4}
                     falloff={0.2}
-                    blur={5}
+                    blur={typeof navigator !== 'undefined' && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ? 2 : 5}
                     duration={650}
                     autoplay={false}
                     loop={true}
