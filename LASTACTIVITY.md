@@ -7,7 +7,7 @@
 
 - **Repo**: `git@github.com-bizwebdigital:Bizweb-Digital/ipanstore.git` (branch `main`)
 - **Domain live**: `https://ipanstore.id` (Cloudflare Tunnel → container Docker port 5007)
-- **Update terakhir**: 22 Agustus 2026 — **PSI 59/88 Fix — Logo WebP + Supabase Idle + Forced Reflow** (belum commit — `logo.png/webp`, `Navbar/Footer`, `TestimoniPreview.tsx`).
+- **Update terakhir**: 22 Agustus 2026 — **PSI 59/88 Fix LIVE — Logo WebP + Supabase Idle** (commit `7a5be01` push `d4bd597..7a5be01`, live `index-Cw0DJ93O.js` + `logo-BryJf5zc.webp` 28kB, brave verified).
 
 ### Sesi: PSI 59/88 Fix — Logo WebP + Supabase Idle + Forced Reflow (22 Agustus 2026)
 
