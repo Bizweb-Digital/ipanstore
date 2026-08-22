@@ -7,7 +7,7 @@
 
 - **Repo**: `git@github.com-bizwebdigital:Bizweb-Digital/ipanstore.git` (branch `main`)
 - **Domain live**: `https://ipanstore.id` (Cloudflare Tunnel → container Docker port 5007)
-- **Update terakhir**: 22 Agustus 2026 — **Fix Perbandingan Paket & Proteksi Anti Cheat (teks Fitur + tab Anti Cheat)** (belum commit — `src/pages/Paket.tsx`).
+- **Update terakhir**: 22 Agustus 2026 — **Deploy 6e65d44 — Garansi + Dashboard pie + Order manual + SEO Garansi + Fix logo/icon + Fix Paket anti cheat LIVE** (commit `6e65d44` push `3e98f68..6e65d44`, pull & docker rebuild, live bundle `index-yxKLoRgO.js`).
 
 ### Sesi: Fix Perbandingan Paket & Proteksi Anti Cheat — Teks Fitur & Tab Anti Cheat (22 Agustus 2026)
 
@@ -23,7 +23,7 @@
   - Copy baru Anti Cheat: eyebrow `Perlindungan`, H2 `Proteksi Fair Play untuk Free Fire`, paragraf `ANTICHEAT LAGA bukan paket boost FPS — ini lapisan proteksi ... external cheat, internal cheat, kernel driver ... agar scrim dan turnamen tetap fair. Sekali pasang, proteksi berjalan di level sistem.` + card `ANTICHEAT LAGA Rp 100.000 — sekali pasang` badge `Tournament Secure` + grid 2 kolom 6 kartu (icon Check + judul + deskripsi 1 kalimat) + footer `Cocok untuk player, tim esports, dan penyelenggara turnamen Free Fire ... Konsultasi gratis via WhatsApp, instalasi 100% remote.` + CTA `Pasang Proteksi via WhatsApp` (wa.me prefilled) & `Order ANTICHEAT LAGA`.
   - Verifikasi: `npx tsc --noEmit` 0, `npm run build` sukses (Paket 18.27kB gzip 5.38kB dari 14.27kB), HMR OK; logic `APP SETTINX` tetap `AppSettinxSection compact`, OPTIMIZE/SET PC tetap tabel dengan fitur left.
 - **File diubah**: `src/pages/Paket.tsx` saja (Garansi & logo/icon fix sebelumnya tetap).
-- **Belum dilakukan**: commit/push/deploy menunggu konfirmasi (aturan #2).
+- **Deploy**: commit `6e65d44` push `3e98f68..6e65d44` → pull server `4d2c2f2..6e65d44` → `scp dist` → `docker compose up --build -d` → live `https://ipanstore.id/assets/Paket-Di3gu2SI.js` + `Garansi-ChBuAvvU.js` 200, `Proteksi Fair Play` & `!text-left` live.
 
 ### Sesi: Fix Logo Mobile & Icon Menu + — Warna Hilang & Plus Pindah ke CTA (22 Agustus 2026)
 
@@ -37,7 +37,7 @@
   - Fix: `StaggeredMenu.tsx:114-115` → `gsap.set(plusH, { xPercent:-50, yPercent:-50, transformOrigin:'50% 50%', rotate:0 })` & `plusV` rotate 90 dengan x/yPercent, sehingga GSAP menghasilkan `translate(-50%,-50%) rotate()` tetap ter-center di 14px icon. `src/index.css:1138` → `.sm-toggle { gap:0.4rem; flex-shrink:0; isolation:isolate; }` agar toggle tidak shrink/overlap ke WA button (`gap:12px` terukur di 1280/1100).
   - Verifikasi: `npx agent-browser set viewport 1280` gap Menu-WA 12px, 390 mobile hanya Menu, snapshot `nav.glass-nav` + `sectionheader` terpisah; `npx tsc --noEmit` 0, `npm run build` sukses, `agent-browser close` done tanpa stuck.
 - **File diubah**: `src/index.css`, `src/components/StaggeredMenu.tsx` (logo Garansi dari sesi sebelumnya tetap).
-- **Belum dilakukan**: commit/push/deploy menunggu konfirmasi (aturan #2); browser ditutup agar tidak stuck.
+- **Deploy**: termasuk dalam commit `6e65d44` di atas — live bundle `index-yxKLoRgO.js` 200, logo mobile tanpa filter & plus ter-center live.
 
 ### Sesi: Optimasi SEO & Tipografi Page Garansi — Copy, Posisi Teks & Font Desktop/Mobile (22 Agustus 2026)
 
@@ -84,7 +84,7 @@
 - **Update lanjutan — SEO + form manual admin + migrasi fix (sesi sama, 22 Agu)**: atas permintaan user: (1) audit copywriting FE `/garansi` jadi SEO-friendly (title baru `Garansi Resmi IPAN STORE — Klaim Garansi Optimasi PC & Boost FPS Free Fire`, description keyword-rich `optimasi PC gaming & Boost FPS Free Fire via UltraViewer`, H1 baru, badge tambahan, section baru `Cara Klaim 3 langkah`, `Syarat & Ketentuan 6 poin`, `FAQ 5 item` + JSON-LD `breadcrumb` + `FAQPage`, internal link ke `/paket`/`/kontak`/WA), (2) admin `/admin/garansi` ditambah **form manual** `Tambah Klaim Manual` (dialog: nama, layanan dropdown 4, keluhan, tanggal hint, invoice opsional, status, catatan admin) — generate tiket `CLM-YYYYMMDD-XXXXX` lokal, insert langsung via admin RLS, audit `warranty.manual.create`, toast,
   (3) `supabase_migration_v3.sql` diperbaiki idempotent: `DROP POLICY IF EXISTS` sebelum CREATE + `WITH CHECK` pada `admin_can_manage_warranty_claims` agar insert manual admin lolos; komentar ditambah. Navbar/Footer ditambah link `Garansi` (setelah Order). Verifikasi ulang `npx tsc --noEmit` clean, `npm run build` sukses (Garansi public 16.35kB, admin 18.87kB), dev 8080 HMR OK.
 - **Revisi hapus konten & icon (22 Agu, lanjutan sesi sama)**: atas permintaan user — hapus 3 section visible di `/garansi` (`Cara Klaim 3 langkah`, `Syarat & Ketentuan 6 poin`, `FAQ visible` + footer panjang) — FAQ JSON-LD tetap disimpan untuk SEO; hilangkan icon di teks foto: badge `Garansi 7–30 hari / Tanpa invoice / Lanjut WhatsApp otomatis` (ShieldCheck/FileCheck/MessageCircle), header `Masa Garansi Resmi per Paket` (ShieldCheck), list paket `7 hari` (Clock), dan footer form `Setelah submit...` (ShieldCheck). Import dibersihkan (`HelpCircle`/`Link` dihapus). `npx tsc --noEmit` clean, `npm run build` sukses (Garansi 13.42kB), HMR OK.
-- **Belum dilakukan**: jalankan/re-run `supabase_migration_v3.sql` (versi terbaru) di Supabase SQL Editor (atau jika sudah pernah run, run ulang — aman idempotent), lalu commit/push/deploy (menunggu konfirmasi user).
+- **Sudah dilakukan (22 Agu malam)**: `supabase_migration_v3.sql` sudah dijalankan user di Supabase SQL Editor (konfirmasi user 22 Agu); commit/push/deploy sudah via `6e65d44` (di atas).
 
 ### Sesi: Fix Dashboard — Grafik Status Order & Bug Limit 200 (22 Agustus 2026)
 
