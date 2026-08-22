@@ -7,7 +7,7 @@
 
 - **Repo**: `git@github.com-bizwebdigital:Bizweb-Digital/ipanstore.git` (branch `main`)
 - **Domain live**: `https://ipanstore.id` (Cloudflare Tunnel → container Docker port 5007)
-- **Update terakhir**: 22 Agustus 2026 — **Mobile 70 tanpa pangkas efek — content-visibility below-fold** (belum commit — `src/index.css`).
+- **Update terakhir**: 22 Agustus 2026 — **Mobile 70 tanpa pangkas efek LIVE** (commit `1317278` push `84debc2..1317278`, live `index-DEs1x_h3.js`).
 
 ### Sesi: Mobile 70 Tanpa Pangkas Efek — Content-Visibility Below-Fold (22 Agustus 2026)
 
