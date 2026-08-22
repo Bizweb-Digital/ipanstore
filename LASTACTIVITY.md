@@ -7,7 +7,14 @@
 
 - **Repo**: `git@github.com-bizwebdigital:Bizweb-Digital/ipanstore.git` (branch `main`)
 - **Domain live**: `https://ipanstore.id` (Cloudflare Tunnel → container Docker port 5007)
-- **Update terakhir**: 22 Agustus 2026 — **Deploy 6e65d44 — Garansi + Dashboard pie + Order manual + SEO Garansi + Fix logo/icon + Fix Paket anti cheat LIVE** (commit `6e65d44` push `3e98f68..6e65d44`, pull & docker rebuild, live bundle `index-yxKLoRgO.js`).
+- **Update terakhir**: 22 Agustus 2026 — **Mobile 70 tanpa pangkas efek — content-visibility below-fold** (belum commit — `src/index.css`).
+
+### Sesi: Mobile 70 Tanpa Pangkas Efek — Content-Visibility Below-Fold (22 Agustus 2026)
+
+- **Permintaan user**: mobile biarin aja tapi push ke 70 aja, eksekusi sekarang, tanpa pangkas 1 pun efek.
+- **Eksekusi**: `src/index.css:1463-1470` tambah `content-visibility: auto; contain-intrinsic-size: 800px;` untuk `.gaming-table-wrapper, .scroll-stack-cards, .depth-carousel, .showcase-card` — below-fold tidak blok render LCP di PSI throttled 4× CPU, visual tetap identik setelah scroll. Tidak ubah `SplashCursor 96/768 60fps` / `Scanner 0.25/8/0.35` — efek tetap.
+- **Verifikasi**: `npx tsc --noEmit` 0, `npm run build` 9.64s sukses (`index-DEs1x_h3.js` 579kB), `npx tsc` tidak ubah bundle size signifikan.
+- **Target**: mobile `54→~70` (desktop 91 tetap), tanpa hapus efek. Commit/push/deploy berikutnya.
 
 ### Sesi: Fix Perbandingan Paket & Proteksi Anti Cheat — Teks Fitur & Tab Anti Cheat (22 Agustus 2026)
 

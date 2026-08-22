@@ -1453,6 +1453,16 @@
 }
 
 /* ── Aksesibilitas: naikkan kontras teks muted agar lolos WCAG AA di latar gelap.
-   Warna tetap muted (abu-abu) tapi cukup terang vs #1a1a1a/#131314. ───────── */
+Warna tetap muted (abu-abu) tapi cukup terang vs #1a1a1a/#131314. ───────── */
 .text-zinc-500 { color: #8E8E97; }
 .text-zinc-600 { color: #87878F; }
+
+/* ── Mobile 70 tanpa pangkas efek: content-visibility untuk below-fold agar LCP tidak blok render.
+    Visual tetap identik setelah scroll, hanya mengurangi render cost awal di PSI mobile throttled. */
+.gaming-table-wrapper,
+.scroll-stack-cards,
+.depth-carousel,
+.showcase-card {
+  content-visibility: auto;
+  contain-intrinsic-size: 800px;
+}
