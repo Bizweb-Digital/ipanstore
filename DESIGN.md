@@ -21,7 +21,7 @@ Website katalog & penjualan jasa optimasi PC gaming (IPAN STORE).
 | `/layanan` | Layanan | Detail layanan + sub-halaman (Boost FPS FF, Tweaking PC) |
 | `/paket` | Paket | Tab paket (Optimize/SET PC/Anti Cheat/APP SETTINX) + tabel perbandingan |
 | `/testimoni` | Testimoni | Bukti & ulasan pelanggan |
-| `/order` | **Order** | Checkout online: pilih paket → isi data → bayar (Cashi.id) |
+| `/order` | **Order** | Checkout online: pilih paket → isi data → bayar QRIS (KlikQris, tampil di halaman) |
 | `/faq` | FAQ | Pertanyaan umum |
 | `/kontak` | Kontak | Info kontak |
 
@@ -65,7 +65,7 @@ Website katalog & penjualan jasa optimasi PC gaming (IPAN STORE).
 | Animasi stack tidak smooth di HP | `ScrollStackCards.tsx` | ✅ |
 | Tabel perbandingan susah digeser di HP | `Paket.tsx` + `index.css` | ✅ |
 | Halaman **Order** baru | `pages/Order.tsx` + route | ✅ |
-| Integrasi payment gateway **Cashi.id** | `lib/cashi.ts` | ✅ (kerangka, perlu API key) |
+| Integrasi payment gateway **KlikQris (QRIS)** | `lib/klikqris.ts` + `server/index.js` | ✅ (aktif) |
 | Nav: Order=05, FAQ=06, Kontak=07 | `Navbar.tsx` + `Footer.tsx` | ✅ |
 | Tombol Beli/Order → `/order` | Paket, AppSettinx, CatalogAppSettinx, PackagesPreview | ✅ |
 
@@ -83,37 +83,32 @@ Menyatukan semua CTA ke satu alur checkout membuat funnel jelas dan terlihat pro
 
 ### ⚠️ Yang berguna TAPI dengan catatan penting
 
-**Integrasi Cashi.id** — berguna, **TAPI ada batasan besar yang harus dipahami:**
+**Integrasi payment gateway (DOKU + KlikQris)** — sudah terpasang penuh:
 
-1. **Website ini front-end statis (tanpa backend).** Payment gateway yang benar-benar aman & otomatis butuh backend:
-   - API key tidak boleh terekspos di browser.
-   - Konfirmasi pembayaran otomatis (webhook) butuh URL server.
-2. **Tanpa backend**, yang realistis sekarang:
-   - **Cara A (Payment Link per produk)** — tombol langsung redirect ke link pembayaran Cashi. Sederhana & aman, tapi konfirmasi order masih manual (cek di dashboard Cashi "Transaksi"/"Cek Order").
-   - Fallback WhatsApp — pelanggan tetap bisa order manual.
-3. **Cara B (API + serverless function)** baru membuka otomatisasi penuh — tapi itu artinya menambah backend, yang berarti proyek **belum "selesai"** seperti perkiraan.
+1. **Backend ada** (`server/`) — API key & secret payment gateway tersimpan aman di server, tidak terekspos di browser.
+2. **Alur order:** pelanggan pilih paket → isi data → QRIS KlikQris muncul langsung di halaman order → setelah lunas (webhook), email produk SettinX terkirim otomatis.
+3. **Konfirmasi pembayaran otomatis** lewat webhook + polling status.
 
 ### Kesimpulan evaluasi
 
-- **Kalau target Anda "cepat selesai & bisa jualan":** pakai **Cara A (payment link)** atau fallback WhatsApp. Website bisa dianggap selesai. Ini rekomendasi saya.
-- **Kalau target "otomatis penuh" (order tercatat, pembayaran terkonfirmasi sendiri):** perlu backend/serverless function + webhook → tambahan pekerjaan di luar front-end.
+- **Alur saat ini:** QRIS dinamis KlikQris tampil di halaman order (tanpa redirect) + fallback checkout DOKU untuk kanal lain.
+- **Sesuai target:** order tercatat, pembayaran terkonfirmasi otomatis, email terkirim → alur jualan otomatis penuh.
 
 ---
 
 ## 6. REKOMENDASI LANGKAH TERAKHIR SEBELUM "SELESAI"
 
 1. **Deploy** front-end (Vercel/Netlify/Cloudflare Pages — gratis).
-2. Daftar Cashi → aktifkan **QRIS** → buat **payment link per paket**.
-3. Isi `CASHI_PAYMENT_LINKS` di `src/lib/cashi.ts`.
-4. Test beli paket termurah → pastikan dana masuk.
-5. (Opsional, nanti) tambah serverless function untuk otomatisasi webhook.
+2. Isi `.env` server: `KLIKQRIS_API_KEY`, `KLIKQRIS_ID_MERCHANT`, `KLIKQRIS_CALLBACK_URL`, SMTP (optional).
+3. Jalan-kan migrasi Supabase (kolom `klikqris_*` di tabel `orders`) — lihat script terbaru.
+4. Set webhook KlikQris → `https://api.ipanstore.id/api/klikqris-webhook`.
+5. Test beli paket termurah → pastikan QRIS muncul, dana masuk, email terkirim.
 
-Setelah langkah 1–4, website sudah **production-ready** untuk menerima pembayaran.
+Setelah langkah 1–5, website **production-ready** untuk menerima pembayaran QRIS otomatis.
 
 ---
 
 ## 7. CATATAN TEKNIS
 
 - Build: `npm run build` → output `dist/` (SPA). Perlu konfigurasi **SPA fallback** di hosting (semua route → `index.html`) agar `/order`, `/paket`, dll. tidak 404 saat refresh.
-- API key Cashi disimpan di `.env` (jangan di-commit). Template: `.env.example`.
-- Panduan setup lengkap: lihat `SETUP-CASHI.md`.
+- API key payment gateway disimpan di `.env` server (jangan di-commit). Template: `server/.env.example`.
