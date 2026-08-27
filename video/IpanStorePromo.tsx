@@ -11,19 +11,21 @@ export type IpanStorePromoProps = {
 };
 
 const GREEN_SCREEN = "#00ff00";
-const LOOP_FRAMES = 480;
-const MESSAGE_FRAMES = 120;
-const ENTER_FRAMES = 12;
-const EXIT_START = 76;
-const EXIT_END = MESSAGE_FRAMES - 2;
-const EXIT_DROP_FRAMES = 16;
+// Perpanjang seluruh teks +5 detik @60fps (240 -> 540), jatuh pas
+const LOOP_FRAMES = 2160;
+const MESSAGE_FRAMES = 540;
+const ENTER_FRAMES = 24;
+const EXIT_START = 452;
+const EXIT_END = MESSAGE_FRAMES - 4;
+const EXIT_DROP_FRAMES = 32;
 const RAIL_WIDTH = 1920;
-const RAIL_HEIGHT = 200;
-const RAIL_TOP = 440;
+// Centered + 147 -> 154 (+5% 24 Aug)
+const RAIL_HEIGHT = 154;
+const RAIL_TOP = Math.round((1080 - 154) / 2);
 
 const messages = [
   { lines: ["Mau Aim Kalian Stabil?"], size: 54 },
-  { lines: ["Mouse dan Analog suka stuck bareng emulator?"], size: 40 },
+  { lines: ["Mouse dan Analog suka stuck bareng emulator?"], size: 41 },
   {
     lines: [
       "Langsung aja Order Ipan APP SettinX V1",
@@ -77,27 +79,27 @@ const CornerMarks = () => (
         left: 0,
         top: 0,
         bottom: 0,
-        width: 12,
+        width: 7,
         background: "#94A3B8",
       }}
     />
     <div
       style={{
         position: "absolute",
-        left: 36,
-        top: 46,
-        width: 88,
-        height: 6,
-        background: "#94A3B8",
-      }}
-    />
-    <div
-      style={{
-        position: "absolute",
-        left: 36,
-        top: 63,
-        width: 44,
+        left: 22,
+        top: 28,
+        width: 54,
         height: 3,
+        background: "#94A3B8",
+      }}
+    />
+    <div
+      style={{
+        position: "absolute",
+        left: 22,
+        top: 39,
+        width: 27,
+        height: 2,
         background: "rgba(148, 163, 184, 0.48)",
       }}
     />
@@ -148,15 +150,15 @@ const ElectricBorder = ({ frame }: { frame: number }) => {
     >
       <defs>
         <filter id="ipan-electric-glow" x="-20%" y="-40%" width="140%" height="180%">
-          <feGaussianBlur stdDeviation="8" result="blur" />
+          <feGaussianBlur stdDeviation="5" result="blur" />
         </filter>
       </defs>
-      <path d={path} fill="none" stroke="#94A3B8" strokeWidth="10" opacity="0.24" filter="url(#ipan-electric-glow)" />
+      <path d={path} fill="none" stroke="#94A3B8" strokeWidth="6" opacity="0.24" filter="url(#ipan-electric-glow)" />
       <path
         d={path}
         fill="none"
         stroke="#94A3B8"
-        strokeWidth="3"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
         opacity="0.9"
@@ -165,23 +167,23 @@ const ElectricBorder = ({ frame }: { frame: number }) => {
         d={path}
         fill="none"
         stroke="#E2E8F0"
-        strokeWidth="1.5"
-        strokeDasharray="22 38"
+        strokeWidth="1"
+        strokeDasharray="13 23"
         strokeDashoffset={-phase * 240}
         strokeLinecap="round"
         opacity={0.6 + sparkOpacity * 0.3}
       />
       {[0, 1, 2, 3].map((corner) => {
-        const x = corner % 2 === 0 ? 18 : RAIL_WIDTH - 18;
-        const y = corner < 2 ? 18 : RAIL_HEIGHT - 18;
+        const x = corner % 2 === 0 ? 11 : RAIL_WIDTH - 11;
+        const y = corner < 2 ? 11 : RAIL_HEIGHT - 11;
         const direction = corner % 2 === 0 ? 1 : -1;
 
         return (
           <path
             key={corner}
-            d={`M ${x} ${y} l ${direction * 28} ${corner < 2 ? 0 : 0} M ${x} ${y} l 0 ${corner < 2 ? 28 : -28}`}
+            d={`M ${x} ${y} l ${direction * 17} ${corner < 2 ? 0 : 0} M ${x} ${y} l 0 ${corner < 2 ? 17 : -17}`}
             stroke="#CBD5E1"
-            strokeWidth="2"
+            strokeWidth="1"
             strokeLinecap="round"
             opacity={sparkOpacity}
           />
@@ -197,24 +199,21 @@ const OverlayRail = ({ frame, website }: { frame: number; website: string }) => 
   const scene = sceneThemes[sceneIndex];
   const sceneFrame = loopFrame % MESSAGE_FRAMES;
   const accentPulse = 0.55 + Math.sin((frame % 120) / 120 * Math.PI * 2) * 0.2;
-  const logoOpacity = interpolate(
-    sceneFrame,
-    [0, 14, MESSAGE_FRAMES - 16, MESSAGE_FRAMES],
-    [0, 1, 1, 0],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-  );
-  const logoX = interpolate(
-    sceneFrame,
-    [0, 14, MESSAGE_FRAMES - 16, MESSAGE_FRAMES],
-    [-40, 0, 0, 40],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-  );
-  const logoScale = interpolate(
-    sceneFrame,
-    [0, 14, MESSAGE_FRAMES - 16, MESSAGE_FRAMES],
-    [0.92, 1, 1, 0.92],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-  );
+  // Stay: no blink/hilang/ganti — floating terbang atas-bawah seperti LAGA IPAN referensi
+  const logoOpacity = 1;
+  const logoX = 0;
+  const logoScale = 1;
+  const floatY = Math.sin((frame / 60) * Math.PI * 0.9) * 3.5;
+  const floatRot = Math.sin((frame / 60) * Math.PI * 0.5) * 0.6;
+  // LAGA IPAN audit: diagonal shining sweep + bright pulse (same as panggilan-jihad)
+  const SHINE_CYCLE = 150;
+  const SHINE_DURATION = 36;
+  const shineFrame = frame % SHINE_CYCLE;
+  const shineT = clamp01(shineFrame / SHINE_DURATION);
+  const shineActive = shineFrame < SHINE_DURATION;
+  const shineX = interpolate(shineT, [0, 1], [-90, 170]);
+  const shineOpacity = shineActive ? interpolate(shineT, [0, 0.15, 0.5, 0.85, 1], [0, 0.95, 0.9, 0.95, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) : 0;
+  const shineBright = shineActive ? interpolate(shineT, [0, 0.5, 1], [0, 0.22, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) : 0;
   const resolvedMessages = messages.map((message) => ({
     ...message,
     lines: message.lines.map((line) => line.replace("ipanstore.id", website)),
@@ -229,9 +228,9 @@ const OverlayRail = ({ frame, website }: { frame: number; website: string }) => 
         top: RAIL_TOP,
         height: RAIL_HEIGHT,
         background: `linear-gradient(135deg, ${scene.dark} 0%, ${scene.mid} 46%, ${scene.dark} 100%)`,
-        borderTop: "3px solid #94A3B8",
+        borderTop: "2px solid #94A3B8",
         borderBottom: "1px solid rgba(148, 163, 184, 0.52)",
-        boxShadow: "0 14px 34px rgba(0, 0, 0, 0.34)",
+        boxShadow: "0 8px 21px rgba(0, 0, 0, 0.34)",
         overflow: "hidden",
       }}
     >
@@ -240,7 +239,7 @@ const OverlayRail = ({ frame, website }: { frame: number; website: string }) => 
           position: "absolute",
           inset: 0,
           background:
-            `radial-gradient(ellipse at 18% 30%, ${scene.light}, transparent 22%), radial-gradient(ellipse at 72% 72%, rgba(0,0,0,0.24), transparent 28%), repeating-linear-gradient(135deg, transparent 0 34px, rgba(255,255,255,0.045) 35px 38px, transparent 39px 78px), repeating-linear-gradient(40deg, rgba(0,0,0,0.1) 0 2px, transparent 3px 14px)`,
+            `radial-gradient(ellipse at 18% 30%, ${scene.light}, transparent 22%), radial-gradient(ellipse at 72% 72%, rgba(0,0,0,0.24), transparent 28%), repeating-linear-gradient(135deg, transparent 0 21px, rgba(255,255,255,0.045) 22px 23px, transparent 24px 48px), repeating-linear-gradient(40deg, rgba(0,0,0,0.1) 0 1px, transparent 2px 8px)`,
         }}
       />
 
@@ -252,7 +251,7 @@ const OverlayRail = ({ frame, website }: { frame: number; website: string }) => 
           position: "absolute",
           top: 0,
           left: 0,
-          width: 224,
+          width: 179,
           height: "100%",
           display: "flex",
           alignItems: "center",
@@ -265,22 +264,46 @@ const OverlayRail = ({ frame, website }: { frame: number; website: string }) => 
       >
         <div
           style={{
-            width: 168,
-            height: 106,
+            position: "relative",
+            width: 133,
+            height: 85,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             opacity: logoOpacity,
-            transform: `translateX(${logoX}px) scale(${logoScale})`,
+            transform: `translateX(${logoX}px) translateY(${floatY}px) scale(${logoScale}) rotate(${floatRot}deg)`,
+            overflow: "hidden",
+            filter: `drop-shadow(0 0 12px rgba(34, 211, 238, ${0.26 + shineBright * 0.4})) brightness(${1 + shineBright})`,
           }}
         >
           <Img
             src={staticFile("logo-transparent.png")}
             style={{
-              width: 168,
-              height: 106,
+              width: 133,
+              height: 85,
               objectFit: "contain",
-              filter: "drop-shadow(0 0 12px rgba(34, 211, 238, 0.26))",
+              display: "block",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: `linear-gradient(105deg, transparent 35%, rgba(255,255,255,0) 42%, rgba(255,255,255,0.95) 50%, rgba(255,255,255,0) 58%, transparent 65%)`,
+              transform: `translateX(${shineX}px) skewX(-18deg)`,
+              opacity: shineOpacity,
+              mixBlendMode: "screen",
+              pointerEvents: "none",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              inset: -4,
+              background: `radial-gradient(ellipse at 50% 50%, rgba(255,255,255,${shineBright * 0.5}) 0%, transparent 70%)`,
+              opacity: shineOpacity,
+              pointerEvents: "none",
+              filter: "blur(6px)",
             }}
           />
         </div>
@@ -289,8 +312,8 @@ const OverlayRail = ({ frame, website }: { frame: number; website: string }) => 
       <div
         style={{
           position: "absolute",
-          left: 212,
-          right: 40,
+          left: 169,
+          right: 30,
           top: 0,
           bottom: 0,
           display: "flex",
@@ -305,8 +328,8 @@ const OverlayRail = ({ frame, website }: { frame: number; website: string }) => 
 
           // Masuk: sama seperti kondisi sekarang (pop + slide halus), sudah benar.
           const enterProgress = easeOutCubic(clamp01(sceneFrame / ENTER_FRAMES));
-          const enterOpacity = clamp01(sceneFrame / 6);
-          const enterY = (1 - enterProgress) * 26;
+          const enterOpacity = clamp01(sceneFrame / 12);
+          const enterY = (1 - enterProgress) * 16;
           const popScale = interpolate(
             sceneFrame,
             [0, ENTER_FRAMES, MESSAGE_FRAMES],
@@ -338,7 +361,7 @@ const OverlayRail = ({ frame, website }: { frame: number; website: string }) => 
               <div
                 style={{
                   maxWidth: "100%",
-                  padding: "6px 20px 10px",
+                  padding: "3px 12px 6px",
                   color: "#F4F4F5",
                   fontFamily: "Bowlby One SC, Impact, Arial Black, Arial, sans-serif",
                   fontSize: message.size,
@@ -347,9 +370,9 @@ const OverlayRail = ({ frame, website }: { frame: number; website: string }) => 
                   lineHeight: 1.06,
                   textAlign: "center",
                   textTransform: "uppercase",
-                  WebkitTextStroke: "2.5px #080808",
+                  WebkitTextStroke: "1.5px #080808",
                   paintOrder: "stroke fill",
-                  textShadow: "0 3px 0 #080808, 0 6px 9px rgba(0,0,0,0.3)",
+                  textShadow: "0 2px 0 #080808, 0 3px 5px rgba(0,0,0,0.3)",
                 }}
               >
                 {message.lines.map((line) => (
@@ -360,7 +383,7 @@ const OverlayRail = ({ frame, website }: { frame: number; website: string }) => 
                       const drop = easeInQuad(
                         charExitProgress(sceneFrame, charIndex, totalChars),
                       );
-                      const charY = drop * drop * 190;
+                      const charY = drop * drop * 118;
                       const charOpacity = 1 - drop;
                       const charRotate = drop * 14;
 
@@ -389,10 +412,10 @@ const OverlayRail = ({ frame, website }: { frame: number; website: string }) => 
       <div
         style={{
           position: "absolute",
-          left: 120,
-          right: 280,
-          bottom: 18,
-          height: 2,
+          left: 95,
+          right: 223,
+          bottom: 15,
+          height: 1,
           background: "rgba(148, 163, 184, 0.28)",
         }}
       />

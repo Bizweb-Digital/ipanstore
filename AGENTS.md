@@ -84,6 +84,12 @@
      laporkan ke user dan tanya mau pakai browser mana — jangan utak-atik instalasi
      browser sendiri tanpa izin.
 
+10. **⚠️ JIKA ADA PERUBAHAN MANUAL KE SUPABASE (PENTING)**:
+    - Jika implementasi butuh migrasi/SQL yang harus dijalankan **manual di Supabase Dashboard** (SQL Editor), AI **WAJIB** langsung memberitahu user **saat itu juga** — jangan diam/jeda/tunda.
+    - Berikan **teks query SQL yang siap copy-paste** (satu blok utuh, idempotent `IF NOT EXISTS` / `DROP IF EXISTS`), dan **otomatis copy ke clipboard** via `Get-Content ... | Set-Clipboard` bila memungkinkan di Windows.
+    - Sertakan **tutorial lengkap, jelas, detail, dan mudah dipahami**: buka Supabase Dashboard → pastikan project sesuai `VITE_SUPABASE_URL`/`SUPABASE_URL` di `.env` → SQL Editor → New query → `Ctrl+A` → `Delete` (hapus query lama) → `Ctrl+V` (paste) → Run → cara verifikasi sukses (`SELECT` cek / lihat `Results`), serta langkah bila error (screenshot error + copy pesan).
+    - Sebutkan **file sumber** query di repo (`sql_patches/...` atau `supabase_migration*.sql:line`) agar user bisa buka manual di VS Code (`Ctrl+A` → `Ctrl+C`) bila clipboard gagal.
+
 ## Perintah Penting
 
 | Perintah | Arti |

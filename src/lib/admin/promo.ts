@@ -2,8 +2,57 @@
 // IPAN STORE - Kode Promo / Diskon
 // Dipakai di halaman Order (cek & tampilkan diskon) dan admin Promos (CRUD).
 // Validasi final TETAP di server (server/index.js) saat membuat order DOKU.
+//
+// SECURITY FIX #1: lookupPromoCode sekarang memanggil BACKEND endpoint
+// `/api/promo/validate` dengan rate limiting, bukan query Supabase langsung.
+// Public SELECT policy di promo_codes sudah dihapus via SQL migration.
 // ─────────────────────────────────────────────────────────────────────────────
-import { supabase } from "@/lib/admin/supabase";
+// ── VALIDASI PROMO VIA BACKEND (SECURITY FIX #1) ─────────────────────────────
+// Endpoint ini aman karena:
+//   1. Service-side validation (Secret key DOKU di server)
+//   2. Rate-limited (max 30 requests / 15 menit per IP)
+//   3. Tidak expose used_count / max_uses ke client
+//   4. Promo data tidak bisa enumerate via public DB access
+export async function lookupPromoCode(
+  code: string,
+  amount?: number
+): Promise<{ ok: boolean; discount?: number; total?: number; message?: string } | null> {
+  try {
+    // Ambil dari URL param (?kode=HEMAT5) atau arguman
+    const c = code || "";
+    if (!c) return null;
+
+    const url = import.meta.env.VITE_BACKEND_URL;
+    if (!url) {
+      console.warn("VITE_BACKEND_URL belum diisi, skip promo validation");
+      return null;
+    }
+
+    // Panggil backend endpoint untuk validasi + perhitungan diskon.
+    // `amount` (harga paket) dikirim karena promo tipe persen butuh basis harga.
+    // Backend menghitung diskon — frontend TIDAK menentukan diskon sendiri.
+    const res = await fetch(`${url}/api/promo/validate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: c, amount: Number(amount) || 0 }),
+    });
+
+    const result = await res.json();
+    if (result.ok) {
+      return {
+        ok: true,
+        discount: result.discount_amount,
+        total: result.amount,
+        message: result.message,
+      };
+    }
+
+    return { ok: false, message: result.message || "Kode promo tidak valid." };
+  } catch (err) {
+    console.error("Failed to validate promo code:", err);
+    return { ok: false, message: "Gagal memeriksa kode promo." };
+  }
+}
 
 export interface PromoCode {
   id: string;
@@ -44,7 +93,7 @@ export function applyPromo(price: number, promo: PromoCode, now = new Date()): P
 }
 
 /** Cari kode promo berdasarkan string (case-insensitive). */
-export async function lookupPromoCode(code: string): Promise<PromoCode | null> {
+export async function lookupPromoCodeFromDb(code: string): Promise<PromoCode | null> {
   if (!code.trim()) return null;
   try {
     const { data, error } = await supabase

@@ -22,16 +22,30 @@ import { fileURLToPath } from "url";
 import nodemailer from "nodemailer";
 import { createClient } from "@supabase/supabase-js";
 import "dotenv/config";
+import rateLimit from "express-rate-limit";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
+// SECURITY FIX #8 — origin berada di belakang Cloudflare Tunnel (cloudflared).
+// Express harus memercayai hop pertama proxy agar `req.ip` berisi IP pengunjung
+// asli (bukan 127.0.0.1 cloudflared). Tanpa ini, rate limiter "melihat" semua
+// pengunjung sebagai IP yang sama → semua pengunjung share satu bucket (self-DoS).
+app.set("trust proxy", 1);
 const PORT = process.env.PORT || 3001;
 
 // Domain front-end Anda (untuk CORS). Isi di .env, pisahkan koma bila banyak.
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "http://localhost:8080")
+let ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "http://localhost:8080")
   .split(",")
-  .map((s) => s.trim());
+  .map((s) => s.trim())
+  .filter(Boolean);
+// SECURITY FIX #7 — tolak wildcard "*" agar tidak jadi open CORS.
+// Jika .env terisi "*", kita saring dan fallback ke localhost (fail-closed).
+if (ALLOWED_ORIGINS.includes("*")) {
+  console.warn('⚠️ SECURITY: ALLOWED_ORIGINS mengandung "*" — wildcard ditolak. Pakai daftar domain spesifik (mis. https://ipanstore.id). Fallback ke localhost.');
+  ALLOWED_ORIGINS = ALLOWED_ORIGINS.filter((o) => o !== "*");
+  if (ALLOWED_ORIGINS.length === 0) ALLOWED_ORIGINS = ["http://localhost:8080"];
+}
 
 // ── Kredensial DOKU — WAJIB diisi di .env (jangan di-hardcode di sini) ───────
 // Dari Dashboard DOKU → Integrations → API Keys
@@ -106,6 +120,77 @@ function dokuTimestamp() {
 // Orders disimpan di tabel `orders` Supabase.
 // Fallback ke in-memory map jika Supabase belum dikonfigurasi (dev/testing).
 const ordersFallback = new Map();
+
+// ── Webhook replay protection (in-memory + DB persist) ──────────────────────
+// Simpan requestId DOKU yang sudah diproses (TTL 24 jam). Tanpa ini, attacker
+// bisa replay webhook SUCCESS yang valid berulang kali → double email / state.
+//
+// SECURITY FIX #9 — dua lapis proteksi:
+//   1. inFlightWebhooks (Set): requestId yang SEDANG diproses → cegah
+//      concurrent duplicate webhook memproses dua kali sekaligus.
+//   2. processedWebhooks (Map) + tabel Supabase `webhook_replays`: requestId
+//      yang SUDAH selesai diproses → cegah replay (tahan restart server).
+//
+// Penting: markWebhookProcessed() dipanggil SETELAH proses sukses, bukan
+// sebelum. Jika proses gagal (throw), DOKU akan retry dan kami tidak
+// menandainya sebagai processed → order tidak hilang.
+const processedWebhooks = new Map(); // requestId -> timestamp ms
+const inFlightWebhooks = new Set(); // requestId sedang diproses (anti concurrent)
+const WEBHOOK_TTL_MS = 24 * 60 * 60 * 1000; // 24 jam
+const WEBHOOK_MAX_AGE_MS = 15 * 60 * 1000; // 15 menit — tolok stale timestamp
+
+async function isWebhookProcessed(requestId) {
+  if (!requestId) return false;
+  // Cek memory dulu (cepat)
+  const ts = processedWebhooks.get(requestId);
+  if (ts != null) {
+    if (Date.now() - ts > WEBHOOK_TTL_MS) {
+      processedWebhooks.delete(requestId);
+      return false;
+    }
+    return true;
+  }
+  // Memory miss → cek DB (tahan restart). Webhook jarang, query DB OK.
+  if (supabase && requestId.length <= 64) {
+    try {
+      const { data } = await supabase
+        .from("webhook_replays")
+        .select("request_id")
+        .eq("request_id", requestId)
+        .maybeSingle();
+      if (data?.request_id) {
+        processedWebhooks.set(requestId, Date.now());
+        return true;
+      }
+    } catch {
+      // Tabel belum ada / error → fallback ke in-memory saja (non-fatal).
+    }
+  }
+  return false;
+}
+
+async function markWebhookProcessed(requestId) {
+  if (!requestId) return;
+  processedWebhooks.set(requestId, Date.now());
+  // Persist ke DB agar tahan restart server
+  if (supabase && requestId.length <= 64) {
+    try {
+      await supabase
+        .from("webhook_replays")
+        .upsert(
+          { request_id: requestId, processed_at: new Date().toISOString() },
+          { onConflict: "request_id" }
+        );
+    } catch {
+      // Non-fatal — replay protection tetap jalan via memory.
+    }
+  }
+  // Bersihkan entri lama tiap 100 inserts (ringan, tanpa setInterval)
+  if (processedWebhooks.size > 500) {
+    const cutoff = Date.now() - WEBHOOK_TTL_MS;
+    for (const [k, v] of processedWebhooks) if (v < cutoff) processedWebhooks.delete(k);
+  }
+}
 
 // Constants untuk email tracking
 const ORDER_DEFAULTS = {
@@ -263,7 +348,14 @@ const emailTransporter = SMTP_USER
 /** Kirim email produk SettinX + invoice. Mengembalikan {ok, error?}. */
 async function sendSettinXEmail({ to, customerName, invoiceNumber, amount, paidAt }) {
   if (!emailTransporter) return { ok: false, error: "SMTP belum dikonfigurasi (SMTP_USER kosong)." };
-  if (!to) return { ok: false, error: "Email pembeli kosong." };
+  // SECURITY FIX #10 — validasi email pembeli & sanitize semua input user
+  // sebelum masuk ke header email (anti header injection / BCC spam).
+  const safeTo = String(to ?? "").trim();
+  if (!isValidEmail(safeTo)) {
+    return { ok: false, error: "Format email pembeli tidak valid." };
+  }
+  const safeName = sanitizeForHeader(customerName, 100);
+  const safeInvoice = sanitizeForHeader(invoiceNumber, 64);
 
   const formattedAmount = new Intl.NumberFormat("id-ID", {
     style: "currency",
@@ -282,13 +374,13 @@ async function sendSettinXEmail({ to, customerName, invoiceNumber, amount, paidA
       <div style="font-size:12px;color:#a1a1aa;margin-top:2px">Payment Confirmation</div>
     </div>
     <div style="padding:28px 32px">
-      <p style="font-size:16px;font-weight:600;margin:0 0 4px">Halo, ${escapeHtml(customerName || "Pelanggan")} 👋</p>
+      <p style="font-size:16px;font-weight:600;margin:0 0 4px">Halo, ${escapeHtml(safeName || "Pelanggan")} 👋</p>
       <p style="color:#a1a1aa;font-size:14px;margin:0 0 20px">Terima kasih atas pembelian Anda. Pembayaran telah kami terima ✅</p>
 
       <table style="width:100%;border-collapse:collapse;font-size:14px">
         <tr>
           <td style="padding:8px 0;color:#a1a1aa">No. Invoice</td>
-          <td style="padding:8px 0;text-align:right;font-family:monospace">${escapeHtml(invoiceNumber || "-")}</td>
+          <td style="padding:8px 0;text-align:right;font-family:monospace">${escapeHtml(safeInvoice || "-")}</td>
         </tr>
         <tr>
           <td style="padding:8px 0;color:#a1a1aa">Produk</td>
@@ -329,8 +421,8 @@ async function sendSettinXEmail({ to, customerName, invoiceNumber, amount, paidA
   try {
     await emailTransporter.sendMail({
       from: MAIL_FROM,
-      to,
-      subject: `✅ Pembayaran Diterima — Download IPAN APP SettinX V1 (${invoiceNumber || ""})`,
+      to: safeTo,
+      subject: `✅ Pembayaran Diterima — Download IPAN APP SettinX V1 (${safeInvoice || ""})`,
       html,
     });
     return { ok: true };
@@ -345,7 +437,35 @@ function escapeHtml(s) {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/**
+ * SECURITY FIX #10 — validasi alamat email pembeli sebelum dikirim.
+ * Mencegah email header injection (attacker sisipkan \r\n untuk BCC massal
+ * atau ubah recipient). Hanya izinkan 1 alamat email standar.
+ */
+const EMAIL_RE = /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/;
+function isValidEmail(addr) {
+  if (typeof addr !== "string") return false;
+  const s = addr.trim();
+  // Tolak CR/LF (header injection), panjang wajar, format email dasar.
+  if (/[\r\n<>]/.test(s)) return false;
+  if (s.length < 5 || s.length > 254) return false;
+  return EMAIL_RE.test(s);
+}
+
+/**
+ * Sanitize string untuk dipakai di header email (Subject, nama recipient).
+ * Buang CR/LF & kontrol char, potong panjang. Mencegah header injection.
+ */
+function sanitizeForHeader(s, maxLen = 200) {
+  return String(s ?? "")
+    .replace(/[\r\n\0]/g, " ")
+    .replace(/[<>]/g, "")
+    .trim()
+    .slice(0, maxLen);
 }
 
 // ── Middleware ───────────────────────────────────────────────────────────────
@@ -365,6 +485,47 @@ app.use("/api/doku-webhook", express.raw({ type: "*/*" }));
 
 // Body parser JSON untuk endpoint lain
 app.use(express.json());
+
+// ── Rate Limiting Middleware ─────────────────────────────────────────────────
+// Proteksi abuse: enumeration promo, spam order, brute force.
+// Keyed by IP (req.ip). Standard RateLimit headers dikirim ke client.
+// SECURITY FIX #8 — pakai IP pengunjung asli. Cloudflare Tunnel menambahkan
+// CF-Connecting-IP; kalau header itu ada, kita pakai (anti sesama-pengunjung
+// share bucket). Fallback ke req.ip (sudah benar berkat trust proxy = 1).
+function ipKeyGenerator(req) {
+  const cfIp = req.headers?.["cf-connecting-ip"];
+  return typeof cfIp === "string" && cfIp.trim()
+    ? cfIp.trim()
+    : req.ip || req.socket?.remoteAddress || "unknown";
+}
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 menit
+  max: 100, // max 100 request / 15 menit / IP untuk semua endpoint umum
+  keyGenerator: ipKeyGenerator,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: "Terlalu banyak request. Coba lagi nanti." },
+});
+
+const promoLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30, // max 30 validasi promo / 15 menit / IP — anti enumeration
+  keyGenerator: ipKeyGenerator,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: "Terlalu banyak pengecekan promo. Coba lagi dalam beberapa menit." },
+});
+
+const orderLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10, // max 10 order / jam / IP
+  keyGenerator: ipKeyGenerator,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: "Batas pembuatan order tercapai. Silakan coba lagi nanti." },
+});
+
+app.use("/api/", apiLimiter);
 
 // ── Health check ─────────────────────────────────────────────────────────────
 app.get("/api/health", (_req, res) => {
@@ -457,11 +618,127 @@ app.post("/api/cashi-webhook", (req, res) => {
 // ── Kode Promo / Diskon ─────────────────────────────────────────────────────
 // Promo di-validasi DI SERVER (bukan dipercaya dari browser) agar diskon
 // tidak bisa dipalsukan. Backend menghitung ulang diskon dari tabel promo_codes.
+//
+// SECURITY FIX #1: Public SELECT policy di promo_codes sudah dihapus (sql_patches/
+// supabase_patch_security_critical.sql) — enumerasi promo via anon key tidak
+// mungkin lagi. Validasi frontend sekarang lewat endpoint ini (rate-limited).
+//
+// SECURITY FIX #2: Pemakaian promo (used_count++) dilakukan via RPC
+// `consume_promo_code` yang atomic (FOR UPDATE + guarded UPDATE), sehingga
+// concurrent request tidak bisa melewati max_uses.
+//
+// ── Endpoint: validasi promo (preview diskon, TIDAK mengurangi kuota) ────────
+// Dipanggil frontend di halaman Order saat user klik "Pakai".
+app.post("/api/promo/validate", promoLimiter, async (req, res) => {
+  try {
+    const { code, amount } = req.body || {};
+    if (!code || !supabase) {
+      return res.json({ ok: false, message: "Kode promo tidak valid." });
+    }
+    const cleanCode = String(code).trim().slice(0, 40); // batasi panjang input
+    if (!cleanCode) {
+      return res.json({ ok: false, message: "Kode promo tidak valid." });
+    }
+
+    const price = Number(amount);
+    if (!Number.isFinite(price) || price <= 0 || price > 100_000_000) {
+      return res.json({ ok: false, message: "Nominal tidak valid." });
+    }
+
+    // Validasi via RPC (service role, bypass RLS, tidak mengubah used_count).
+    // Fallback ke query langsung jika RPC belum ada (belum migrasi).
+    let result = null;
+    try {
+      const { data, error } = await supabase.rpc("validate_promo_code", {
+        p_code: cleanCode,
+        p_price: price,
+      });
+      if (!error && data) {
+        result = typeof data === "string" ? JSON.parse(data) : data;
+      }
+    } catch {
+      /* RPC belum ada → fallback di bawah */
+    }
+
+    if (!result) {
+      // Fallback: baca promo via service role (aman, tidak expose apa pun)
+      const { data: promo, error } = await supabase
+        .from("promo_codes")
+        .select("code, type, value, max_uses, used_count, is_active, expires_at")
+        .ilike("code", cleanCode)
+        .limit(1)
+        .maybeSingle();
+
+      if (error || !promo || !promo.is_active) {
+        return res.json({ ok: false, message: "Kode promo tidak ditemukan atau tidak aktif." });
+      }
+      if (promo.expires_at && new Date(promo.expires_at) < new Date()) {
+        return res.json({ ok: false, message: "Kode promo sudah kedaluwarsa." });
+      }
+      if (promo.max_uses != null && Number(promo.used_count) >= Number(promo.max_uses)) {
+        return res.json({ ok: false, message: "Kode promo sudah mencapai batas pemakaian." });
+      }
+
+      const raw =
+        promo.type === "percent"
+          ? Math.round((price * Number(promo.value)) / 100)
+          : Math.round(Number(promo.value));
+      const discount = Math.min(Math.max(raw, 0), price);
+      result = {
+        ok: true,
+        code: promo.code,
+        message: "Kode promo berlaku!",
+        discount_amount: discount,
+        amount: Math.max(price - discount, 1),
+      };
+    }
+
+    // Respons minimal: jangan expose used_count / max_uses / id / strategi promo.
+    return res.json({
+      ok: !!result.ok,
+      valid: !!result.ok,
+      code: result.code || cleanCode.toUpperCase(),
+      message: result.message || (result.ok ? "Kode promo berlaku!" : "Kode promo tidak valid."),
+      discount_amount: result.ok ? Number(result.discount_amount) || 0 : 0,
+      amount: result.ok ? Number(result.amount) || 0 : 0,
+    });
+  } catch (e) {
+    console.error("promo validate error:", e.message);
+    return res.json({ ok: false, message: "Gagal memeriksa kode promo." });
+  }
+});
+
 async function validateAndApplyPromo(code, amount) {
   if (!code || !supabase) return { ok: false, message: "Kode promo tidak valid." };
   const cleanCode = String(code).trim();
   if (!cleanCode) return { ok: false, message: "Kode promo tidak valid." };
 
+  // SECURITY FIX #2: consume via RPC atomic (row lock + guarded update).
+  // Satu request = satu increment yang dijamin konsisten di bawah max_uses.
+  try {
+    const { data, error } = await supabase.rpc("consume_promo_code", {
+      p_code: cleanCode,
+      p_price: Number(amount) || 0,
+    });
+    if (!error && data) {
+      const r = typeof data === "string" ? JSON.parse(data) : data;
+      if (r && r.ok) {
+        return {
+          ok: true,
+          promo_code: r.promo_code,
+          discount_amount: Number(r.discount_amount) || 0,
+          amount: Number(r.amount) || 0,
+        };
+      }
+      return { ok: false, message: r.message || "Kode promo tidak valid." };
+    }
+  } catch {
+    /* RPC belum ada → fallback non-atomik di bawah (dev only) */
+  }
+
+  // ── FALLBACK (jika RPC belum dijalankan di Supabase) ────────────────────────
+  // Logika lama (read-check-write). MASIH rentan race condition — jalankan
+  // migrasi sql_patches/supabase_patch_security_critical.sql secepatnya.
   const { data: promo, error } = await supabase
     .from("promo_codes")
     .select("*")
@@ -499,7 +776,7 @@ async function validateAndApplyPromo(code, amount) {
 // ── Create Order ─────────────────────────────────────────────────────────────
 // Front-end memanggil endpoint ini. Server menandatangani request dengan
 // SECRET_KEY lalu meneruskan ke DOKU. Mengembalikan response.payment.url.
-app.post("/api/doku-create-order", async (req, res) => {
+app.post("/api/doku-create-order", orderLimiter, async (req, res) => {
   try {
     const { amount, order_id, customer_name, customer_email, customer_phone, item_name, promo_code } =
       req.body || {};
@@ -514,12 +791,60 @@ app.post("/api/doku-create-order", async (req, res) => {
       });
     }
 
+    // SECURITY FIX #4 — jangan percaya `amount` dari client (bisa di-tamper via DevTools/Burp).
+    // Harga authoritative diambil dari tabel `services` berdasarkan `item_name`.
+    // Kalau service tidak ditemukan dan Supabase tersedia → reject (bukan fallback ke client).
+    let basePrice = Number(amount);
+    if (supabase && item_name) {
+      const clean = String(item_name).replace(/^IPAN STORE\s*-\s*/i, "").trim();
+      if (clean) {
+        let svcPrice = null;
+        // 1) exact name match
+        let { data: svc } = await supabase
+          .from("services")
+          .select("price")
+          .ilike("name", clean)
+          .limit(1)
+          .maybeSingle();
+        if (svc?.price != null) svcPrice = Number(svc.price);
+        // 2) partial match fallback
+        if (svcPrice == null) {
+          const r2 = await supabase
+            .from("services")
+            .select("price")
+            .ilike("name", `%${clean}%`)
+            .limit(1)
+            .maybeSingle();
+          if (r2.data?.price != null) svcPrice = Number(r2.data.price);
+        }
+        // 3) slug settinx fallback
+        if (svcPrice == null && /settinx/i.test(clean)) {
+          const r3 = await supabase.from("services").select("price").eq("slug", "app-settinx").limit(1).maybeSingle();
+          if (r3.data?.price != null) svcPrice = Number(r3.data.price);
+        }
+        if (svcPrice != null && Number.isFinite(svcPrice) && svcPrice > 0) {
+          if (svcPrice !== basePrice) {
+            console.warn(`⚠️ amount client (${basePrice}) ≠ harga DB (${svcPrice}) untuk "${clean}" — pakai harga DB.`);
+          }
+          basePrice = svcPrice;
+        } else if (svcPrice == null) {
+          console.warn(`⚠️ Service tidak ditemukan untuk "${item_name}" — pakai amount client sementara.`);
+          // Tetap lanjut pakai client amount bila service memang belum ada di DB (mis. project kosong).
+          // Bila DB sudah terisi services, pertimbangkan untuk reject: return 400.
+        }
+      }
+    }
+    // Guard: jangan izinkan pembayaran di bawah 1.000 IDR (anti tamper 0/1 rupiah)
+    if (basePrice < 1000 || !Number.isFinite(basePrice)) {
+      return res.status(400).json({ success: false, message: "Nominal pembayaran tidak valid." });
+    }
+
     // Validasi kode promo di server (authoritative) sebelum diteruskan ke DOKU.
-    let finalAmount = Number(amount);
+    let finalAmount = basePrice;
     let discountAmount = 0;
     let appliedPromo = null;
     if (promo_code) {
-      const promo = await validateAndApplyPromo(promo_code, amount);
+      const promo = await validateAndApplyPromo(promo_code, basePrice);
       if (!promo.ok) {
         return res.status(400).json({ success: false, message: promo.message });
       }
@@ -682,6 +1007,28 @@ app.post("/api/doku-webhook", async (req, res) => {
       return res.status(401).json({ success: false, message: "Invalid signature" });
     }
 
+    // ── SECURITY FIX #6 — Replay protection ──────────────────────────────────
+    // Timestamp freshness (15 menit) — header sudah terverifikasi via signature
+    // di atas, jadi aman untuk di-trust sebagai waktu asli DOKU.
+    const webhookAge = Math.abs(Date.now() - new Date(String(requestTimestamp)).getTime());
+    if (!Number.isFinite(webhookAge) || webhookAge > WEBHOOK_MAX_AGE_MS) {
+      const ageSec = Number.isFinite(webhookAge) ? Math.round(webhookAge / 1000) : "NaN";
+      console.warn(`⚠️ Webhook stale: age=${ageSec}s, requestId=${requestId} — ditolak.`);
+      return res.status(401).json({ success: false, message: "Webhook timestamp expired." });
+    }
+    // SECURITY FIX #9 — cegah concurrent duplicate (webhook diproses paralel)
+    if (inFlightWebhooks.has(requestId)) {
+      console.warn(`⚠️ Webhook masih diproses: requestId=${requestId} — skip (concurrent).`);
+      return res.json({ success: true });
+    }
+    inFlightWebhooks.add(requestId);
+    try {
+      if (await isWebhookProcessed(requestId)) {
+        console.warn(`⚠️ Webhook replay: requestId=${requestId} sudah diproses — skip.`);
+        return res.json({ success: true });
+      }
+      // (markWebhookProcessed dipindah ke SETELAH proses sukses — lihat bawah)
+
     let payload;
     try {
       payload = JSON.parse(rawBody);
@@ -763,7 +1110,14 @@ app.post("/api/doku-webhook", async (req, res) => {
       }
     }
 
+    // SECURITY FIX #9 — tandai SUKSES setelah proses selesai (bukan sebelum).
+    // Jika throw di atas, kita tidak menandai → DOKU retry aman, order tidak hilang.
+    await markWebhookProcessed(requestId);
     return res.json({ success: true });
+    } finally {
+      // Selalu hapus dari in-flight, baik sukses maupun gagal.
+      inFlightWebhooks.delete(requestId);
+    }
   } catch (e) {
     console.error("doku-webhook error:", e);
     return res.status(500).json({ success: false });

@@ -22,7 +22,7 @@ import { AuroraText } from "@/components/ui/aurora-text";
 import { createDokuPayment } from "@/lib/doku";
 import { useActiveServices } from "@/hooks/useActiveServices";
 import { ActiveService } from "@/lib/services";
-import { lookupPromoCode, applyPromo, PromoCode } from "@/lib/admin/promo";
+import { lookupPromoCode } from "@/lib/admin/promo";
 
 /* ─── Data Paket (sinkron dengan halaman Paket) ─────────────────────────── */
 type Pkg = {
@@ -165,18 +165,21 @@ const Order = () => {
       setPromoApplied(null);
       setCheckingPromo(true);
       try {
-        const promo = await lookupPromoCode(c);
-        if (!promo) {
-          setPromoMsg("Kode promo tidak ditemukan atau tidak aktif.");
+        // Validasi via backend (SECURITY FIX #1) — server menghitung diskon,
+        // frontend tidak lagi query tabel promo_codes langsung.
+        const result = await lookupPromoCode(c, selected.price);
+        if (!result) {
+          setPromoMsg("VITE_BACKEND_URL belum dikonfigurasi.");
           return;
         }
-        const result = applyPromo(selected.price, promo);
         if (!result.ok) {
-          setPromoMsg(result.message);
+          setPromoMsg(result.message || "Kode promo tidak valid.");
           return;
         }
-        setPromoApplied({ code: promo.code, discount: result.discount, total: result.total });
-        setPromoMsg(`Kode ${promo.code} berlaku! Anda hemat Rp ${result.discount.toLocaleString("id-ID")}.`);
+        const discount = result.discount ?? 0;
+        const total = result.total ?? selected.price;
+        setPromoApplied({ code: c, discount, total });
+        setPromoMsg(`Kode ${c} berlaku! Anda hemat Rp ${discount.toLocaleString("id-ID")}.`);
       } catch {
         setPromoMsg("Gagal memeriksa kode promo. Coba lagi.");
       } finally {

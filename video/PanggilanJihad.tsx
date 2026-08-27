@@ -6,26 +6,31 @@ import {
   useCurrentFrame,
 } from "remotion";
 
+const RESCALE_FACTOR = 0.78;
+
 export type PanggilanJihadProps = {
   website?: string;
 };
 
 const GREEN_SCREEN = "#00ff00";
-const MESSAGE_FRAMES = 120;
-const LOOP_FRAMES = MESSAGE_FRAMES * 6; // LCM of 2 (center) and 3 (left) scenes
-const ENTER_FRAMES = 12;
-const EXIT_START = 76;
-const EXIT_END = MESSAGE_FRAMES - 2;
-const EXIT_DROP_FRAMES = 16;
-const RAIL_WIDTH = 1920;
-const RAIL_HEIGHT = 220;
-const RAIL_TOP = 430;
+// Image 1 — semua scene +5 detik @60fps (280 -> 580), jatuh pas di akhir durasi
+const MESSAGE_FRAMES = 580;
+const LOOP_FRAMES = MESSAGE_FRAMES * 6;
+const ENTER_FRAMES = 24;
+const EXIT_START = 480;
+const EXIT_END = MESSAGE_FRAMES - 4;
+const EXIT_DROP_FRAMES = 40;
+const COMPOSITION_WIDTH = 1920;
+const RAIL_WIDTH = COMPOSITION_WIDTH;
+// Centered + slightly larger than thin Image 1 — 120px tall, vertically centered, independent of RESCALE
+const RAIL_HEIGHT = 120;
+const RAIL_TOP = Math.round((1080 - 120) / 2);
 
 // Center zone: 2 messages, shown one at a time
 const centerMessages = [
   {
     lines: ["CARA DI LAGAIN GIMANA? OPTES VS IPAN", "LINK GB IPAN KE BIO"],
-    size: 30,
+    size: Math.round(30 * RESCALE_FACTOR),
   },
   {
     lines: [
@@ -35,7 +40,7 @@ const centerMessages = [
       "SKIP ANTRI 20K",
       "11 HF 5K || 22 HF 8K",
     ],
-    size: 24,
+    size: Math.round(24 * RESCALE_FACTOR),
   },
 ];
 
@@ -43,15 +48,15 @@ const centerMessages = [
 const leftMessages = [
   {
     lines: ["LU WIN?", "GW RESET WS", "+ GW FOLLBACK"],
-    size: 28,
+    size: Math.round(28 * RESCALE_FACTOR),
   },
   {
     lines: ["BANTU POSTUL", "LIVE GW"],
-    size: 30,
+    size: Math.round(30 * RESCALE_FACTOR),
   },
   {
     lines: ["TAP TAP", "SAMPE 10K"],
-    size: 32,
+    size: Math.round(32 * RESCALE_FACTOR),
   },
 ];
 
@@ -59,11 +64,11 @@ const leftMessages = [
 const rightMessages = [
   {
     lines: ["JASA PEMBUATAN", "WEBSITE? KE BIO"],
-    size: 26,
+    size: Math.round(26 * RESCALE_FACTOR),
   },
   {
     lines: ["CONTOH WEBSITE BISA", "CEK KE ipanstore.id"],
-    size: 25,
+    size: Math.round(25 * RESCALE_FACTOR),
   },
 ];
 
@@ -105,27 +110,27 @@ const CornerMarks = () => (
         left: 0,
         top: 0,
         bottom: 0,
-        width: 12,
+        width: Math.round(12 * RESCALE_FACTOR),
         background: "#94A3B8",
       }}
     />
     <div
       style={{
         position: "absolute",
-        left: 36,
-        top: 46,
-        width: 88,
-        height: 6,
+        left: Math.round(36 * RESCALE_FACTOR),
+        top: Math.round(46 * RESCALE_FACTOR),
+        width: Math.round(88 * RESCALE_FACTOR),
+        height: Math.round(6 * RESCALE_FACTOR),
         background: "#94A3B8",
       }}
     />
     <div
       style={{
         position: "absolute",
-        left: 36,
-        top: 63,
-        width: 44,
-        height: 3,
+        left: Math.round(36 * RESCALE_FACTOR),
+        top: Math.round(63 * RESCALE_FACTOR),
+        width: Math.round(44 * RESCALE_FACTOR),
+        height: Math.round(3 * RESCALE_FACTOR),
         background: "rgba(148, 163, 184, 0.48)",
       }}
     />
@@ -139,16 +144,16 @@ const electricPath = (frame: number) => {
     Math.sin(index * 2.17 + phase * 1.7 + seed) * 2.8 +
     Math.sin(index * 5.41 - phase * 2.2 + seed * 2) * 1.4;
 
-  for (let x = 0, index = 0; x <= RAIL_WIDTH; x += 32, index++) {
+  for (let x = 0, index = 0; x <= RAIL_WIDTH; x += Math.round(32 * RESCALE_FACTOR), index++) {
     points.push(`${x},${3 + edgeNoise(index, 0)}`);
   }
-  for (let y = 32, index = 0; y <= RAIL_HEIGHT; y += 32, index++) {
-    points.push(`${RAIL_WIDTH - 3 + edgeNoise(index, 3)},${y}`);
+  for (let y = Math.round(32 * RESCALE_FACTOR), index = 0; y <= RAIL_HEIGHT; y += Math.round(32 * RESCALE_FACTOR), index++) {
+    points.push(`${RAIL_WIDTH - Math.round(3 * RESCALE_FACTOR) + edgeNoise(index, 3)},${y}`);
   }
-  for (let x = RAIL_WIDTH - 32, index = 0; x >= 0; x -= 32, index++) {
+  for (let x = RAIL_WIDTH - Math.round(32 * RESCALE_FACTOR), index = 0; x >= 0; x -= Math.round(32 * RESCALE_FACTOR), index++) {
     points.push(`${x},${RAIL_HEIGHT - 3 + edgeNoise(index, 6)}`);
   }
-  for (let y = RAIL_HEIGHT - 32, index = 0; y >= 0; y -= 32, index++) {
+  for (let y = RAIL_HEIGHT - Math.round(32 * RESCALE_FACTOR), index = 0; y >= 0; y -= Math.round(32 * RESCALE_FACTOR), index++) {
     points.push(`${3 + edgeNoise(index, 9)},${y}`);
   }
 
@@ -176,15 +181,15 @@ const ElectricBorder = ({ frame }: { frame: number }) => {
     >
       <defs>
         <filter id="jihad-electric-glow" x="-20%" y="-40%" width="140%" height="180%">
-          <feGaussianBlur stdDeviation="8" result="blur" />
+          <feGaussianBlur stdDeviation={Math.round(8 * RESCALE_FACTOR)} result="blur" />
         </filter>
       </defs>
-      <path d={path} fill="none" stroke="#94A3B8" strokeWidth="10" opacity="0.24" filter="url(#jihad-electric-glow)" />
+      <path d={path} fill="none" stroke="#94A3B8" strokeWidth={Math.round(10 * RESCALE_FACTOR)} opacity="0.24" filter="url(#jihad-electric-glow)" />
       <path
         d={path}
         fill="none"
         stroke="#94A3B8"
-        strokeWidth="3"
+        strokeWidth={Math.round(3 * RESCALE_FACTOR)}
         strokeLinecap="round"
         strokeLinejoin="round"
         opacity="0.9"
@@ -193,23 +198,23 @@ const ElectricBorder = ({ frame }: { frame: number }) => {
         d={path}
         fill="none"
         stroke="#E2E8F0"
-        strokeWidth="1.5"
-        strokeDasharray="22 38"
+        strokeWidth={Math.round(1.5 * RESCALE_FACTOR)}
+        strokeDasharray={`${Math.round(22 * RESCALE_FACTOR)} ${Math.round(38 * RESCALE_FACTOR)}`}
         strokeDashoffset={-phase * 240}
         strokeLinecap="round"
         opacity={0.6 + sparkOpacity * 0.3}
       />
       {[0, 1, 2, 3].map((corner) => {
-        const x = corner % 2 === 0 ? 18 : RAIL_WIDTH - 18;
-        const y = corner < 2 ? 18 : RAIL_HEIGHT - 18;
+        const x = corner % 2 === 0 ? Math.round(18 * RESCALE_FACTOR) : RAIL_WIDTH - Math.round(18 * RESCALE_FACTOR);
+        const y = corner < 2 ? Math.round(18 * RESCALE_FACTOR) : RAIL_HEIGHT - Math.round(18 * RESCALE_FACTOR);
         const direction = corner % 2 === 0 ? 1 : -1;
 
         return (
           <path
             key={corner}
-            d={`M ${x} ${y} l ${direction * 28} 0 M ${x} ${y} l 0 ${corner < 2 ? 28 : -28}`}
+            d={`M ${x} ${y} l ${direction * Math.round(28 * RESCALE_FACTOR)} 0 M ${x} ${y} l 0 ${corner < 2 ? Math.round(28 * RESCALE_FACTOR) : -Math.round(28 * RESCALE_FACTOR)}`}
             stroke="#CBD5E1"
-            strokeWidth="2"
+            strokeWidth={Math.round(2 * RESCALE_FACTOR)}
             strokeLinecap="round"
             opacity={sparkOpacity}
           />
@@ -236,8 +241,8 @@ const ZoneText = ({
   const lines = message.lines.map((line) => line.replace("ipanstore.id", website));
 
   const enterProgress = easeOutCubic(clamp01(sceneFrame / ENTER_FRAMES));
-  const enterOpacity = clamp01(sceneFrame / 6);
-  const enterY = (1 - enterProgress) * 26;
+  const enterOpacity = clamp01(sceneFrame / 12);
+  const enterY = (1 - enterProgress) * Math.round(26 * RESCALE_FACTOR);
   const popScale = interpolate(
     sceneFrame,
     [0, ENTER_FRAMES, MESSAGE_FRAMES],
@@ -264,7 +269,7 @@ const ZoneText = ({
       <div
         style={{
           maxWidth: "100%",
-          padding: "4px 14px 8px",
+          padding: `${Math.round(4 * RESCALE_FACTOR)}px ${Math.round(14 * RESCALE_FACTOR)}px ${Math.round(8 * RESCALE_FACTOR)}px`,
           color: "#F4F4F5",
           fontFamily: "Bowlby One SC, Impact, Arial Black, Arial, sans-serif",
           fontSize: message.size,
@@ -273,9 +278,9 @@ const ZoneText = ({
           lineHeight: 1.12,
           textAlign: "center",
           textTransform: "uppercase",
-          WebkitTextStroke: "2.5px #080808",
+          WebkitTextStroke: `${Math.round(2.5 * RESCALE_FACTOR)}px #080808`,
           paintOrder: "stroke fill",
-          textShadow: "0 3px 0 #080808, 0 6px 9px rgba(0,0,0,0.3)",
+          textShadow: `0 ${Math.round(3 * RESCALE_FACTOR)}px 0 #080808, 0 ${Math.round(6 * RESCALE_FACTOR)}px ${Math.round(9 * RESCALE_FACTOR)}px rgba(0,0,0,0.3)`,
         }}
       >
         {lines.map((line) => (
@@ -285,7 +290,7 @@ const ZoneText = ({
               const drop = easeInQuad(
                 charExitProgress(sceneFrame, charIndex, totalChars),
               );
-              const charY = drop * drop * 190;
+              const charY = drop * drop * Math.round(190 * RESCALE_FACTOR);
               const charOpacity = 1 - drop;
               const charRotate = drop * 14;
 
@@ -316,24 +321,21 @@ const OverlayRail = ({ frame, website }: { frame: number; website: string }) => 
   const scene = sceneThemes[themeIndex];
   const sceneFrame = loopFrame % MESSAGE_FRAMES;
   const accentPulse = 0.55 + Math.sin(((frame % 120) / 120) * Math.PI * 2) * 0.2;
-  const logoOpacity = interpolate(
-    sceneFrame,
-    [0, 14, MESSAGE_FRAMES - 16, MESSAGE_FRAMES],
-    [0, 1, 1, 0],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-  );
-  const logoX = interpolate(
-    sceneFrame,
-    [0, 14, MESSAGE_FRAMES - 16, MESSAGE_FRAMES],
-    [-40, 0, 0, 40],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-  );
-  const logoScale = interpolate(
-    sceneFrame,
-    [0, 14, MESSAGE_FRAMES - 16, MESSAGE_FRAMES],
-    [0.92, 1, 1, 0.92],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-  );
+  // Stay: no blink/hilang/ganti — floating terbang atas-bawah seperti LAGA IPAN referensi
+  const logoOpacity = 1;
+  const logoX = 0;
+  const logoScale = 1;
+  const floatY = Math.sin((frame / 60) * Math.PI * 0.9) * 3.5;
+  const floatRot = Math.sin((frame / 60) * Math.PI * 0.5) * 0.6;
+  // LAGA IPAN audit: diagonal shining sweep like 3D glossy text + soft bright pulse
+  const SHINE_CYCLE = 150;
+  const SHINE_DURATION = 36;
+  const shineFrame = frame % SHINE_CYCLE;
+  const shineT = clamp01(shineFrame / SHINE_DURATION);
+  const shineActive = shineFrame < SHINE_DURATION;
+  const shineX = interpolate(shineT, [0, 1], [-Math.round(120 * RESCALE_FACTOR), Math.round(220 * RESCALE_FACTOR)]);
+  const shineOpacity = shineActive ? interpolate(shineT, [0, 0.15, 0.5, 0.85, 1], [0, 0.95, 0.9, 0.95, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) : 0;
+  const shineBright = shineActive ? interpolate(shineT, [0, 0.5, 1], [0, 0.22, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) : 0;
 
   return (
     <div
@@ -344,9 +346,9 @@ const OverlayRail = ({ frame, website }: { frame: number; website: string }) => 
         top: RAIL_TOP,
         height: RAIL_HEIGHT,
         background: `linear-gradient(135deg, ${scene.dark} 0%, ${scene.mid} 46%, ${scene.dark} 100%)`,
-        borderTop: "3px solid #94A3B8",
-        borderBottom: "1px solid rgba(148, 163, 184, 0.52)",
-        boxShadow: "0 14px 34px rgba(0, 0, 0, 0.34)",
+        borderTop: `${Math.round(3 * RESCALE_FACTOR)}px solid #94A3B8`,
+        borderBottom: `1px solid rgba(148, 163, 184, 0.52)`,
+        boxShadow: `0 ${Math.round(14 * RESCALE_FACTOR)}px ${Math.round(34 * RESCALE_FACTOR)}px rgba(0, 0, 0, 0.34)`,
         overflow: "hidden",
       }}
     >
@@ -355,107 +357,131 @@ const OverlayRail = ({ frame, website }: { frame: number; website: string }) => 
           position: "absolute",
           inset: 0,
           background:
-            `radial-gradient(ellipse at 18% 30%, ${scene.light}, transparent 22%), radial-gradient(ellipse at 72% 72%, rgba(0,0,0,0.24), transparent 28%), repeating-linear-gradient(135deg, transparent 0 34px, rgba(255,255,255,0.045) 35px 38px, transparent 39px 78px), repeating-linear-gradient(40deg, rgba(0,0,0,0.1) 0 2px, transparent 3px 14px)`,
+            `radial-gradient(ellipse at 18% 30%, ${scene.light}, transparent 22%), radial-gradient(ellipse at 72% 72%, rgba(0,0,0,0.24), transparent 28%), repeating-linear-gradient(135deg, transparent 0 ${Math.round(34 * RESCALE_FACTOR)}px, rgba(255,255,255,0.045) ${Math.round(35 * RESCALE_FACTOR)}px ${Math.round(38 * RESCALE_FACTOR)}px, transparent ${Math.round(39 * RESCALE_FACTOR)}px ${Math.round(78 * RESCALE_FACTOR)}px), repeating-linear-gradient(40deg, rgba(0,0,0,0.1) 0 ${Math.round(2 * RESCALE_FACTOR)}px, transparent ${Math.round(3 * RESCALE_FACTOR)}px ${Math.round(14 * RESCALE_FACTOR)}px)`,
         }}
       />
 
       <CornerMarks />
       <ElectricBorder frame={frame} />
 
+      {/* Flex row: logo cap + 3 zones - fills 1920 width proportionally */}
       <div
         style={{
           position: "absolute",
-          top: 0,
-          left: 0,
-          width: 190,
-          height: "100%",
+          inset: 0,
           display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          clipPath: "polygon(0 0, 100% 0, 84% 100%, 0 100%)",
-          background: `rgba(13, 13, 14, ${0.62 + accentPulse * 0.12})`,
-          borderRight: "1px solid rgba(226, 232, 240, 0.38)",
+          alignItems: "stretch",
           zIndex: 2,
         }}
       >
         <div
           style={{
-            width: 140,
-            height: 88,
+            flex: `0 0 ${Math.round(190 * RESCALE_FACTOR)}px`,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            opacity: logoOpacity,
-            transform: `translateX(${logoX}px) scale(${logoScale})`,
+            clipPath: "polygon(0 0, 100% 0, 84% 100%, 0 100%)",
+            background: `rgba(13, 13, 14, ${0.62 + accentPulse * 0.12})`,
+            borderRight: "1px solid rgba(226, 232, 240, 0.38)",
           }}
         >
-          <Img
-            src={staticFile("logo-transparent.png")}
+          <div
             style={{
-              width: 140,
-              height: 88,
-              objectFit: "contain",
-              filter: "drop-shadow(0 0 12px rgba(34, 211, 238, 0.26))",
+              position: "relative",
+              width: Math.round(140 * RESCALE_FACTOR),
+              height: Math.round(88 * RESCALE_FACTOR),
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: logoOpacity,
+              transform: `translateX(${logoX}px) translateY(${floatY}px) scale(${logoScale}) rotate(${floatRot}deg)`,
+              overflow: "hidden",
+              filter: `drop-shadow(0 0 12px rgba(34, 211, 238, ${0.26 + shineBright * 0.4})) brightness(${1 + shineBright})`,
             }}
-          />
+          >
+            <Img
+              src={staticFile("logo-transparent.png")}
+              style={{
+                width: Math.round(140 * RESCALE_FACTOR),
+                height: Math.round(88 * RESCALE_FACTOR),
+                objectFit: "contain",
+                display: "block",
+              }}
+            />
+            {/* LAGA IPAN shining sweep — diagonal white bar */}
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                background: `linear-gradient(105deg, transparent 35%, rgba(255,255,255,0) 42%, rgba(255,255,255,${0.95}) 50%, rgba(255,255,255,0) 58%, transparent 65%)`,
+                transform: `translateX(${shineX}px) skewX(-18deg)`,
+                opacity: shineOpacity,
+                mixBlendMode: "screen",
+                pointerEvents: "none",
+              }}
+            />
+            {/* soft outer glow during shine */}
+            <div
+              style={{
+                position: "absolute",
+                inset: -4,
+                background: `radial-gradient(ellipse at 50% 50%, rgba(255,255,255,${shineBright * 0.5}) 0%, transparent 70%)`,
+                opacity: shineOpacity,
+                pointerEvents: "none",
+                filter: "blur(6px)",
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Left zone: 3 rotating messages - ratio 480 */}
+        <div
+          style={{
+            flex: "1 1 0",
+            position: "relative",
+            borderRight: "1px solid rgba(148, 163, 184, 0.34)",
+            fontFamily: "Arial, Helvetica, sans-serif",
+            overflow: "hidden",
+          }}
+        >
+          <ZoneText messages={leftMessages} loopFrame={loopFrame} website={website} />
+        </div>
+
+        {/* Center zone: 2 rotating messages - wider (700) */}
+        <div
+          style={{
+            flex: "1.45 1 0",
+            position: "relative",
+            fontFamily: "Arial, Helvetica, sans-serif",
+            overflow: "hidden",
+          }}
+        >
+          <ZoneText messages={centerMessages} loopFrame={loopFrame} website={website} />
+        </div>
+
+        {/* Right zone: 2 rotating messages - ratio ~540 */}
+        <div
+          style={{
+            flex: "1.12 1 0",
+            position: "relative",
+            borderLeft: "1px solid rgba(148, 163, 184, 0.34)",
+            fontFamily: "Arial, Helvetica, sans-serif",
+            overflow: "hidden",
+          }}
+        >
+          <ZoneText messages={rightMessages} loopFrame={loopFrame} website={website} />
         </div>
       </div>
 
-      {/* Left zone: 3 rotating messages */}
       <div
         style={{
           position: "absolute",
-          left: 196,
-          width: 480,
-          top: 0,
-          bottom: 0,
-          borderRight: "1px solid rgba(148, 163, 184, 0.34)",
-          fontFamily: "Arial, Helvetica, sans-serif",
-          zIndex: 3,
-        }}
-      >
-        <ZoneText messages={leftMessages} loopFrame={loopFrame} website={website} />
-      </div>
-
-      {/* Center zone: 2 rotating messages */}
-      <div
-        style={{
-          position: "absolute",
-          left: 680,
-          width: 700,
-          top: 0,
-          bottom: 0,
-          fontFamily: "Arial, Helvetica, sans-serif",
-          zIndex: 3,
-        }}
-      >
-        <ZoneText messages={centerMessages} loopFrame={loopFrame} website={website} />
-      </div>
-
-      {/* Right zone: 2 rotating messages */}
-      <div
-        style={{
-          position: "absolute",
-          left: 1384,
-          right: 16,
-          top: 0,
-          bottom: 0,
-          borderLeft: "1px solid rgba(148, 163, 184, 0.34)",
-          fontFamily: "Arial, Helvetica, sans-serif",
-          zIndex: 3,
-        }}
-      >
-        <ZoneText messages={rightMessages} loopFrame={loopFrame} website={website} />
-      </div>
-
-      <div
-        style={{
-          position: "absolute",
-          left: 120,
-          right: 280,
-          bottom: 18,
-          height: 2,
+          left: Math.round(120 * RESCALE_FACTOR),
+          right: Math.round(280 * RESCALE_FACTOR),
+          bottom: Math.round(18 * RESCALE_FACTOR),
+          height: Math.round(2 * RESCALE_FACTOR),
           background: "rgba(148, 163, 184, 0.28)",
+          zIndex: 3,
         }}
       />
     </div>

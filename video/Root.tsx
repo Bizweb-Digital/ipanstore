@@ -10,8 +10,8 @@ export const RemotionRoot = () => {
         component={IpanStorePromo}
         width={1920}
         height={1080}
-        fps={30}
-        durationInFrames={480}
+        fps={60}
+        durationInFrames={2160}
         defaultProps={{ website: "ipanstore.id" }}
       />
       <Composition
@@ -19,8 +19,8 @@ export const RemotionRoot = () => {
         component={PanggilanJihad}
         width={1920}
         height={1080}
-        fps={30}
-        durationInFrames={720}
+        fps={60}
+        durationInFrames={3480}
         defaultProps={{ website: "ipanstore.id" }}
       />
     </>

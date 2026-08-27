@@ -1,0 +1,61 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Dependabot — Automated Dependency Security Updates
+# (Setup untuk Task #4: Automated Security Scanning)
+#
+# Dependabot akan:
+#   - Scan setiap PR commit untuk dependensi yang diketahui vulnerable
+#   - Auto-create PR saat update minor/patch tersedia untuk dependency
+#   - Alert GitHub Security advisories ke menu "Security" repo
+#
+# Referensi: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates
+# ─────────────────────────────────────────────────────────────────────────────
+
+version: 2
+updates:
+  # 1) Frontend (root) — npm
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Jakarta"
+    assignees:
+      - "Bizweb-Digital"
+    labels:
+      - "dependencies"
+      - "security"
+    versioning-strategy: "auto"
+    # Abaikan major upgrade yang breaking (misal react-router v7) kecuali
+    # vulnerability — biar tidak merusak app tanpa central review.
+    ignore:
+      - dependency-name: "react-router-dom"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "vite"
+        update-types: ["version-update:semver-major"]
+
+  # 2) Backend (server/) — npm
+  - package-ecosystem: "npm"
+    directory: "/server"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "09:00"
+      timezone: "Asia/Jakarta"
+    assignees:
+      - "Bizweb-Digital"
+    labels:
+      - "dependencies"
+      - "security"
+
+  # 3) Server-side / tooling lain (docker dll.) — aktif bila ada Dockerfile
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "09:00"
+      timezone: "Asia/Jakarta"
+    labels:
+      - "dependencies"
+      - "security"

@@ -1,0 +1,109 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# SECURITY JOB — Automated Security Scanning (Task #4)
+#
+# Dijalankan otomatis pada: push ke main, pull request, dan jadwal mingguan.
+# Terdiri dari:
+#   1. npm audit  — vuln dependency frontend & backend
+#   2. Secret scan — deteksi API keys / secrets ter-hardcode di repo
+#   3. TruffleHog Git history leak scan (opsional, bila diaktifkan)
+#
+# NOTE: Workflow ini TIDAK mewajibkan semua check lolos di PR (agar tidak
+# memblokir kerja), tapi menampilkan hasilnya sebagai PR check + annotation.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: Security Scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 3 * * 1" # Setiap Senin 03:00 UTC (10:00 WIB)
+  workflow_dispatch: {}
+
+jobs:
+  # ── Job 1: npm audit (vulnerability scan) ──────────────────────────────────
+  npm-audit:
+    name: npm audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install frontend deps
+        run: npm ci --ignore-scripts || npm install --ignore-scripts
+
+      - name: npm audit — frontend
+        run: npm audit --audit-level=high || echo "::warning::Frontend npm audit menemukan 1+ vulnerability high/critical. Review dependensi."
+
+      - name: Install backend deps
+        working-directory: server
+        run: npm ci --ignore-scripts || npm install --ignore-scripts
+
+      - name: npm audit — backend
+        working-directory: server
+        run: npm audit --audit-level=high || echo "::warning::Backend npm audit menemukan 1+ vulnerability high/critical."
+
+  # ── Job 2: Secret Scanning (gitleaks) ──────────────────────────────────────
+  secret-scan:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: gitleaks scan (current tree)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── Job 3 (dev-bec-off): TruffleHog git-history scan komentar hanya ────────
+  # trufflehog-optional:
+  #   name: Secrets in git history (trufflehog)
+  #   runs-on: ubuntu-latest
+  #   timeout-minutes: 15
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0
+  #     - name: trufflehog scan
+  #       uses: trufflesecurity/trufflehog@main
+  #       with:
+  #         path: .
+  #         extra_args: --results=verified,unknown
+
+  # ── Job 4: Brand check — build + typecheck (subset safety) ─────────────────
+  build-check:
+    name: Build & Typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install root deps
+        run: npm ci --ignore-scripts || npm install --ignore-scripts
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_BACKEND_URL: ${{ secrets.VITE_BACKEND_URL }}

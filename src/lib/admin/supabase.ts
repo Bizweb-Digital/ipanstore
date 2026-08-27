@@ -1,8 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
 
-// SUPABASE CONFIG - PRODUCTION CREDENTIALS
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://zpjkroatjmegwnxzvwlw.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpwamtyb2F0am1lZ3dueHp2d2x3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NjUwODksImV4cCI6MjEwMjU0MTA4OX0.wT12hDD3nmQra1sA-XHst6N7ZvSI3KN6zeLRwAoaOjM';
+// SECURITY FIX #3: Hardcoded production credentials dihapus.
+// Env vars WAJIB diisi di .env / Vite — tidak ada fallback di code.
+// Kalau hilang, client dibuat dengan nilai kosong → semua query akan error
+// dengan pesan jelas, memaksa developer konfigurasi dengan benar.
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim() || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() || '';
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error(
+    '[IPAN STORE] VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY tidak diisi di .env. ' +
+      'Pastikan kedua variabel ada sebelum menjalankan aplikasi.'
+  );
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
