@@ -1,7 +1,7 @@
 {
   "name": "ipanstore-backend",
   "version": "1.0.0",
-  "description": "Backend ringan IPAN STORE untuk integrasi Cashi.id (API key aman di server)",
+  "description": "Backend IPAN STORE — integrasi Payment Gateway DOKU & KlikQris (QRIS); API key aman di server",
   "type": "module",
   "main": "index.js",
   "scripts": {
