@@ -19,7 +19,7 @@ import { WA_NUMBER } from "@/components/FloatingWhatsApp";
 import PageBackground from "@/components/effects/PageBackground";
 import Reveal from "@/components/effects/Reveal";
 import { AuroraText } from "@/components/ui/aurora-text";
-import { createDokuPayment } from "@/lib/doku";
+import { createKlikQrisPayment, checkKlikQrisStatus, isPaidStatus } from "@/lib/klikqris";
 import { useActiveServices } from "@/hooks/useActiveServices";
 import { ActiveService } from "@/lib/services";
 import { lookupPromoCode } from "@/lib/admin/promo";
@@ -148,6 +148,18 @@ const Order = () => {
   const [promoMsg, setPromoMsg] = useState<string | null>(null);
   const [checkingPromo, setCheckingPromo] = useState(false);
 
+  // ── QRIS KlikQris ───────────────────────────────────────────────────────────
+  const [qr, setQr] = useState<{
+    orderId: string;
+    qrisUrl?: string;
+    qrisImage?: string;
+    totalAmount?: number;
+    expiredAt?: string;
+  } | null>(null);
+  const [qrExpired, setQrExpired] = useState(false);
+  const [paid, setPaid] = useState(false);
+  const [countdown, setCountdown] = useState("");
+
   const selected = useMemo(
     () => packages.find((p) => p.id === selectedId) ?? packages[0],
     [selectedId, packages]
@@ -203,41 +215,84 @@ const Order = () => {
 
   const handleCheckout = async () => {
     setError(null);
+    if (qr && !qrExpired) return;
+    if (paid) return;
     if (!name.trim() || !email.trim()) {
       setError("Mohon isi Nama dan Email terlebih dahulu.");
       return;
     }
     setLoading(true);
     try {
-      const res = await createDokuPayment({
+      const res = await createKlikQrisPayment({
         orderId: `IPAN-${selected.id.toUpperCase()}-${Date.now()}`,
-        pkgId: selected.id,
-        amount: selected.price,
+        amount: promoApplied ? promoApplied.total : selected.price,
         customerName: name.trim(),
         customerEmail: email.trim(),
         customerPhone: wa.trim(),
         itemName: `IPAN STORE - ${selected.name}`,
-        description: `Pembelian paket ${selected.name} (${selected.priceLabel})`,
         promoCode: promoApplied?.code,
       });
 
-      if (res.checkoutUrl) {
-        // Redirect ke halaman pembayaran DOKU (QRIS/VA/E-Wallet/AllPayment).
-        window.location.href = res.checkoutUrl;
-        return;
+      if (res.error || !res.qrisUrl) {
+        throw new Error(
+          res.error || "Backend tidak mengembalikan QRIS. Hubungi kami via WhatsApp."
+        );
       }
 
-      // API belum dikonfigurasi / error → fallback ke WhatsApp.
-      const text = encodeURIComponent(
-        `Halo min, saya mau order paket ${selected.name} (${selected.priceLabel}).%0ANama: ${name}%0AEmail: ${email}${wa ? `%0AWhatsApp: ${wa}` : ""}`
-      );
-      window.open(`https://wa.me/${WA_NUMBER}?text=${text}`, "_blank");
+      setQr({
+        orderId: res.orderId || "",
+        qrisUrl: res.qrisUrl,
+        qrisImage: res.qrisImage,
+        totalAmount: res.totalAmount,
+        expiredAt: res.expiredAt,
+      });
+      setPaid(false);
+      setQrExpired(false);
     } catch (e) {
-      setError("Gagal memproses pembayaran. Silakan coba lagi atau hubungi kami via WhatsApp.");
+      setError(e instanceof Error ? e.message : "Gagal memproses pembayaran.");
     } finally {
       setLoading(false);
     }
   };
+
+  // ── Countdown QRIS (5 menit) + polling status ───────────────────────────────
+  useEffect(() => {
+    if (!qr) return;
+    const expiresAt = qr.expiredAt ? new Date(qr.expiredAt).getTime() : Date.now() + 5 * 60 * 1000;
+
+    const tick = () => {
+      const remain = Math.max(0, expiresAt - Date.now());
+      const mins = Math.floor(remain / 60000);
+      const secs = Math.floor((remain % 60000) / 1000);
+      setCountdown(`${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`);
+      if (remain <= 0) {
+        setQrExpired(true);
+        setCountdown("00:00");
+      }
+    };
+    tick();
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, [qr]);
+
+  useEffect(() => {
+    if (!qr || !qr.orderId || qrExpired) return;
+    let stop = false;
+    const poll = async () => {
+      const r = await checkKlikQrisStatus(qr.orderId);
+      if (stop) return;
+      if (r.paid) {
+        setPaid(true);
+        return;
+      }
+      setTimeout(poll, 8000);
+    };
+    const t = setTimeout(poll, 8000);
+    return () => {
+      stop = true;
+      clearTimeout(t);
+    };
+  }, [qr, qrExpired]);
 
   return (
     <Layout>
@@ -468,8 +523,81 @@ const Order = () => {
 
         <p className="mt-4 flex items-start gap-2 text-[11px] text-zinc-500 leading-relaxed">
           <ShieldCheck className="h-3.5 w-3.5 text-[#94A3B8] mt-0.5 shrink-0" />
-          Pembayaran diproses aman melalui payment gateway DOKU. Data kamu terenkripsi.
+          Pembayaran diproses aman melalui payment gateway. Data kamu terenkripsi.
         </p>
+
+                {/* Panel QRIS KlikQris */}
+                {paid ? (
+                  <div className="mt-5 rounded-xl border border-green-500/40 bg-green-500/10 p-5 text-center">
+                    <p className="flex items-center justify-center gap-2 text-sm font-semibold text-green-400">
+                      <Check className="h-5 w-5" /> Pembayaran Berhasil!
+                    </p>
+                    <p className="mt-1 text-xs text-zinc-400">
+                      Terima kasih! Produk/aktivasi sedang dikirim ke email kamu. Cek inbox/spam ya.
+                    </p>
+                    <Link
+                      to="/paket"
+                      className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-[#F4F4F5] hover:text-white transition-colors"
+                    >
+                      Kembali ke daftar paket <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                  </div>
+                ) : qr ? (
+                  <div className="mt-5 rounded-xl border border-white/16 bg-[#131314]/80 p-5 text-center">
+                    {qrExpired ? (
+                      <>
+                        <p className="flex items-center justify-center gap-2 text-sm font-semibold text-red-400">
+                          <QrCode className="h-5 w-5" /> QRIS Kedaluwarsa
+                        </p>
+                        <p className="mt-1 text-xs text-zinc-400">
+                          Waktu pembayaran habis. Klik tombol di bawah untuk membuat QR baru.
+                        </p>
+                        <Button onClick={handleCheckout} size="sm" className="mt-4">
+                          <QrCode className="mr-2 h-4 w-4" /> Buat QRIS Baru
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <p className="flex items-center justify-center gap-2 text-sm font-semibold text-[#F4F4F5]">
+                          <QrCode className="h-5 w-5 text-emerald-400" /> Scan QRIS untuk Membayar
+                        </p>
+                        <div className="mt-4 mx-auto w-56 h-56 bg-white rounded-xl p-2">
+                          {qr.qrisImage ? (
+                            <img
+                              src={qr.qrisImage}
+                              alt="QRIS KlikQris"
+                              className="w-full h-full object-contain"
+                            />
+                          ) : qr.qrisUrl ? (
+                            <a href={qr.qrisUrl} target="_blank" rel="noreferrer">
+                              <img
+                                src={qr.qrisUrl}
+                                alt="QRIS KlikQris"
+                                className="w-full h-full object-contain"
+                              />
+                            </a>
+                          ) : null}
+                        </div>
+                        <p className="mt-4 text-xs text-zinc-400">
+                          Total bayar:{" "}
+                          <span className="font-mono font-semibold text-[#F4F4F5]">
+                            {formatRupiah(qr.totalAmount ?? (promoApplied ? promoApplied.total : selected.price))}
+                          </span>
+                        </p>
+                        <p className="mt-2 text-[11px] text-zinc-500">
+                          Kode pesanan: <span className="font-mono">{qr.orderId}</span>
+                        </p>
+                        <p className="mt-2 inline-flex items-center gap-1.5 text-[12px] font-mono text-amber-300/90">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Sisa waktu: {countdown}
+                        </p>
+                        <p className="mt-3 text-[11px] text-zinc-500 leading-relaxed">
+                          Buka aplikasi e-wallet / m-banking (GoPay, OVO, DANA, ShopeePay, dll), pilih
+                          QRIS, lalu scan QR di atas. Status ter-update otomatis.
+                        </p>
+                      </>
+                    )}
+                  </div>
+                ) : null}
 
                 <Link
                   to="/paket"

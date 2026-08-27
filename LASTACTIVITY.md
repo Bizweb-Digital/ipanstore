@@ -7,7 +7,51 @@
 
 - **Repo**: `git@github.com-bizwebdigital:Bizweb-Digital/ipanstore.git` (branch `main`)
 - **Domain live**: `https://ipanstore.id` (Cloudflare Tunnel → container Docker port 5007)
-- **Update terakhir**: 22 Agustus 2026 — **Security Hardening v2: Rate limiter + Replay protection persist + nginx body size + RLS audit SQL + Email sanitization**.
+- **Update terakhir**: 30 Agustus 2026 — **SETUP KLIKQRIS (QRIS Dinamis) selesai implementasi** — backend 3 endpoint + frontend panel QRIS + SQL patch siap, Cashi.id dihapus total. Menunggu eksekusi SQL + konfigurasi .env + deploy.
+
+### Sesi: SETUP KLIKQRIS — QRIS Dinamis Ganti Cashi.id (30 Agustus 2026)
+
+- **Permintaan user**: "lanjutkan task yang baru saja terhenti jangan lupa baca ulang prompt nya secara lengkap dan lihat juga history todo terakhir nya, jangan ada satupun yang ke skip — perubahan benar benar harus nyata sesuai prompt saya dari awal sampai akhir"
+- **Konteks sesi terhenti**: Implementasi KlikQris hampir selesai — backend 3 endpoint + frontend panel QRIS + bersih-bersih Cashi done + build/test/lint OK. Terhenti saat membuat SQL migrasi Supabase.
+
+**Perubahan nyata sesi ini (lanjutan):**
+
+#### ✅ Task — Baca ulang seluruh history & verifikasi semua todo lama
+- Konfirmasi progress sesi sebelumnya dari terminal log user:
+  - ✅ Backend: env KLIKQRIS (`server/index.js`), raw-body middleware `/api/klikqris-webhook`, hapus middleware Cashi
+  - ✅ Endpoint `POST /api/klikqris-create-order` (orderLimiter, harga authoritative dari tabel `services` — SECURITY FIX anti-tamper amount, min nominal 1000, promo `validateAndApplyPromo`, amount integer)
+  - ✅ Endpoint `POST /api/klikqris-webhook` (payload unwrap `data`, idempotent via sudah-PAID check, email otomatis SettinX, status EXPIRED)
+  - ✅ Endpoint `GET /api/klikqris-status/:orderId` (proxy polling ke KlikQris)
+  - ✅ Hapus Cashi total: constants CASHI_*, `/api/create-order`, `/api/cashi-webhook`, `src/lib/cashi.ts`, `SETUP-CASHI.md`
+  - ✅ `.env.example` root + `server/.env.example`: CASHI_ dihapus, KLIKQRIS_API_KEY / KLIKQRIS_ID_MERCHANT / KLIKQRIS_BASE_URL / KLIKQRIS_CALLBACK_URL ditambah
+  - ✅ Frontend: `src/lib/klikqris.ts` (createKlikQrisPayment, checkKlikQrisStatus, isPaidStatus)
+  - ✅ `src/pages/Order.tsx`: state QRIS (qr/qrExpired/paid/countdown), handleCheckout ganti DOKU → KlikQris, panel QR tampil inline (img qrisImage/qrisUrl), countdown 5 menit, polling 8s, tombol "Buat QRIS Baru" saat expired, panel hijau "Pembayaran Berhasil" saat paid
+  - ✅ DESIGN.md: tabel route, tabel kerja, rekomendasi langkah terakhir, catatan teknis → semua Cashi diganti KlikQris
+  - ✅ server/DEPLOY.md: rewrite penuh (arsitektur KlikQris, .env template, PM2, webhook setup, troubleshooting)
+  - ✅ server/index.js header comment + package.json description → DOKU & KlikQris
+  - ✅ Verifikasi sesi lalu: `node --check` OK, `tsc --noEmit` EXIT 0, `npm run build` OK (Order-CBSlgyvQ.js 17.35kB), `vitest run` 1 passed, lint error hanya pre-existing di file admin (Order.tsx/klikqris.ts/doku.ts bersih)
+- **Tidak ada todo yang ke-skip** — semua 11 todo sebelumnya ✓, sisanya 2 (SQL migrasi + LASTACTIVITY) dieksekusi sesi ini.
+
+#### ✅ Task — SQL Migrasi Supabase (kolom KlikQris)
+- **File baru**: `sql_patches/supabase_patch_klikqris_support.sql`
+- **Isi**:
+  - `ALTER TABLE orders ADD COLUMN IF NOT EXISTS klikqris_signature TEXT` — signature KlikQris untuk verifikasi webhook
+  - `ALTER TABLE orders ADD COLUMN IF NOT EXISTS qris_expired_at TIMESTAMPTZ` — kadaluarsa QRIS
+  - Index: `idx_orders_qris_expired_at`, `idx_orders_klikqris_sig`
+  - Function `ipanstore_cleanup_expired_qris()` — tandai EXPIRED order QRIS lewat waktu (SECURITY DEFINER)
+  - View `ipanstore_v_active_qris_orders` — monitoring admin: QRIS aktif + sisa menit
+  - Idempotent (IF NOT EXISTS / CREATE OR REPLACE) — aman di-run berkali-kali
+- Kolom existing yang sudah dipakai backend & tidak perlu patch (sudah ada dari migrasi lama): `service_id`, `doku_payment_channel`, `webhook_payload`, `email_sent`, `email_sent_at`, `promo_code`, `discount_amount`.
+
+#### ✅ Task — Update LASTACTIVITY.md
+- Entri sesi ini + update header "Update terakhir" + langkah berikutnya (eksekusi SQL, isi .env server, set webhook dashboard KlikQris, test flow end-to-end).
+
+**Pending (butuh user / deploy):**
+1. Eksekusi `sql_patches/supabase_patch_klikqris_support.sql` di Supabase SQL Editor.
+2. Isi `.env` server: `KLIKQRIS_API_KEY`, `KLIKQRIS_ID_MERCHANT` (178785053413), `KLIKQRIS_CALLBACK_URL=https://api.ipanstore.id/api/klikqris-webhook`.
+3. Commit + push + deploy frontend/backend (MENUNGGU KONFIRMASI USER sesuai AGENTS.md #2).
+4. Set webhook URL di dashboard KlikQris (atau biarkan backend kirim `callback_url` per-transaksi).
+5. Test end-to-end: order paket → QR muncul → bayar → status PAID → email SettinX terkirim.
 
 ### Sesi: SECURITY HARDENING #1-5 — Ratelimiting Anti Abuse + Replay Persist + RLS Audit + Input Sanitization (22 Agustus 2026)
 
@@ -117,7 +161,7 @@ cd server && node --check index.js  # ✓ OK (syntax check)
 | Webhook replay + restart loss | 🟠 High | DB persist `webhook_replays` + async checking | ✅ Fix applied |
 | Concurrent webhook processing | 🟡 Medium | `inFlightWebhooks` Set anti-duplicate | ✅ Fix applied |
 | DoS via large body | 🟡 Medium | nginx `client_max_body_size 1m` | ✅ Fix applied |
-| Table data leakage (public) | 🔴 Critical | RLS enable + drop public policies | ⏳ Awaiting SQL execution |
+| Table data leakage (public) | 🔴 Critical | RLS enable + drop public policies | ✅ SQL executed 28 Aug (Success. No rows returned) |
 | Email header injection / XSS | 🟠 High | `isValidEmail()`, `sanitizeForHeader()`, escaped HTML | ✅ Fix applied |
 
 ### Catatan Penting
@@ -125,3 +169,30 @@ cd server && node --check index.js  # ✓ OK (syntax check)
 - User menyebutkan email SMTP diset dengan `muhammadrizvandysukma@gmail.com` → berarti `SMTP_USER` dan `MAIL_FROM` di `.env` sudah dikonfigurasi. Tidak ada perubahan pada konfigurasi email sender.
 - Security fixes ini bersifat **defensive-in-depth**: multiple layers (network→middleware→business logic→database→input validation). Tidak ada single point of failure.
 - Session selanjutnya bisa diskusi **Task 6** (firewall VPS + Cloudflare WAF/rate rule) setelah deployment selesai dan semua patch ter-apply.
+
+### Sesi: Deploy SECURITY FIX #5-10 LIVE — 28 Agustus 2026 (via Tailscale SSH)
+
+- **Trigger**: user "kamu aja yang lakukan deploy ke server lewat ssh tailscale" (izin eksplisit deploy).
+- **Git**: local `56a2c4c` → `git push origin main` `640ad72..56a2c4c`; server `git stash` (docker-compose restart policy diff) → `git pull` fast-forward `640ad72..56a2c4c` → `git stash drop`.
+- **SQL**: user salah project awal (`public.services does not exist`, `p.polname` typo, `RAISE` outside block, `FOREACH IN ARRAY` incompatible). Fix iteratif: `SQL_COMPLETE_SECURITY_PATCH.sql` final (compatible) → Run di project **ipanstore** yang benar → `Success. No rows returned`.
+- **Build**: `npm run build` lokal 7.76s (`index-CLZgnQVS.js` 580kB) → `tar -czf $TEMP\ipanstore-dist.tgz -C D:\ipanstore dist` (10.3MB) → `scp` ke `/tmp/ipanstore-dist.tgz` → server `rm -rf dist && tar -xzf /tmp/ipanstore-dist.tgz` → `dist/index.html` 3.0K OK.
+- **Frontend deploy**: `docker compose down` → `up --build -d` → `nginx:alpine` build 11.87MB context, `COPY dist`+`COPY nginx.conf` done, `ipanstore` `Up Less than a second` `0.0.0.0:5007->80`, `nginx -t` syntax ok, `client_max_body_size 1m` live.
+- **Backend deploy**: `server/package.json` `express-rate-limit ^8.6.2` belum ter-install → `npm install` (88 packages, 0 vuln) → `pm2 restart ipanstore-backend` (pid 525065, online, 67.4mb, 12s uptime). Log awal error `ERR_MODULE_NOT_FOUND` teratasi setelah install.
+- **Verifikasi live** (via `root@100.89.140.16`):
+  - Frontend: `curl -I https://ipanstore.id` `200` `CSP` `HSTS` `nosniff`, body `index-CLZgnQVS.js` live.
+  - Backend: `curl http://localhost:5159/api/health` `200` `RateLimit-Policy: 100;w=900` `{"ok":true,"service":"ipanstore-backend"}`, `curl https://api.ipanstore.id/api/health` `200` same JSON (sebelumnya `502` karena missing dep).
+  - Config: `server/index.js:34 app.set("trust proxy",1)` + `ipKeyGenerator` (`cf-connecting-ip` priority) live, `nginx.conf:12 client_max_body_size 1m` live.
+  - Rate limiter manual test: `ipKeyGenerator({cf:1.2.3.4})≠{cf:5.6.7.8}` `PASS`, fallback `req.ip`/`socket` `PASS`.
+- **Cleanup**: `/tmp/ipanstore-dist.tgz` dihapus (server+local), `git status` server hanya `?? deploy.sh, ipanstore/, nginx.conf.bak-local, server/orders.json, server/test-supabase.mjs` (untracked, tidak mengganggu).
+- **Pending**: commit `LASTACTIVITY.md` update ini (tunggu konfirmasi user sebelum push), diskusi Task 6 (firewall VPS + Cloudflare WAF) sesi berikutnya.
+
+### Sesi: Task 6 — Firewall VPS + Cloudflare WAF — SKIP (28 Agustus 2026)
+
+- **Keputusan user**: "soal ini gausah deh saya gak mau, skip dulu" — Task 6 tidak dieksekusi.
+- **Recon yang sempat dilakukan** (read-only, tidak ada perubahan):
+  - VPS `sever-h81m-s2ph` Ubuntu 22.04, IP publik egress `118.99.112.141`, LAN `192.168.18.223/24`, Tailscale `100.89.140.16`.
+  - `UFW Status: inactive`, `iptables INPUT policy ACCEPT`, `DOCKER-USER` chain kosong.
+  - `cloudflared.service` remote-managed via token (`--token eyJh...`), config di dashboard Cloudflare Zero Trust (bukan file lokal).
+  - Port `5007` (ipanstore Docker) + `5159` (PM2 backend) + ~80 container Bizweb lain bind `0.0.0.0` — shared VPS, perubahan firewall berisiko ganggu project lain.
+- **Hasil**: Tidak ada file/kode/server yang diubah. Task 6 ditunda sesuai permintaan.
+- **Status**: `LASTACTIVITY.md` ini belum di-commit/push (menunggu konfirmasi user sesuai AGENTS.md #2).
