@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Backend IPAN STORE — integrasi Payment Gateway DOKU (DOKU Checkout)
+// Backend IPAN STORE — integrasi Payment Gateway DOKU (DOKU Checkout) & KlikQris (QRIS Dinamis)
 //
 // Kenapa butuh file ini?
 //   DOKU Checkout butuh header Signature HMAC-SHA256 yang dibuat dari
@@ -7,11 +7,12 @@
 //   dikirim dari browser → semua call ke DOKU harus lewat server ini.
 //
 // Endpoint yang disediakan:
-//   POST /api/doku-create-order → membuat transaksi DOKU Checkout
+//   POST /api/klikqris-create-order → membuat transaksi QRIS KlikQris (QR tampil di halaman order)
+//   POST /api/klikqris-webhook      → menerima notifikasi PAID/EXPIRED dari KlikQris
+//   GET  /api/klikqris-status/:orderId → polling status transaksi (fallback webhook)
+//   POST /api/doku-create-order → membuat transaksi DOKU Checkout (fallback kanal lain)
 //   POST /api/doku-webhook      → menerima notifikasi pembayaran dari DOKU
 //   GET  /api/health            → cek server hidup
-//
-// (Endpoint Cashi.id lama tetap dipertahankan sebagai legacy reference.)
 // ─────────────────────────────────────────────────────────────────────────────
 
 import express from "express";
@@ -68,6 +69,23 @@ const DOKU_CALLBACK_URL = process.env.DOKU_CALLBACK_URL || "";
 
 if (!DOKU_CLIENT_ID || !DOKU_SECRET_KEY) {
   console.warn("⚠️  DOKU_CLIENT_ID / DOKU_SECRET_KEY belum diisi di .env — endpoint doku-create-order akan gagal.");
+}
+
+// ── Kredensial KlikQris (Payment Gateway QRIS Dinamis) ───────────────────────
+// Dari dashboard KlikQris: https://klikqris.com/dokumentasi (Login) → Kredensial API.
+const KLIKQRIS_API_KEY = process.env.KLIKQRIS_API_KEY || "";
+// id_merchant juga dikirim sebagai header sesuai dokumentasi.
+const KLIKQRIS_ID_MERCHANT = process.env.KLIKQRIS_ID_MERCHANT || "";
+// Base URL API KlikQris (dokumentasi: https://klikqris.com/api)
+const KLIKQRIS_BASE_URL = process.env.KLIKQRIS_BASE_URL || "https://klikqris.com/api";
+// Callback/notification URL webhook (dikirim per-transaksi via callback_url).
+const KLIKQRIS_CALLBACK_URL = process.env.KLIKQRIS_CALLBACK_URL || "";
+
+if (!KLIKQRIS_API_KEY || !KLIKQRIS_ID_MERCHANT) {
+  console.warn("⚠️  KLIKQRIS_API_KEY / KLIKQRIS_ID_MERCHANT belum diisi di .env — endpoint klikqris-create-order akan gagal.");
+}
+if (!KLIKQRIS_CALLBACK_URL) {
+  console.warn("⚠️  KLIKQRIS_CALLBACK_URL belum diisi di .env — webhook KlikQris harus diset manual di dashboard (pengaturan global) agar order bisa dikonfirmasi lunas.");
 }
 
 // ── Polyfill WebSocket global (Node < 22) untuk @supabase/realtime-js ──────
@@ -480,7 +498,7 @@ app.use(
 );
 
 // Webhook butuh RAW body untuk verifikasi signature → daftarkan SEBELUM express.json()
-app.use("/api/cashi-webhook", express.raw({ type: "*/*" }));
+app.use("/api/klikqris-webhook", express.raw({ type: "application/json" }));
 app.use("/api/doku-webhook", express.raw({ type: "*/*" }));
 
 // Body parser JSON untuk endpoint lain
@@ -532,85 +550,325 @@ app.get("/api/health", (_req, res) => {
   res.json({ ok: true, service: "ipanstore-backend", time: new Date().toISOString() });
 });
 
-// ── Create Order ─────────────────────────────────────────────────────────────
-// Front-end memanggil ini; server meneruskan ke Cashi dengan API key rahasia.
-app.post("/api/create-order", async (req, res) => {
+// ── Create Order KlikQris ─────────────────────────────────────────────────────
+// Front-end memanggil ini; server meneruskan ke KlikQris dengan API key rahasia.
+app.post("/api/klikqris-create-order", orderLimiter, async (req, res) => {
   try {
-    const { amount, order_id, customer_name, customer_email, customer_phone, item_name, description } =
+    const { amount, order_id, customer_name, customer_email, customer_phone, item_name, promo_code } =
       req.body || {};
 
     if (!amount || !order_id) {
       return res.status(400).json({ success: false, message: "amount dan order_id wajib diisi." });
     }
-    if (!CASHI_API_KEY) {
-      return res.status(500).json({ success: false, message: "Server belum dikonfigurasi (API key kosong)." });
+    if (!KLIKQRIS_API_KEY || !KLIKQRIS_ID_MERCHANT) {
+      return res.status(500).json({
+        success: false,
+        message: "Server belum dikonfigurasi (KLIKQRIS_API_KEY / KLIKQRIS_ID_MERCHANT kosong).",
+      });
     }
 
-    const r = await fetch(`${CASHI_BASE_URL}/api/create-order`, {
+    // SECURITY FIX #4 — jangan percaya `amount` dari client (bisa di-tamper via DevTools/Burp).
+    // Harga authoritative diambil dari tabel `services` berdasarkan `item_name`.
+    let basePrice = Number(amount);
+    if (supabase && item_name) {
+      const clean = String(item_name).replace(/^IPAN STORE\s*-\s*/i, "").trim();
+      if (clean) {
+        let svcPrice = null;
+        let { data: svc } = await supabase
+          .from("services")
+          .select("price")
+          .ilike("name", clean)
+          .limit(1)
+          .maybeSingle();
+        if (svc?.price != null) {
+          svcPrice = Number(svc.price);
+        } else {
+          ({ data: svc } = await supabase
+            .from("services")
+            .select("price")
+            .ilike("name", `%${clean}%`)
+            .limit(1)
+            .maybeSingle());
+          if (svc?.price != null) svcPrice = Number(svc.price);
+        }
+        if (svcPrice == null) {
+          console.warn(`⚠️ Service tidak ditemukan untuk "${clean}" — pakai amount client sementara.`);
+        } else {
+          basePrice = svcPrice;
+        }
+      }
+    }
+    // Guard: jangan izinkan pembayaran di bawah 1.000 IDR (anti tamper 0/1 rupiah)
+    if (basePrice < 1000 || !Number.isFinite(basePrice)) {
+      return res.status(400).json({ success: false, message: "Nominal pembayaran tidak valid." });
+    }
+
+    let finalAmount = basePrice;
+    let appliedPromo = null;
+    const promo_code_clean = String(promo_code || "").trim().toUpperCase();
+    if (promo_code_clean) {
+      const promo = await validateAndApplyPromo(promo_code_clean, basePrice);
+      if (!promo.ok) {
+        return res.status(400).json({ success: false, message: promo.message });
+      }
+      finalAmount = promo.amount;
+      appliedPromo = promo.promo_code;
+    }
+
+    const invoiceNumber = String(order_id).replace(/[^a-zA-Z0-9]/g, "").slice(0, 64) || "IPANORDER";
+
+    const body = {
+      order_id: invoiceNumber,
+      id_merchant: KLIKQRIS_ID_MERCHANT,
+      amount: Math.round(finalAmount),
+      keterangan: `${item_name || "Pembayaran IPAN STORE"}${appliedPromo ? ` (promo ${appliedPromo})` : ""}`.slice(0, 255),
+    };
+    if (KLIKQRIS_CALLBACK_URL) {
+      body.callback_url = KLIKQRIS_CALLBACK_URL;
+    }
+
+    const r = await fetch(`${KLIKQRIS_BASE_URL}/qris/create`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": CASHI_API_KEY,
+        "x-api-key": KLIKQRIS_API_KEY,
+        "id_merchant": KLIKQRIS_ID_MERCHANT,
       },
-      body: JSON.stringify({
-        amount,
-        order_id,
-        customer_name,
-        customer_email,
-        customer_phone,
-        item_name,
-        description,
-      }),
+      body: JSON.stringify(body),
     });
 
     const data = await r.json().catch(() => ({}));
-    return res.status(r.status).json(data);
+    if (!r.ok || !data?.status) {
+      console.error("klikqris-create-order KlikQris error:", JSON.stringify(data));
+      return res.status(r.status || 502).json({
+        success: false,
+        message: data?.message || "Gagal membuat transaksi KlikQris.",
+        raw: data,
+      });
+    }
+
+    // total_amount = jumlah yang benar-benar harus dibayar (KlikQris menambah kode unik).
+    const totalAmount =
+      Number(data?.data?.total_amount || finalAmount) || finalAmount;
+
+    // Simpan order PENDING di database.
+    await saveOrder({
+      invoice_number: invoiceNumber,
+      customer_name: String(customer_name || "").trim(),
+      customer_email: String(customer_email || "").trim(),
+      customer_phone: String(customer_phone || "").trim() || null,
+      service_id: await resolveServiceId(item_name),
+      amount: totalAmount,
+      status: "PENDING",
+      doku_payment_channel: "QRIS",
+      klikqris_signature: data?.data?.signature || null,
+      qris_expired_at: data?.data?.expired_at || null,
+      webhook_payload: null,
+    });
+
+    return res.json({
+      success: true,
+      order_id: invoiceNumber,
+      qris_url: data?.data?.qris_url || null,
+      qris_image: data?.data?.qris_image || null,
+      total_amount: totalAmount,
+      amount: Number(data?.data?.amount) || finalAmount,
+      signature: data?.data?.signature || null,
+      expired_at: data?.data?.expired_at || null,
+      raw: data?.data || null,
+    });
   } catch (e) {
-    console.error("create-order error:", e);
+    console.error("klikqris-create-order error:", e);
     return res.status(500).json({
       success: false,
-      message: e instanceof Error ? e.message : "Gagal menghubungi Cashi.",
+      message: e instanceof Error ? e.message : "Gagal menghubungi KlikQris.",
     });
   }
 });
 
-// ── Webhook Cashi ────────────────────────────────────────────────────────────
-// Cashi memanggil URL ini saat status pembayaran berubah (PAID/EXPIRED/dll).
-// Verifikasi signature HMAC-SHA256 memakai WEBHOOK SECRET KEY.
-app.post("/api/cashi-webhook", (req, res) => {
+// ── Helper: Proses fulfillment order jika baru saja LUNAS (PAID/SUCCESS) ───────
+// Dipanggil oleh webhook AND polling status untuk menangani payment confirmation.
+// Idempotent: skip jika order sudah PAID.
+async function processPaymentConfirmation(orderId, payload = null) {
+  const order = await getOrder(orderId);
+  
+  if (!order) {
+    console.warn(`⚠️  Order ${orderId} tidak ditemukan di DB — abaikan.`);
+    return { processed: false, reason: 'order_not_found' };
+  }
+
+  // Skip jika sudah lunas (anti double-send)
+  if (order.status === "PAID" || order.status === "SUCCESS") {
+    console.log(`⏭️  Order ${orderId} sudah ${order.status} — fulfillment diabaikan.`);
+    return { processed: false, reason: 'already_paid' };
+  }
+
+  const status = payload?.status || 'PAID';
+  if (status !== "PAID" && status !== "SUCCESS") {
+    return { processed: false, reason: 'not_paid_yet' };
+  }
+
+  // Update order status + paid_at
+  await updateOrder(orderId, {
+    status: "PAID",
+    paid_at: new Date().toISOString(),
+    klikqris_signature: payload?.signature || order.klikqris_signature || null,
+  });
+
+  // Identifikasi apakah ini paket SettinX
+  let isSettinX = /settinx/i.test(order.invoice_number || "");
+  if (!isSettinX && order.service_id && supabase) {
+    const { data: svc } = await supabase
+      .from("services")
+      .select("slug, name")
+      .eq("id", order.service_id)
+      .single();
+    if (svc && /settinx/i.test(svc.slug || svc.name || "")) {
+      isSettinX = true;
+    }
+  }
+
+  if (!isSettinX) {
+    return { processed: true, reason: 'non_settinx_product', order };
+  }
+
+  // Kirim email otomatis untuk SettinX V1
+  if (!order.customer_email) {
+    console.warn(`⚠️  SettinX SUCCESS tapi email kosong — skip kirim.`);
+    return { processed: true, reason: 'no_customer_email', order };
+  }
+
+  console.log(`📧 Mengirim email SettinX ke ${order.customer_email} (invoice ${orderId})...`);
+  const result = await sendSettinXEmail({
+    to: order.customer_email,
+    customerName: order.customer_name,
+    invoiceNumber: orderId,
+    amount: payload?.total_amount || order.amount,
+    paidAt: new Date().toISOString(),
+  });
+
+  if (result.ok) {
+    await updateOrder(orderId, {
+      email_sent: true,
+      email_sent_at: new Date().toISOString(),
+    });
+    console.log(`📧 Email SettinX TERKIRIM: ${order.customer_email} (invoice ${orderId})`);
+  } else {
+    console.error(`📧 Email SettinX GAGAL ke ${order.customer_email}: ${result.error}`);
+  }
+
+  return { processed: true, result, order };
+}
+
+// ── Webhook KlikQris ─────────────────────────────────────────────────────────
+// KlikQris memanggil URL ini saat status transaksi berubah (PAID / EXPIRED).
+// Validasi signature: bandingkan dengan signature yang didapat saat create.
+// Selalu balas HTTP 200 supaya KlikQris tidak retry terus-menerus.
+app.post("/api/klikqris-webhook", async (req, res) => {
   try {
-    const signature =
-      req.headers["x-signature"] || req.headers["x-cashi-signature"] || req.headers["signature"];
     const rawBody = req.body instanceof Buffer ? req.body.toString("utf8") : JSON.stringify(req.body);
-
-    if (CASHI_WEBHOOK_SECRET) {
-      const expected = crypto.createHmac("sha256", CASHI_WEBHOOK_SECRET).update(rawBody).digest("hex");
-      const valid =
-        typeof signature === "string" &&
-        signature.length === expected.length &&
-        crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
-
-      if (!valid) {
-        console.warn("⚠️  Webhook signature TIDAK valid — ditolak.");
-        return res.status(401).json({ success: false, message: "Invalid signature" });
+    const payload = (() => {
+      let raw = {};
+      try {
+        raw = JSON.parse(rawBody);
+      } catch {
+        raw = {};
       }
-    } else {
-      console.warn("⚠️  CASHI_WEBHOOK_SECRET kosong — webhook diterima TANPA verifikasi (tidak aman).");
+      // Beberapa versi dashboard/webhook membungkus payload di "data".
+      return (typeof raw?.data === "object" && raw.data !== null ? raw.data : raw) || raw;
+    })();
+
+    const orderId = String(payload?.order_id || "").trim();
+    const status = String(payload?.status || "").trim();
+
+    console.log(`✅ Webhook KlikQris diterima: order_id=${orderId} status=${status}`);
+
+    if (!orderId) {
+      console.warn("⚠️  KlikQris webhook tanpa order_id — pemeriksaan manual.");
+      return res.json({ success: true });
     }
 
-    let payload;
-    try {
-      payload = JSON.parse(rawBody);
-    } catch {
-      payload = req.body;
+    // DOUBLE SECURITY (sesuai dokumentasi KlikQris):
+    // Bandingkan signature dari webhook dengan signature yang disimpan saat create order.
+    const order = await getOrder(orderId);
+    if (
+      order &&
+      order.klikqris_signature &&
+      payload?.signature &&
+      String(payload.signature) !== String(order.klikqris_signature)
+    ) {
+      console.warn(`⚠️  Signature webhook TIDAK COCOK untuk ${orderId} — kemungkinan fake webhook, ditolak.`);
+      return res.status(401).json({ success: false, message: "Invalid signature" });
     }
 
-    // TODO: proses order di sini — tandai lunas, kirim WA/email ke pelanggan, dsb.
-    console.log("✅ Webhook Cashi diterima:", JSON.stringify(payload));
+    if (!order) {
+      console.warn(`⚠️  KlikQris webhook untuk order tak dikenal: ${orderId} — buat minimal dulu.`);
+      await saveOrder({
+        invoice_number: orderId,
+        amount: Number(payload?.total_amount) || Number(payload?.amount) || 0,
+        status: status === "PAID" || status === "SUCCESS" ? "PAID" : status,
+        paid_at: status === "PAID" || status === "SUCCESS" ? new Date().toISOString() : null,
+        doku_payment_channel: "QRIS",
+        klikqris_signature: payload?.signature || null,
+      });
+      // Tidak bisa fulfill kalau order baru dibuat — belum punya customer_email
+      return res.json({ success: true });
+    }
+
+    // Sudah lunas → abaikan (anti double-kirim produk/email).
+    if (order.status === "PAID" || order.status === "SUCCESS") {
+      console.log(`⏭️  KlikQris: order ${orderId} sudah ${order.status} — notifikasi diabaikan.`);
+      return res.json({ success: true });
+    }
+
+    // Panggil helper untuk process fulfillment (update DB + kirim email)
+    await processPaymentConfirmation(orderId, payload);
+
+    // EXPIRED handler
+    if (status === "EXPIRED") {
+      await updateOrder(orderId, { status: "EXPIRED" });
+      console.log(`⏳ KlikQris: order ${orderId} kedaluwarsa.`);
+    }
 
     return res.json({ success: true });
   } catch (e) {
-    console.error("webhook error:", e);
+    console.error("klikqris-webhook error:", e);
+    return res.status(500).json({ success: false });
+  }
+});
+
+// ── Check Status KlikQris ─────────────────────────────────────────────────────
+// Manual polling dari frontend (fallback kalau webhook telat). Panggil API
+// KlikQris dan kembalikan status terbaru. Selain itu, jika status adalah SUCCESS/PAID,
+// proses fulfillment (update DB + kirim email SettinX) seperti yang dilakukan webhook.
+// Ini memastikan: meskipun webhook gagal/telat, pembelian tetap di-fulfill otomatis.
+app.get("/api/klikqris-status/:orderId", async (req, res) => {
+  try {
+    const orderId = String(req.params.orderId || "").replace(/[^a-zA-Z0-9]/g, "").slice(0, 64);
+    if (!orderId) {
+      return res.status(400).json({ success: false, message: "orderId wajib diisi." });
+    }
+
+    const r = await fetch(`${KLIKQRIS_BASE_URL}/qris/status/${orderId}`, {
+      method: "GET",
+      headers: {
+        "x-api-key": KLIKQRIS_API_KEY,
+        "id_merchant": KLIKQRIS_ID_MERCHANT,
+      },
+    });
+
+    const data = await r.json().catch(() => ({}));
+    
+    // Proses fulfillment jika status adalah SUCCESS/PAID
+    // Idempotent: skip jika order sudah lunas
+    const apiStatus = String(data?.data?.status || data?.status || "").trim();
+    if (apiStatus === "SUCCESS" || apiStatus === "PAID") {
+      await processPaymentConfirmation(orderId, data.data || data);
+    }
+
+    return res.status(r.status).json(data);
+  } catch (e) {
+    console.error("klikqris-status error:", e);
     return res.status(500).json({ success: false });
   }
 });
