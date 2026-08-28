@@ -24,6 +24,8 @@ export interface Order {
   webhook_payload: Record<string, any> | null;
   email_sent: boolean;
   email_sent_at: string | null;
+  settinx_license_uid: string | null;
+  settinx_license_error: string | null;
   promo_code: string | null;
   discount_amount: number;
   services?: { name: string | null; slug: string | null } | null;

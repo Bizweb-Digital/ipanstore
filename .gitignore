@@ -38,5 +38,8 @@ dist-ssr
 # opencode config lokal
 opencode.json
 
+# Firebase service account (RAHASIA) — JANGAN di-commit
+/server/secrets/
+
 # Rendered video artifacts
 /video/out/
