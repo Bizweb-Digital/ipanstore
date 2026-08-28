@@ -1,18 +1,24 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Dependabot — Automated Dependency Security Updates
-# (Setup untuk Task #4: Automated Security Scanning)
+# Dependabot — pengaturan ANTI-SPAM-EMAIL.
 #
-# Dependabot akan:
-#   - Scan setiap PR commit untuk dependensi yang diketahui vulnerable
-#   - Auto-create PR saat update minor/patch tersedia untuk dependency
-#   - Alert GitHub Security advisories ke menu "Security" repo
+# SEBELUMNYA: Dependabot membuat Pull Request baru tiap minggu untuk update
+# dependency → setiap PR mengirim EMAIL + memicu Security Scan (yang dulu
+# sering gagal → email "Run failed" lagi). Hasilnya inbox banjir.
 #
-# Referensi: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates
+# SEKARANG (open-pull-requests-limit: 0): Dependabot TIDAK membuat PR update
+# versi sama sekali. Yang tetap jalan:
+#   - Dependabot SECURITY ALERTS → muncul di tab "Security" repo (BUKAN email
+#     per-PR), memberitahu bila ada dependency yang benar-benar berbahaya.
+#
+# Update dependency cukup dilakukan manual/terjadwal oleh developer
+# (npm outdated / npm audit fix) agar terkontrol dan tidak merusak aplikasi.
+#
+# Referensi: https://docs.github.com/en/code-security/dependabot
 # ─────────────────────────────────────────────────────────────────────────────
 
 version: 2
 updates:
-  # 1) Frontend (root) — npm
+  # 1) Frontend (root) — npm  → 0 = tidak membuat PR versi (anti email-spam)
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
@@ -20,21 +26,9 @@ updates:
       day: "monday"
       time: "09:00"
       timezone: "Asia/Jakarta"
-    assignees:
-      - "Bizweb-Digital"
-    labels:
-      - "dependencies"
-      - "security"
-    versioning-strategy: "auto"
-    # Abaikan major upgrade yang breaking (misal react-router v7) kecuali
-    # vulnerability — biar tidak merusak app tanpa central review.
-    ignore:
-      - dependency-name: "react-router-dom"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "vite"
-        update-types: ["version-update:semver-major"]
+    open-pull-requests-limit: 0
 
-  # 2) Backend (server/) — npm
+  # 2) Backend (server/) — npm  → 0 = tidak membuat PR versi (anti email-spam)
   - package-ecosystem: "npm"
     directory: "/server"
     schedule:
@@ -42,20 +36,6 @@ updates:
       day: "tuesday"
       time: "09:00"
       timezone: "Asia/Jakarta"
-    assignees:
-      - "Bizweb-Digital"
-    labels:
-      - "dependencies"
-      - "security"
+    open-pull-requests-limit: 0
 
-  # 3) Server-side / tooling lain (docker dll.) — aktif bila ada Dockerfile
-  - package-ecosystem: "docker"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "wednesday"
-      time: "09:00"
-      timezone: "Asia/Jakarta"
-    labels:
-      - "dependencies"
-      - "security"
+  # 3) Docker — nonaktif (tidak dipakai, hindari noise)
