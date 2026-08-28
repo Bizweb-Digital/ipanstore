@@ -37,9 +37,18 @@
 **Pending (butuh user / deploy):**
 1. ✅ **SELESAI (dikonfirmasi user)**: Migrasi `sql_patches/add_settinx_license_columns.sql` sudah di-run di Supabase SQL Editor & berhasil.
 2. ✅ **BATAL / TIDAK PERLU**: Firestore Rules — rules aktif (versi "Device license binding", Aug 2) sudah benar untuk app SettinX (login butuh read/create `deviceUsers`+`deviceBindings` via idToken REST). Backend pakai `firebase-admin` (lewati rules), `settinx_licenses` default tertutup untuk client → aman. Jangan diubah.
-3. Commit + push + deploy (MENUNGGU KONFIRMASI USER sesuai AGENTS.md #2): `git push`, lalu server `git pull && cd server && npm install && pm2 restart ipanstore-backend --update-env` + SCP service-account ke `/root/ipanstore-secrets/` + isi env server.
-4. Build frontend & update `dist/` (SCP + docker cp/restart) bila tombol admin mau live.
-5. Test end-to-end: order SettinX → bayar → email berisi kartu kredensial → cek Firebase Auth Users + Firestore `settinx_licenses` → login aplikasi SettinX pakai kredensial.
+3. ✅ **SELESAI DEPLOY LANGSUNG (user konfirmasi "gas deploy")**:
+   - Commit `cd90278` + push `origin main` (12 files, 3335 insertions).
+   - Service-account → `/root/ipanstore-secrets/settinx-service-account.json` di server.
+   - `server/.env` server ditambahi `SETTINX_FIREBASE_PROJECT_ID` & `SETTINX_FIREBASE_SERVICE_ACCOUNT_FILE`.
+   - `git pull` (fast-forward e9c09d6..cd90278) + `npm install` (firebase-admin di server).
+   - `pm2 restart ipanstore-backend --update-env` → online port 5159, log bersih.
+   - Frontend: build lokal (tsc+build OK) → `dist/` SCP ke server → swap (`dist.bak-` backup) → `docker compose down && up --build -d` → container `ipanstore` Up, web HTTP 200.
+4. ✅ **VERIFIKASI LIVE**:
+   - `POST https://api.ipanstore.id/api/settinx/resend {"orderId":"TESTSETTINX0707"}` → 404 "Order ... tidak ditemukan" (route hidup, validasi jalan).
+   - Firebase init di server: `FB INIT OK: settinx-license`, findExistingLicense OK.
+   - Bundle `assets/Orders-B6VEkkf8.js` memuat `settinx/resend` + teks "Generate & Kirim Ulang Kredensial".
+5. **Usulan test end-to-end manual** (opsional): order SettinX → bayar → email berisi kartu kredensial → cek Firebase Auth Users + Firestore `settinx_licenses` → login aplikasi SettinX pakai kredensial.
 
 ### Sesi: SETUP KLIKQRIS — QRIS Dinamis Ganti Cashi.id (30 Agustus 2026)
 
