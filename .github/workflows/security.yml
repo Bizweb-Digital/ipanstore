@@ -63,17 +63,22 @@ jobs:
         with:
           fetch-depth: 0
 
-      # GITLEAKS_LICENSE dikosongkan → memakai gitleaks versi GRATIS (repo ini
-      # publik, jadi lisensi komersial tidak diwajibkan). continue-on-error
-      # membuat temuan secret menjadi warning, bukan kegagalan seluruh workflow.
+      # GITLEAKS_LICENSE: default STRING KOSONG → memakai gitleaks versi GRATIS
+      # (repo ini publik, jadi lisensi komersial tidak diwajibkan). Variabel
+      # SELALU ter-set (meski secret belum dibuat) supaya action tidak menganggap
+      # "missing license". Bila suatu saat repo jadi privat, isi GitHub Secret
+      # bernama GITLEAKS_LICENSE dengan lisensi dari gitleaks.io.
+      # FORCE_NODE_24: paksa action berjalan di Node 24 (hilangkan warning
+      # "Node.js 20 is deprecated").
       - name: gitleaks scan (current tree)
         uses: gitleaks/gitleaks-action@v2
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE || '' }}
           GITLEAKS_ENABLE_COMMENTS: "false"
           GITLEAKS_ENABLE_SUMMARY: "true"
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
   # ── Job 3 (dev-bec-off): TruffleHog git-history scan komentar hanya ────────
   # trufflehog-optional:
