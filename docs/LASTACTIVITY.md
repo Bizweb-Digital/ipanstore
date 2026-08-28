@@ -19,8 +19,8 @@
 
 | # | Skenario | Kode Pesanan (invoice) | Biaya QRIS | Total Dibayar | Promo | Diskon | DB promo_code | DB discount_amount |
 |---|---|---|---|---|---|---|---|---|
-| 43 || Test 1 | Dengan promo HEMAT5 | IPANAPPSETTINX1787947280544 | Rp 71.250+499 | Rp 71.749 | ✓ "HEMAT5 berlaku! hemat Rp 3.750" | Rp 3.750 | ❌ NULL (bug) | ❌ 0 (bug) |
-|| Test 2 | Tanpa promo | IPANAPPSETTINX1787947452511 | Rp 75.000+531 | Rp 75.531 | — | — | NULL (benar) | 0 (benar) |
+| Test 1 | Dengan promo HEMAT5 | IPANAPPSETTINX1787947280544 | Rp 71.250+499 | Rp 71.749 | ✓ "HEMAT5 berlaku! hemat Rp 3.750" | Rp 3.750 | ❌ NULL (bug) | ❌ 0 (bug) |
+| Test 2 | Tanpa promo | IPANAPPSETTINX1787947452511 | Rp 75.000+531 | Rp 75.531 | — | — | NULL (benar) | 0 (benar) |
 
 ### Sesi: PROJECT REORGANIZATION — Hari Ini
 
