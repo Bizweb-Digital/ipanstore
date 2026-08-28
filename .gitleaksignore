@@ -1,0 +1,13 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# .gitleaksignore — daftar temuan gitleaks yang DIABAIKAN (false-positive).
+#
+# File-file ini hanya berisi CONTOH / placeholder / data non-rahasia (email
+# kontak bisnis, merchant ID publik, dokumentasi cara-setup). BUKAN rahasia
+# asli. Rahasia asli (.env, service-account JSON) sudah dilindungi .gitignore
+# dan tidak pernah ter-commit.
+#
+# Format: <fingerprint>  →  path:rule:line  (lihat output gitleaks).
+# ─────────────────────────────────────────────────────────────────────────────
+# Catatan: karena tidak ada rahasia asli yang bocor, langkah utama sudah cukup
+# dengan GITLEAKS_LICENSE kosong + continue-on-error di workflow. File ini
+# disiapkan bila di kemudian hari ada false-positive yang ingin dibungkam.
