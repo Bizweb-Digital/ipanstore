@@ -7,7 +7,36 @@
 
 - **Repo**: `git@github.com-bizwebdigital:Bizweb-Digital/ipanstore.git` (branch `main`)
 - **Domain live**: `https://ipanstore.id` (Cloudflare Tunnel → container Docker port 5007)
-- **Update terakhir**: 29 Agustus 2026 — **AUTO-GENERATE KREDENSIAL SETTINX V1 (FIREBASE) SAAT PEMBELIAN** — Backend otomatis buat akun Firebase (email+password acak) + License Key (=UID) untuk tiap pembeli SettinX yang lunas, dikirim via email; endpoint resend admin + tombol dashboard; menunggu eksekusi migrasi SQL Supabase & deploy.
+- **Update terakhir**: 29 Agustus 2026 — **E2E TEST ORDER + FIX PROMO KLIKQRIS** — Testing order SettinX V1 (form: ipan / ipanasik123@gmail.com / 088976496870) di live site: dengan promo HEMAT5 vs tanpa promo. Ditemukan bug: diskon promo tampil di UI tapi promo_code/discount_amount null di DB pada handler KlikQris. Fixed (server/index.js), deployed, verified live: order retest simpan HEMAT5/3750.
+
+
+### Sesi: E2E TEST ORDER SETTINX + FIX PROMO KLIKQRIS — 29 Agustus 2026
+
+- **Permintaan user**: "bantu buatin skenario test nya — pengunjung mengisi form di website (nama ipan, email ipanasik123@gmail.com, no WA 088976496870), lakukan 2 kali testing: promo HEMAT5 vs tanpa kode promo. Order paket IPAN App SettinX V1."
+- **Metode**: agent-browser (session settinx-test) di live site https://ipanstore.id/order, paket LISENSI LIFETIME APP SETTINX (IPAN APP SettinX V1, Rp 75.000).
+
+**Hasil Test (live site):**
+
+| # | Skenario | Kode Pesanan (invoice) | Biaya QRIS | Total Dibayar | Promo | Diskon | DB promo_code | DB discount_amount |
+|---|---|---|---|---|---|---|---|---|
+| Test 1 | Dengan promo HEMAT5 | IPANAPPSETTINX1787947280544 | Rp 71.250+499 | Rp 71.749 | ✓ "HEMAT5 berlaku! hemat Rp 3.750" | Rp 3.750 | ❌ NULL (bug) | ❌ 0 (bug) |
+| Test 2 | Tanpa promo | IPANAPPSETTINX1787947452511 | Rp 75.000+531 | Rp 75.531 | — | — | NULL (benar) | 0 (benar) |
+
+**Bug ditemukan & diperbaiki:**
+- Simptom: Promo HEMAT5 dihitung & ditampilkan (total Rp 71.250 di UI, HEMAT Rp 3.750), tapi setelah checkout orders.promo_code & orders.discount_amount = NULL/0 di Supabase untuk alur **KlikQris**.
+- Akar masalah: Handler POST /api/klikqris-create-order (server/index.js) menghitung inalAmount/ppliedPromo tapi tidak meneruskan promo_code & discount_amount ke saveOrder() — beda dengan handler DOKU yang sudah menyimpannya.
+- **Fix** (server/index.js, commit 983c98c): tambah let discountAmount = 0 + isi dari promo.discount_amount (fallback asePrice - finalAmount), dan tambahkan promo_code: appliedPromo, discount_amount: discountAmount di objek saveOrder() KlikQris.
+- **Deploy live**: git push → ssh root@100.89.140.16 git pull + pm2 restart ipanstore-backend → online.
+- **Verifikasi fix live**: checkout ulang dengan HEMAT5 → invoice IPANAPPSETTINX1787948066157, total Rp 71.681 (71.250+fee) → query Supabase: promo_code: "HEMAT5", discount_amount: 3750 ✓✓
+- **Status kedua order test**: PENDING (menunggu pembayaran, wajar — halaman test tidak dibayar). Ini order nyata di DB dengan customer ipan.
+
+**File diubah:**
+- server/index.js — simpan promo_code & discount_amount di handler KlikQris (4 insertions).
+- Semua verifikasi memakai script Node sementara (dihapus setelah dipakai).
+
+**Cleanup**: file temp erify-orders-settinx.cjs, erify-promo-fix.cjs, settinx-orders-result.json dihapus. Browser closed.
+
+**Next steps (opsional)**: Admin bisa cek 2 order test di dashboard admin (Orders) — atau user bisa hapus order test via Supabase jika mengganggu.
 
 ### Sesi: AUTO-GENERATE KREDENSIAL SETTINX V1 (FIREBASE) — 29 Agustus 2026
 
