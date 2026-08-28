@@ -637,6 +637,7 @@ app.post("/api/klikqris-create-order", orderLimiter, async (req, res) => {
 
     let finalAmount = basePrice;
     let appliedPromo = null;
+    let discountAmount = 0;
     const promo_code_clean = String(promo_code || "").trim().toUpperCase();
     if (promo_code_clean) {
       const promo = await validateAndApplyPromo(promo_code_clean, basePrice);
@@ -645,6 +646,7 @@ app.post("/api/klikqris-create-order", orderLimiter, async (req, res) => {
       }
       finalAmount = promo.amount;
       appliedPromo = promo.promo_code;
+      discountAmount = Number(promo.discount_amount) || Math.max(basePrice - finalAmount, 0);
     }
 
     const invoiceNumber = String(order_id).replace(/[^a-zA-Z0-9]/g, "").slice(0, 64) || "IPANORDER";
@@ -693,6 +695,8 @@ app.post("/api/klikqris-create-order", orderLimiter, async (req, res) => {
       amount: totalAmount,
       status: "PENDING",
       doku_payment_channel: "QRIS",
+      promo_code: appliedPromo,
+      discount_amount: discountAmount,
       klikqris_signature: data?.data?.signature || null,
       qris_expired_at: data?.data?.expired_at || null,
       webhook_payload: null,
