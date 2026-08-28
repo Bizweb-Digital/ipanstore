@@ -19,8 +19,24 @@
 
 | # | Skenario | Kode Pesanan (invoice) | Biaya QRIS | Total Dibayar | Promo | Diskon | DB promo_code | DB discount_amount |
 |---|---|---|---|---|---|---|---|---|
-| Test 1 | Dengan promo HEMAT5 | IPANAPPSETTINX1787947280544 | Rp 71.250+499 | Rp 71.749 | ✓ "HEMAT5 berlaku! hemat Rp 3.750" | Rp 3.750 | ❌ NULL (bug) | ❌ 0 (bug) |
-| Test 2 | Tanpa promo | IPANAPPSETTINX1787947452511 | Rp 75.000+531 | Rp 75.531 | — | — | NULL (benar) | 0 (benar) |
+| 43 || Test 1 | Dengan promo HEMAT5 | IPANAPPSETTINX1787947280544 | Rp 71.250+499 | Rp 71.749 | ✓ "HEMAT5 berlaku! hemat Rp 3.750" | Rp 3.750 | ❌ NULL (bug) | ❌ 0 (bug) |
+|| Test 2 | Tanpa promo | IPANAPPSETTINX1787947452511 | Rp 75.000+531 | Rp 75.531 | — | — | NULL (benar) | 0 (benar) |
+
+### Sesi: PROJECT REORGANIZATION — Hari Ini
+
+**Permintaan user**: Commit semua perubahan reorganisasi struktur project yang sudah dilakukan sebelumnya  
+**Perubahan**:
+- ✅ **Dokumentasi** → dipindahkan ke `docs/` subfolder: setup/, deployment/, copywriting-promo-ipanstore.txt
+- ✅ **Database migrations** (`supabase_migration*.sql`, `SQL_*.sql`, `sql_patches/`) → pindah ke `database/migrations/`
+- ✅ **Docker/Nginx configs** → pindah ke `config/docker/`, `config/nginx/`
+- ✅ **Screenshots** → pindah ke `screenshots/`
+- ✅ Hapus `bun.lock`, `bun.lockb` (project pakai npm sekarang)
+- Tambah: `QUICK_REFERENCE.md`, `REORGANIZATION_SUMMARY.md`, `docs/README.md`, `docs/STRUCTURE.md`
+- Update: `README.md` mencerminkan struktur baru
+**Statistik**: 54 files changed, 464 insertions(+), 972 deletions(-)
+**Commit**: `f45ea7f` - "chore: complete project reorganization for better structure"
+**Push**: Berhasil ke `git@github.com-bizwebdigital:Bizweb-Digital/ipanstore.git` (main)
+**Dampak**: Website live tidak terpengaruh karena file dokumen/config non-kode; hanya struktur repo lebih rapi & maintainable
 
 **Bug ditemukan & diperbaiki:**
 - Simptom: Promo HEMAT5 dihitung & ditampilkan (total Rp 71.250 di UI, HEMAT Rp 3.750), tapi setelah checkout orders.promo_code & orders.discount_amount = NULL/0 di Supabase untuk alur **KlikQris**.
