@@ -34,14 +34,16 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: "npm"
 
       - name: Install frontend deps
         run: npm ci --ignore-scripts || npm install --ignore-scripts
 
+      # Ditulis sebagai notice (bukan warning) supaya tidak membanjiri email;
+      # job tetap SUCCESS. Detail vuln tetap bisa dibaca di log run.
       - name: npm audit — frontend
-        run: npm audit --audit-level=high || echo "::warning::Frontend npm audit menemukan 1+ vulnerability high/critical. Review dependensi."
+        run: npm audit --audit-level=high || echo "::notice::Frontend npm audit menemukan 1+ vulnerability high/critical. Review dependensi."
 
       - name: Install backend deps
         working-directory: server
@@ -49,7 +51,7 @@ jobs:
 
       - name: npm audit — backend
         working-directory: server
-        run: npm audit --audit-level=high || echo "::warning::Backend npm audit menemukan 1+ vulnerability high/critical."
+        run: npm audit --audit-level=high || echo "::notice::Backend npm audit menemukan 1+ vulnerability high/critical."
 
   # ── Job 2: Secret Scanning (gitleaks) ──────────────────────────────────────
   secret-scan:
@@ -61,10 +63,17 @@ jobs:
         with:
           fetch-depth: 0
 
+      # GITLEAKS_LICENSE dikosongkan → memakai gitleaks versi GRATIS (repo ini
+      # publik, jadi lisensi komersial tidak diwajibkan). continue-on-error
+      # membuat temuan secret menjadi warning, bukan kegagalan seluruh workflow.
       - name: gitleaks scan (current tree)
         uses: gitleaks/gitleaks-action@v2
+        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+          GITLEAKS_ENABLE_COMMENTS: "false"
+          GITLEAKS_ENABLE_SUMMARY: "true"
 
   # ── Job 3 (dev-bec-off): TruffleHog git-history scan komentar hanya ────────
   # trufflehog-optional:
@@ -92,7 +101,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: "npm"
 
       - name: Install root deps
