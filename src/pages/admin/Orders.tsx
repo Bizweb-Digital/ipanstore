@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -42,6 +42,7 @@ import {
   Save,
   BadgePercent,
   Plus,
+  KeyRound,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -50,6 +51,7 @@ import { supabase } from '@/lib/admin/supabase';
 import { Order, useOrders } from '@/hooks/useOrders';
 import { exportToCsv } from '@/lib/admin/csv';
 import { useAuditLogger } from '@/hooks/useAuditLog';
+import { BACKEND_URL } from '@/lib/doku';
 
 const STATUS_OPTIONS = [
   { value: 'ALL', label: 'Semua Status' },
@@ -112,6 +114,7 @@ export default function AdminOrders() {
     notes: '',
   });
   const logAudit = useAuditLogger();
+  const [isResending, setIsResending] = useState(false);
 
   const { orders, total, loading, error, refetch } = useOrders({
     status: statusFilter === 'ALL' ? undefined : statusFilter,
@@ -178,6 +181,41 @@ export default function AdminOrders() {
     notesTimer.current = setTimeout(() => {
       saveNotes(order.id, value);
     }, 800);
+  };
+
+  const isSettinXProduct = useMemo(() => {
+    if (!selectedOrder) return false;
+    const invoice = (selectedOrder.invoice_number || '').toLowerCase();
+    const serviceName = (selectedOrder.services?.name || '').toLowerCase();
+    const serviceSlug = (selectedOrder.services?.slug || '').toLowerCase();
+    return /settinx/.test(invoice) || /settinx/.test(serviceName) || /settinx/.test(serviceSlug);
+  }, [selectedOrder]);
+
+  const resendSettinXLicense = async (order: Order) => {
+    if (!BACKEND_URL) {
+      toast.error('VITE_BACKEND_URL belum dikonfigurasi — backend tidak bisa dipanggil.');
+      return;
+    }
+    setIsResending(true);
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/settinx/resend`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: order.invoice_number }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || `HTTP ${res.status}`);
+      }
+      toast.success(data.message || 'Email kredensial berhasil dikirim ulang.');
+      await logAudit('SETTINX_RESEND', `Kirim ulang kredensial SettinX utk ${order.invoice_number}`);
+      refetch();
+    } catch (err: any) {
+      console.error('resendSettinXLicense error:', err);
+      toast.error(err?.message || 'Gagal mengirim ulang kredensial.');
+    } finally {
+      setIsResending(false);
+    }
   };
 
   // ── Export CSV (hanya data yang sedang difilter) ───────────────────────────
@@ -780,6 +818,43 @@ export default function AdminOrders() {
                       </div>
                     )}
                   </div>
+                  {isSettinXProduct && (
+                    <div className="mt-4 border-t border-white/10 pt-3 space-y-2">
+                      <div className="text-xs text-muted-foreground">
+                        Kredensial akan dikirim ulang ke email pembeli beserta link download. Untuk
+                        produk SettinX V1, tombol ini membuat/memakai kembali akun Firebase
+                        kemudian mengirim email berisi Username, Password &amp; License Key.
+                      </div>
+                      {selectedOrder.settinx_license_uid && (
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">License Key (UID)</span>
+                          <span className="font-mono text-[11px] break-all">{selectedOrder.settinx_license_uid}</span>
+                        </div>
+                      )}
+                      {selectedOrder.settinx_license_error && (
+                        <div className="text-[11px] text-red-400 break-all">
+                          Error sebelumnya: {selectedOrder.settinx_license_error}
+                        </div>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full gap-2"
+                        disabled={isResending}
+                        onClick={() => resendSettinXLicense(selectedOrder)}
+                      >
+                        {isResending ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" /> Mengirim...
+                          </>
+                        ) : (
+                          <>
+                            <KeyRound className="w-4 h-4" /> Generate &amp; Kirim Ulang Kredensial
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Webhook Payload */}

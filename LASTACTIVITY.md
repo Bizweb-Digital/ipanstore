@@ -7,7 +7,39 @@
 
 - **Repo**: `git@github.com-bizwebdigital:Bizweb-Digital/ipanstore.git` (branch `main`)
 - **Domain live**: `https://ipanstore.id` (Cloudflare Tunnel → container Docker port 5007)
-- **Update terakhir**: 30 Agustus 2026 — **SETUP KLIKQRIS (QRIS Dinamis) selesai implementasi** — backend 3 endpoint + frontend panel QRIS + SQL patch siap, Cashi.id dihapus total. Menunggu eksekusi SQL + konfigurasi .env + deploy.
+- **Update terakhir**: 29 Agustus 2026 — **AUTO-GENERATE KREDENSIAL SETTINX V1 (FIREBASE) SAAT PEMBELIAN** — Backend otomatis buat akun Firebase (email+password acak) + License Key (=UID) untuk tiap pembeli SettinX yang lunas, dikirim via email; endpoint resend admin + tombol dashboard; menunggu eksekusi migrasi SQL Supabase & deploy.
+
+### Sesi: AUTO-GENERATE KREDENSIAL SETTINX V1 (FIREBASE) — 29 Agustus 2026
+
+- **Permintaan user**: "ga... servis... eksekusi penuh" — eksekusi implementasi auto-generate kredensial SettinX di Firebase saat pembelian, lengkap dengan panduan manual (query/code untuk Firebase & Supabase + tata cara).
+- **Konteks**: User sudah punya service-account JSON Firebase SettinX (`d:\ipan-app-settinx-firebase-adminsdk-fbsvc-043981c07c.json`, `type: service_account`, project `ipan-app-settinx` — diverifikasi valid). Website tetap Supabase, aplikasi SettinX tetap Firebase.
+- **Riset kunci**: `D:\Ipan-AppSettinX-V1\PROJECT-IPAN-X-ESCO\src\ipan_optimizer\app\auth.py` — app login email/password via Firebase REST; license key DIPERIKSA `== localId` (UID Firebase); `bind_device()` 1 lisensi per perangkat → license key = Firebase UID, persis yang backend simpan.
+
+**Perubahan nyata sesi ini:**
+
+1. ✅ `server/package.json` + `package-lock.json` — tambah dependency `firebase-admin@14.3.0` (npm install: 213 packages).
+2. ✅ `server/lib/settinxLicense.js` (BARU) — modul `assignSettinxLicense()`: init firebase-admin (inline JSON `SETTINX_FIREBASE_SERVICE_ACCOUNT` atau file `SETTINX_FIREBASE_SERVICE_ACCOUNT_FILE`), `generatePassword()` (charset tanpa ambigu), reuse kredensial by customer email dari Firestore `settinx_licenses`, `createUser`, simpan doc `{uid, licenseKey, username, password, customer_email, from_invoice, created_at}`, handle `auth/email-already-exists`; plus `findExistingLicense()` & `initSettinxFirebase()`.
+3. ✅ `server/index.js`:
+   - Import modul settinxLicense.
+   - `credentialsCardHtml()` — kartu 🔐 Username/Password/License Key di email SettinX.
+   - `sendSettinXEmail()` terima param `credentials` → tampilkan kartu; seluruh value di-escape.
+   - `processPaymentConfirmation()` (webhook KlikQris + polling) → generate license otomatis sebelum kirim email; simpan `settinx_license_uid` & `settinx_license_error` di orders; fallback reuse bila generate gagal.
+   - Endpoint DOKU (status PAID) → logika generate license yang sama.
+   - Endpoint BARU `POST /api/settinx/resend` — validasi order SettinX, assignOrReuse license, kirim email kredensial, update orders (dipakai tombol admin).
+4. ✅ `server/secrets/settinx-service-account.json` — salinan service account (RAHASIA). `.gitignore` + baris `/server/secrets/`.
+5. ✅ `server/.env` (lokal) & `.env.example` — `SETTINX_FIREBASE_PROJECT_ID=ipan-app-settinx`, `SETTINX_FIREBASE_SERVICE_ACCOUNT_FILE`.
+6. ✅ `sql_patches/add_settinx_license_columns.sql` (BARU) — `ALTER TABLE orders ADD COLUMN IF NOT EXISTS settinx_license_uid TEXT;` + `settinx_license_error TEXT;` (idempotent).
+7. ✅ Type: `src/hooks/useOrders.ts` Order + `src/lib/admin/supabase.ts` (Row/Insert/Update) + `services?` relasi.
+8. ✅ `src/pages/admin/Orders.tsx` — state `isResending`, `isSettinXProduct` (deteksi via invoice/service name/slug), fungsi `resendSettinXLicense()` (POST ke `BACKEND_URL/api/settinx/resend` + audit log), tombol "🔑 Generate & Kirim Ulang Kredensial" + tampil License UID & error di detail order.
+9. ✅ `SETTINX_FIREBASE_AUTOGEN.md` (BARU) — panduan lengkap: alur, file yang diubah, migrasi SQL Supabase (siap copy-paste), Firestore rules opsional, deploy PM2 (SCP service-account, git push, npm install, pm2 restart), verifikasi & troubleshooting.
+10. ✅ Verifikasi: `node --check` index.js & settinxLicense.js OK; `npx tsc --noEmit` EXIT 0; `npm run build` OK (ingatan earlier Order chunk); `vitest run` 1 passed; uji init Firebase OK (`FB APP OK: settinx-license`, find existing → TIDAK ADA).
+
+**Pending (butuh user / deploy):**
+1. ✅ **SELESAI (dikonfirmasi user)**: Migrasi `sql_patches/add_settinx_license_columns.sql` sudah di-run di Supabase SQL Editor & berhasil.
+2. ✅ **BATAL / TIDAK PERLU**: Firestore Rules — rules aktif (versi "Device license binding", Aug 2) sudah benar untuk app SettinX (login butuh read/create `deviceUsers`+`deviceBindings` via idToken REST). Backend pakai `firebase-admin` (lewati rules), `settinx_licenses` default tertutup untuk client → aman. Jangan diubah.
+3. Commit + push + deploy (MENUNGGU KONFIRMASI USER sesuai AGENTS.md #2): `git push`, lalu server `git pull && cd server && npm install && pm2 restart ipanstore-backend --update-env` + SCP service-account ke `/root/ipanstore-secrets/` + isi env server.
+4. Build frontend & update `dist/` (SCP + docker cp/restart) bila tombol admin mau live.
+5. Test end-to-end: order SettinX → bayar → email berisi kartu kredensial → cek Firebase Auth Users + Firestore `settinx_licenses` → login aplikasi SettinX pakai kredensial.
 
 ### Sesi: SETUP KLIKQRIS — QRIS Dinamis Ganti Cashi.id (30 Agustus 2026)
 
@@ -52,6 +84,52 @@
 3. Commit + push + deploy frontend/backend (MENUNGGU KONFIRMASI USER sesuai AGENTS.md #2).
 4. Set webhook URL di dashboard KlikQris (atau biarkan backend kirim `callback_url` per-transaksi).
 5. Test end-to-end: order paket → QR muncul → bayar → status PAID → email SettinX terkirim.
+
+### Sesi: DEPLOYMENT KLIKQRIS LIVE PRODUCTION — 28 Agustus 2026 (via Tailscale SSH)
+
+- **Trigger**: user "kamu aja yang lakukan deploy ke server lewat ssh tailscale", kemudian "Success. No rows returned lanjut" (SQL patch dijalankan), "apakah semua perubahan sudah di commit,push github, dan pull + deploy ke server", selesai dengan "catat ke last activity".
+- **Backend deployment** (commit `7bf9430` feat(deploy): Add KlikQris QRIS payment + polling fallback email):
+  - Git: `git push origin main` → `e9c09d6..main fast-forward`; server `git pull` OK.
+  - Server config: `.env` update `SMTP_PASS=shfjexnzxrzedubn` (app password baru), tambahkan `KLIKQRIS_API_KEY`, `KLIKQRIS_ID_MERCHANT=178785053413`, `KLIKQRIS_CALLBACK_URL=https://api.ipanstore.id/api/klikqris-webhook`.
+  - Service: `pm2 restart ipanstore-backend --update-env` → pid 525065, online.
+  - Verification test:
+    - QRIS create-order: `https://api.ipanstore.id/api/klikqris-create-order` POST `{order_id:"FINAL-VERIFY",amount:20000,...}` → HTTP 200, qris_url generated, signature valid.
+    - Webhook PAID: `https://api.ipanstore.id/api/klikqris-webhook` POST `{order_id:"FINAL-VERIFY",status:"PAID",...}` → success, email triggered.
+    - Email log production: `pm2 logs | grep FINAL-VERIFY` → "📧 Mengirim email SettinX ke ipanasik123@gmail.com (invoice FINAL-VERIFY)..." → "📧 Email SettinX TERKIRIM: ipanasik123@gmail.com".
+- **Frontend deployment** (commit `e9c09d6` feat(frontend): Add KlikQris payment integration + SQL patches):
+  - Source files: `src/lib/klikqris.ts`, `src/pages/Order.tsx`, `sql_patches/*.sql`, docs (DEPLOY_INSTRUCTIONS.md, EMAIL_SETUP_GUIDE.md), deletion of `src/lib/cashi.ts` & `SETUP-CASHI.md`.
+  - Git: push → server `git pull` fast-forward `7bf9430..e9c09d6` (13 files changed).
+  - Build issue found: local `.env` accidentally written as UTF-16 by PowerShell redirect → Vite couldn't read → first build had empty backend URL.
+  - Fix: convert `.env` from UTF-16 to UTF-8 (PowerShell `Get-Content` read + `[System.IO.File]::WriteAllLines` write UTF8 no BOM).
+  - Build: `npm run build` 8.47s → `dist/assets/Order-CBSlgyvQ.js` (17.35kB) contains `api.ipanstore.id`, no localhost/Tailscale URL.
+  - Upload: `scp -r dist/* root@100.89.140.16:/project/website/padel/IpanStore/ipanstore/dist/`.
+  - Docker rebuild: `docker compose down app && docker cp dist/. ipanstore:/usr/share/nginx/html/ && docker restart ipanstore`.
+  - Verification: Order page HTTP 200, JS bundle references correct hashed file.
+- **Final end-to-end test**:
+  - Create order: `POST /api/klikqris-create-order {order_id:"FINALTESTEMAIL035053",amount:20000,customer_name:"Test Email Verify",customer_email:"ipanasik123@gmail.com",item_name:"IPAN APP SettinX V1"}` → success, qris_url.
+  - Simulate webhook PAID: `POST /api/klikqris-webhook {order_id:"FINALTESTEMAIL035053",status:"PAID",...}` → success.
+  - Production email log: "✅ Webhook KlikQris diterima: order_id=FINALTESTEMAIL035053 status=PAID" → "📧 Mengirim email SettinX ke ipanasik123@gmail.com (invoice FINALTESTEMAIL035053)..." → "📧 Email SettinX TERKIRIM: ipanasik123@gmail.com (invoice FINALTESTEMAIL035053)".
+- **Result**: 
+  - Backend fully deployed & tested via production endpoints ✅
+  - Frontend built with correct `VITE_BACKEND_URL=https://api.ipanstore.id` ✅
+  - Container rebuilt with updated dist ✅
+  - Email automated flow verified working ✅
+  - Promo code HEMAT5 active (5% discount applied on orders) ✅
+- **Current live state**:
+  - https://api.ipanstore.id — all 3 KlikQris endpoints operational (create-order, webhook, status).
+  - https://ipanstore.id/order — QRIS panel inline, countdown 5 menit, polling 8 detik, promo code input.
+  - Email otomatis terkirim < 10 detik setelah webhook PAID confirmed.
+- **Action items completed**:
+  - ✅ SQL patch executed (`Success. No rows returned` for Supabase schema migration).
+  - ✅ SMTP configured dengan app password baru (verified email sent successfully).
+  - ✅ KLIKQRIS credentials configured in server `.env`.
+  - ✅ Local `.env` encoding fixed (UTF-16 → UTF-8).
+  - ✅ Build artifact verified contains production backend URL.
+  - ✅ Frontend container restarted with fresh dist.
+  - ✅ End-to-end payment flow tested and verified.
+- **Pending** (for future reference):
+  - Monitor webhook delivery dashboard KlikQris (optional: configure callback URL globally vs per-transaction).
+  - A/B testing atau monitoring conversion rate dari QRIS vs DOKU (jika ada transition period).
 
 ### Sesi: SECURITY HARDENING #1-5 — Ratelimiting Anti Abuse + Replay Persist + RLS Audit + Input Sanitization (22 Agustus 2026)
 

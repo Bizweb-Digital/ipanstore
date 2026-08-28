@@ -24,6 +24,11 @@ import nodemailer from "nodemailer";
 import { createClient } from "@supabase/supabase-js";
 import "dotenv/config";
 import rateLimit from "express-rate-limit";
+import {
+  assignSettinxLicense,
+  findExistingLicense,
+  initSettinxFirebase,
+} from "./lib/settinxLicense.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -363,8 +368,33 @@ const emailTransporter = SMTP_USER
     })
   : null;
 
+/**
+ * Buat kartu kredensial login SettinX untuk email (ada isi → tampilkan; kosong → null).
+ */
+function credentialsCardHtml(credentials) {
+  if (!credentials?.username || !credentials?.password || !credentials?.licenseKey) return "";
+  const row = (label, value) =>
+    `<tr>
+      <td style="padding:6px 0;color:#a1a1aa;font-size:13px;white-space:nowrap;vertical-align:top">${label}</td>
+      <td style="padding:6px 0;text-align:right;font-family:monospace;font-size:13px;font-weight:600;word-break:break-all">${escapeHtml(value)}</td>
+    </tr>`;
+  return `
+    <div style="background:#0c0c0d;border:1px solid #3f3f46;border-radius:10px;padding:18px 20px;margin:22px 0">
+      <div style="font-weight:700;margin-bottom:4px">🔐 Kredensial Login IPAN APP SettinX V1</div>
+      <div style="font-size:12px;color:#a1a1aa;margin-bottom:10px">Gunakan kredensial ini untuk login pada aplikasi setelah di-download:</div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        ${row("Username (Email)", credentials.username)}
+        ${row("Password", credentials.password)}
+        ${row("License Key", credentials.licenseKey)}
+      </table>
+      <div style="font-size:11px;color:#71717a;margin-top:10px;border-top:1px solid #27272a;padding-top:8px">
+        ⚠️ Simpan kredensial ini baik-baik. Jangan pernah membagikannya kepada orang lain. Satu lisensi hanya untuk satu perangkat.
+      </div>
+    </div>`;
+}
+
 /** Kirim email produk SettinX + invoice. Mengembalikan {ok, error?}. */
-async function sendSettinXEmail({ to, customerName, invoiceNumber, amount, paidAt }) {
+async function sendSettinXEmail({ to, customerName, invoiceNumber, amount, paidAt, credentials }) {
   if (!emailTransporter) return { ok: false, error: "SMTP belum dikonfigurasi (SMTP_USER kosong)." };
   // SECURITY FIX #10 — validasi email pembeli & sanitize semua input user
   // sebelum masuk ke header email (anti header injection / BCC spam).
@@ -417,6 +447,8 @@ async function sendSettinXEmail({ to, customerName, invoiceNumber, amount, paidA
           <td style="padding:8px 0;text-align:right">${escapeHtml(paidLabel)}</td>
         </tr>
       </table>
+
+      ${credentialsCardHtml(credentials)}
 
       <div style="background:#18181b;border:1px solid #27272a;border-radius:10px;padding:18px 20px;margin:22px 0">
         <div style="font-weight:700;margin-bottom:6px">📦 Download IPAN APP SettinX V1</div>
@@ -738,6 +770,31 @@ async function processPaymentConfirmation(orderId, payload = null) {
     return { processed: true, reason: 'no_customer_email', order };
   }
 
+  // Generate kredensial Firebase (username/password/license key) OTOMATIS.
+  // Aplikasi SettinX login memakai email+password+license(UID), jadi kita buat
+  // akun di sini lalu sertakan kredensialnya dalam email. Jika Firebase belum
+  // dikonfigurasi / gagal, email tetap terkirim (tanpa kredensial) dan log error.
+  let credentials = null;
+  let licenseUid = null;
+  let licenseErr = null;
+  try {
+    const lic = await assignSettinxLicense({
+      customerEmail: order.customer_email,
+      customerName: order.customer_name,
+      invoiceNumber: orderId,
+    });
+    credentials = lic;
+    licenseUid = lic.licenseKey;
+  } catch (e) {
+    licenseErr = e.message;
+    console.error(`⚠️  SettinX license GAGAL dibuat untuk ${order.customer_email}:`, e.message);
+    // Fallback: coba ambil license lama supaya email tetap punya kredensial.
+    try {
+      const existing = await findExistingLicense(order.customer_email);
+      if (existing) credentials = existing;
+    } catch (_) { /* abaikan */ }
+  }
+
   console.log(`📧 Mengirim email SettinX ke ${order.customer_email} (invoice ${orderId})...`);
   const result = await sendSettinXEmail({
     to: order.customer_email,
@@ -745,19 +802,22 @@ async function processPaymentConfirmation(orderId, payload = null) {
     invoiceNumber: orderId,
     amount: payload?.total_amount || order.amount,
     paidAt: new Date().toISOString(),
+    credentials,
   });
 
   if (result.ok) {
     await updateOrder(orderId, {
       email_sent: true,
       email_sent_at: new Date().toISOString(),
+      settinx_license_uid: licenseUid || order.settinx_license_uid || null,
+      settinx_license_error: licenseErr || null,
     });
     console.log(`📧 Email SettinX TERKIRIM: ${order.customer_email} (invoice ${orderId})`);
   } else {
     console.error(`📧 Email SettinX GAGAL ke ${order.customer_email}: ${result.error}`);
   }
 
-  return { processed: true, result, order };
+  return { processed: true, result, credentials, licenseErr, order };
 }
 
 // ── Webhook KlikQris ─────────────────────────────────────────────────────────
@@ -1345,18 +1405,42 @@ app.post("/api/doku-webhook", async (req, res) => {
 
         if (isSettinX && order.customer_email) {
           console.log(`📧 Mengirim email SettinX ke ${order.customer_email} (invoice ${order.invoice_number})...`);
+          let credentials = null;
+          let licenseUid = null;
+          let licenseErr = null;
+          try {
+            const lic = await assignSettinxLicense({
+              customerEmail: order.customer_email,
+              customerName: order.customer_name,
+              invoiceNumber: order.invoice_number,
+            });
+            credentials = lic;
+            licenseUid = lic.licenseKey;
+          } catch (e) {
+            licenseErr = e.message;
+            console.error(`⚠️  SettinX license GAGAL dibuat untuk ${order.customer_email}:`, e.message);
+            try {
+              const existing = await findExistingLicense(order.customer_email);
+              if (existing) credentials = existing;
+            } catch (_) { /* abaikan */ }
+          }
+
+          console.log(`📧 Mengirim email SettinX ke ${order.customer_email} (invoice ${order.invoice_number})...`);
           const result = await sendSettinXEmail({
             to: order.customer_email,
             customerName: order.customer_name,
             invoiceNumber: order.invoice_number,
             amount: order.amount || amount,
             paidAt: order.paid_at,
+            credentials,
           });
 
           if (result.ok) {
             await updateOrder(order.invoice_number || order.id, {
               email_sent: true,
               email_sent_at: new Date().toISOString(),
+              settinx_license_uid: licenseUid || order.settinx_license_uid || null,
+              settinx_license_error: licenseErr || null,
             });
             console.log(`📧 Email SettinX TERKIRIM: ${order.customer_email} (invoice ${order.invoice_number})`);
           } else {
@@ -1443,6 +1527,91 @@ app.post("/api/doku-cancel-order", async (req, res) => {
     return res.json({ success: true, raw: data });
   } catch (e) {
     console.error("doku-cancel-order error:", e);
+    return res.status(500).json({ success: false, message: e instanceof Error ? e.message : "Gagal." });
+  }
+});
+
+// ── Resend kredensial SettinX (manual dari dashboard admin) ───────────────────
+// Untuk order SettinX yang emailnya gagal terkirim / pembeli minta dikirim ulang.
+// Generate atau reuse license (by customer email), lalu kirim ulang email berisi
+// kredensial. Idempotent: jika kredensial sudah ada, tidak membuat akun ganda.
+app.post("/api/settinx/resend", async (req, res) => {
+  try {
+    const { orderId } = req.body || {};
+    const invoice = String(orderId || "").replace(/[^a-zA-Z0-9]/g, "").slice(0, 64);
+    if (!invoice) {
+      return res.status(400).json({ success: false, message: "orderId wajib diisi." });
+    }
+
+    const order = await getOrder(invoice);
+    if (!order) {
+      return res.status(404).json({ success: false, message: `Order ${invoice} tidak ditemukan.` });
+    }
+
+    // Pastikan ini benar-benar produk SettinX.
+    const isSettinX = /settinx/i.test(order.invoice_number || "");
+    if (!isSettinX && order.service_id && supabase) {
+      const { data: svc } = await supabase
+        .from("services")
+        .select("slug, name")
+        .eq("id", order.service_id)
+        .single();
+      if (svc && /settinx/i.test(svc.slug || svc.name || "")) isSettinX = true;
+    }
+    if (!isSettinX) {
+      return res.status(400).json({ success: false, message: "Order ini bukan produk IPAN APP SettinX V1." });
+    }
+    if (!order.customer_email) {
+      return res.status(400).json({ success: false, message: "Order tidak memiliki email pembeli." });
+    }
+
+    let credentials = null;
+    let licenseErr = null;
+    try {
+      credentials = await assignSettinxLicense({
+        customerEmail: order.customer_email,
+        customerName: order.customer_name,
+        invoiceNumber: order.invoice_number,
+      });
+    } catch (e) {
+      licenseErr = e.message;
+      try {
+        const existing = await findExistingLicense(order.customer_email);
+        if (existing) credentials = existing;
+      } catch (_) { /* abaikan */ }
+    }
+
+    if (!credentials) {
+      return res.status(502).json({
+        success: false,
+        message: `Gagal menyiapkan kredensial SettinX: ${licenseErr || "credential kosong"}`,
+      });
+    }
+
+    const result = await sendSettinXEmail({
+      to: order.customer_email,
+      customerName: order.customer_name,
+      invoiceNumber: order.invoice_number,
+      amount: order.amount,
+      paidAt: order.paid_at,
+      credentials,
+    });
+
+    if (!result.ok) {
+      return res.status(502).json({ success: false, message: `Gagal kirim email: ${result.error}` });
+    }
+
+    await updateOrder(order.invoice_number || order.id, {
+      email_sent: true,
+      email_sent_at: new Date().toISOString(),
+      settinx_license_uid: credentials.licenseKey || order.settinx_license_uid || null,
+      settinx_license_error: licenseErr || null,
+    });
+
+    console.log(`🔁 SettinX credential RE-SENT: ${order.customer_email} (invoice ${order.invoice_number})`);
+    return res.json({ success: true, message: "Email kredensial berhasil dikirim ulang." });
+  } catch (e) {
+    console.error("settinx-resend error:", e);
     return res.status(500).json({ success: false, message: e instanceof Error ? e.message : "Gagal." });
   }
 });
