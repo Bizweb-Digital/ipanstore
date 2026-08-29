@@ -18,6 +18,7 @@
 import express from "express";
 import cors from "cors";
 import crypto from "crypto";
+import helmet from "helmet";
 import path from "path";
 import { fileURLToPath } from "url";
 import nodemailer from "nodemailer";
@@ -29,10 +30,17 @@ import {
   findExistingLicense,
   initSettinxFirebase,
 } from "./lib/settinxLicense.js";
+import { sendPaidEmail } from "./lib/notify.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
+
+// Helmet — security headers HTTP default (X-Content-Type-Options, X-Frame-Options,
+// Referrer-Policy, dll). CSP dimatikan di sini karena frontend dilayani Vite/nginx
+// (CSP ketat diatur di config/nginx.conf) agar tidak bentrok/dobel.
+app.use(helmet({ contentSecurityPolicy: false }));
+
 // SECURITY FIX #8 — origin berada di belakang Cloudflare Tunnel (cloudflared).
 // Express harus memercayai hop pertama proxy agar `req.ip` berisi IP pengunjung
 // asli (bukan 127.0.0.1 cloudflared). Tanpa ini, rate limiter "melihat" semua
@@ -40,17 +48,24 @@ const app = express();
 app.set("trust proxy", 1);
 const PORT = process.env.PORT || 3001;
 
-// Domain front-end Anda (untuk CORS). Isi di .env, pisahkan koma bila banyak.
-let ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "http://localhost:8080")
+// Domain front-end Anda (untuk CORS). WAJIB diisi di .env, pisahkan koma bila banyak.
+// SECURITY (fail-closed): jika ALLOWED_ORIGINS kosong/tidak diset, server berhenti
+// saat startup. Jangan pernah fallback diam-diam ke localhost — itu membuat server
+// produksi tampak "jalan" padahal CORS salah konfigurasi (atau terlalu terbuka).
+let ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
 // SECURITY FIX #7 — tolak wildcard "*" agar tidak jadi open CORS.
-// Jika .env terisi "*", kita saring dan fallback ke localhost (fail-closed).
 if (ALLOWED_ORIGINS.includes("*")) {
-  console.warn('⚠️ SECURITY: ALLOWED_ORIGINS mengandung "*" — wildcard ditolak. Pakai daftar domain spesifik (mis. https://ipanstore.id). Fallback ke localhost.');
+  console.error('❌ SECURITY: ALLOWED_ORIGINS mengandung "*" — wildcard ditolak. Pakai daftar domain spesifik (mis. https://ipanstore.id).');
   ALLOWED_ORIGINS = ALLOWED_ORIGINS.filter((o) => o !== "*");
-  if (ALLOWED_ORIGINS.length === 0) ALLOWED_ORIGINS = ["http://localhost:8080"];
+}
+if (ALLOWED_ORIGINS.length === 0) {
+  console.error("❌ FATAL: ALLOWED_ORIGINS kosong/tidak diset di .env (atau hanya berisi wildcard yang ditolak).");
+  console.error("   Isi daftar origin front-end yang sah, mis: ALLOWED_ORIGINS=https://ipanstore.id,https://www.ipanstore.id");
+  console.error("   Server dihentikan (fail-closed) untuk mencegah CORS salah konfigurasi.");
+  process.exit(1);
 }
 
 // ── Kredensial DOKU — WAJIB diisi di .env (jangan di-hardcode di sini) ───────
@@ -506,6 +521,86 @@ function isValidEmail(addr) {
   return EMAIL_RE.test(s);
 }
 
+// ── Validasi format Order ID ─────────────────────────────────────────────────
+// Format orderId dibuat frontend: `IPAN-{SERVICE_ID}-{timestamp}`
+// (lihat src/pages/Order.tsx) → hanya huruf kapital, angka, dan tanda hubung.
+const ORDER_ID_RE = /^[A-Z0-9][A-Z0-9-]{3,63}$/i;
+function isValidOrderId(id) {
+  return typeof id === "string" && ORDER_ID_RE.test(id);
+}
+
+/**
+ * Kirim kredensial akun admin baru ke email tujuan via Gmail SMTP.
+ * Mengembalikan { ok, error? } — kegagalan email tidak menggagalkan pembuatan akun.
+ */
+async function sendAdminCredentialsEmail({ to, email, password, role }) {
+  if (!emailTransporter) return { ok: false, error: "SMTP belum dikonfigurasi (SMTP_USER kosong)." };
+  const safeTo = String(to ?? "").trim();
+  if (!isValidEmail(safeTo)) return { ok: false, error: "Format email tujuan tidak valid." };
+
+  const roleLabel = role === "super_admin" ? "Super Admin (akses penuh)" : "Viewer (akses terbatas)";
+  const loginUrl = `${ALLOWED_ORIGINS[0] || ""}/admin/login`;
+
+  const html = `
+  <div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#0f0f10;color:#e4e4e7;border-radius:12px;overflow:hidden;border:1px solid #27272a">
+    <div style="background:linear-gradient(135deg,#18181b,#3f3f46);padding:28px 32px">
+      <div style="font-size:22px;font-weight:800;letter-spacing:-0.5px">IPAN <span style="color:#a1a1aa">STORE</span></div>
+      <div style="font-size:12px;color:#a1a1aa;margin-top:2px">Akun Admin Baru</div>
+    </div>
+    <div style="padding:28px 32px">
+      <p style="font-size:16px;font-weight:600;margin:0 0 4px">Halo 👋</p>
+      <p style="color:#a1a1aa;font-size:14px;margin:0 0 20px">Akun admin IPAN STORE telah dibuat untuk email ini. Berikut kredensial login kamu:</p>
+
+      <div style="background:#18181b;border:1px solid #27272a;border-radius:10px;padding:16px 18px;font-size:14px">
+        <div style="margin-bottom:10px"><span style="color:#a1a1aa">Email&nbsp;&nbsp;&nbsp;&nbsp;:</span> <strong style="color:#e4e4e7">${escapeHtml(email)}</strong></div>
+        <div style="margin-bottom:10px"><span style="color:#a1a1aa">Password:</span> <strong style="color:#e4e4e7;font-family:monospace">${escapeHtml(password)}</strong></div>
+        <div><span style="color:#a1a1aa">Role&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:</span> <strong style="color:#e4e4e7">${escapeHtml(roleLabel)}</strong></div>
+      </div>
+
+      <a href="${loginUrl}" style="display:inline-block;background:#f4f4f5;color:#18181b;text-decoration:none;font-weight:700;padding:12px 24px;border-radius:8px;font-size:14px;margin-top:20px">🔐 Masuk ke Dashboard Admin</a>
+
+      <p style="font-size:11px;color:#71717a;margin-top:24px;border-top:1px solid #27272a;padding-top:16px;line-height:1.6">
+        ⚠️ Simpan kredensial ini baik-baik dan segera ganti password setelah login pertama.
+        Jangan pernah membagikannya kepada siapa pun.<br/>
+        © ${new Date().getFullYear()} IPAN STORE
+      </p>
+    </div>
+  </div>`;
+
+  try {
+    await emailTransporter.sendMail({
+      from: MAIL_FROM,
+      to: safeTo,
+      subject: "🔐 Akun Admin IPAN STORE — Kredensial Login Kamu",
+      html,
+    });
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+}
+
+// ── Middleware: proteksi endpoint admin via shared secret ────────────────────
+// Header wajib: x-admin-secret (dibandingkan dengan process.env.ADMIN_API_SECRET
+// memakai crypto.timingSafeEqual agar tahan timing attack).
+function requireAdminSecret(req, res, next) {
+  const expected = process.env.ADMIN_API_SECRET || "";
+  const provided = String(req.headers["x-admin-secret"] || "");
+  if (!expected) {
+    console.error("❌ ADMIN_API_SECRET belum diset di .env — endpoint admin ditolak.");
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  const a = Buffer.from(provided, "utf8");
+  const b = Buffer.from(expected, "utf8");
+  // timingSafeEqual throw jika panjang beda → samakan dulu dengan hash SHA-256.
+  const ha = crypto.createHash("sha256").update(a).digest();
+  const hb = crypto.createHash("sha256").update(b).digest();
+  if (!crypto.timingSafeEqual(ha, hb)) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  return next();
+}
+
 /**
  * Sanitize string untuk dipakai di header email (Subject, nama recipient).
  * Buang CR/LF & kontrol char, potong panjang. Mencegah header injection.
@@ -717,7 +812,7 @@ app.post("/api/klikqris-create-order", orderLimiter, async (req, res) => {
     console.error("klikqris-create-order error:", e);
     return res.status(500).json({
       success: false,
-      message: e instanceof Error ? e.message : "Gagal menghubungi KlikQris.",
+      message: "Gagal menghubungi KlikQris.",
     });
   }
 });
@@ -750,6 +845,10 @@ async function processPaymentConfirmation(orderId, payload = null) {
     paid_at: new Date().toISOString(),
     klikqris_signature: payload?.signature || order.klikqris_signature || null,
   });
+
+  // Notifikasi pasca-lunas: hanya email konfirmasi (WhatsApp dinonaktifkan —
+  // notifikasi memang hanya via Gmail). Fire-and-forget, tidak memblokir webhook.
+  sendPaidEmail(order).catch((e) => console.error("Paid email error:", e?.message || e));
 
   // Identifikasi apakah ini paket SettinX
   let isSettinX = /settinx/i.test(order.invoice_number || "");
@@ -908,9 +1007,10 @@ app.post("/api/klikqris-webhook", async (req, res) => {
 // Ini memastikan: meskipun webhook gagal/telat, pembelian tetap di-fulfill otomatis.
 app.get("/api/klikqris-status/:orderId", async (req, res) => {
   try {
-    const orderId = String(req.params.orderId || "").replace(/[^a-zA-Z0-9]/g, "").slice(0, 64);
-    if (!orderId) {
-      return res.status(400).json({ success: false, message: "orderId wajib diisi." });
+    const orderId = String(req.params.orderId || "").trim();
+    // SECURITY FIX M1 — validasi format orderId (IPAN-XXXX-timestamp).
+    if (!isValidOrderId(orderId)) {
+      return res.status(400).json({ success: false, message: "Format orderId tidak valid." });
     }
 
     const r = await fetch(`${KLIKQRIS_BASE_URL}/qris/status/${orderId}`, {
@@ -930,10 +1030,45 @@ app.get("/api/klikqris-status/:orderId", async (req, res) => {
       await processPaymentConfirmation(orderId, data.data || data);
     }
 
-    return res.status(r.status).json(data);
+    // SECURITY FIX M1 — response minimal: JANGAN bocorkan amount/email/nama.
+    return res.status(r.status).json({
+      orderId,
+      status: apiStatus || "UNKNOWN",
+      paymentMethod: data?.data?.payment_method || data?.payment_method || "QRIS",
+    });
   } catch (e) {
     console.error("klikqris-status error:", e);
-    return res.status(500).json({ success: false });
+    return res.status(500).json({ success: false, message: "Internal server error." });
+  }
+});
+
+// ── Cek Status Order Publik ─────────────────────────────────────────────────
+// Endpoint publik untuk halaman "Lacak Order" (/cek-order). Response MINIMAL
+// (tanpa email/nama lengkap/amount) demi privasi — hanya status & ringkasan.
+app.get("/api/order-status/:orderId", apiLimiter, async (req, res) => {
+  try {
+    const orderId = String(req.params.orderId || "").trim();
+    if (!isValidOrderId(orderId)) {
+      return res.status(400).json({ success: false, message: "Format orderId tidak valid." });
+    }
+    if (!supabase) {
+      return res.status(503).json({ success: false, message: "Layanan belum tersedia." });
+    }
+    const order = await getOrder(orderId);
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order tidak ditemukan." });
+    }
+    return res.json({
+      success: true,
+      orderId,
+      status: order.status || "PENDING",
+      packageName: order.package_name || order.item_name || order.service_name || null,
+      paymentMethod: order.payment_method || "QRIS",
+      createdAt: order.created_at || null,
+    });
+  } catch (e) {
+    console.error("order-status error:", e);
+    return res.status(500).json({ success: false, message: "Internal server error." });
   }
 });
 
@@ -1286,7 +1421,7 @@ app.post("/api/doku-create-order", orderLimiter, async (req, res) => {
     console.error("doku-create-order error:", e);
     return res.status(500).json({
       success: false,
-      message: e instanceof Error ? e.message : "Gagal menghubungi DOKU.",
+      message: "Gagal menghubungi DOKU.",
     });
   }
 });
@@ -1539,7 +1674,7 @@ app.post("/api/doku-cancel-order", async (req, res) => {
 // Untuk order SettinX yang emailnya gagal terkirim / pembeli minta dikirim ulang.
 // Generate atau reuse license (by customer email), lalu kirim ulang email berisi
 // kredensial. Idempotent: jika kredensial sudah ada, tidak membuat akun ganda.
-app.post("/api/settinx/resend", async (req, res) => {
+app.post("/api/settinx/resend", requireAdminSecret, async (req, res) => {
   try {
     const { orderId } = req.body || {};
     const invoice = String(orderId || "").replace(/[^a-zA-Z0-9]/g, "").slice(0, 64);
@@ -1621,6 +1756,71 @@ app.post("/api/settinx/resend", async (req, res) => {
 });
 
 // ── Start ────────────────────────────────────────────────────────────────────
+// ── Buat akun admin baru (Auth + whitelist + email kredensial) ───────────────
+// Dipanggil dari dashboard admin (halaman Admins). Butuh header x-admin-secret.
+app.post("/api/admin/create", requireAdminSecret, async (req, res) => {
+  try {
+    const { email, password, role } = req.body || {};
+    const cleanEmail = String(email || "").trim().toLowerCase();
+    const cleanPassword = String(password || "");
+    const cleanRole = role === "viewer" ? "viewer" : "super_admin";
+
+    if (!isValidEmail(cleanEmail)) {
+      return res.status(400).json({ success: false, message: "Format email tidak valid." });
+    }
+    if (cleanPassword.length < 8) {
+      return res.status(400).json({ success: false, message: "Password minimal 8 karakter." });
+    }
+    if (!supabase) {
+      return res.status(500).json({ success: false, message: "Supabase belum dikonfigurasi di server." });
+    }
+
+    // 1) Buat akun di Supabase Auth (pakai service role — hanya di server).
+    const { data: created, error: authError } = await supabase.auth.admin.createUser({
+      email: cleanEmail,
+      password: cleanPassword,
+      email_confirm: true,
+      user_metadata: { role: cleanRole },
+    });
+    if (authError) {
+      const msg = /already (been )?registered|already exists|User already registered/i.test(authError.message)
+        ? "Email ini sudah punya akun Auth. Gunakan email lain atau reset password-nya."
+        : authError.message;
+      return res.status(400).json({ success: false, message: msg });
+    }
+
+    // 2) Tambahkan ke whitelist admin_users (abaikan jika sudah ada / duplikat).
+    const { error: wlError } = await supabase
+      .from("admin_users")
+      .upsert({ email: cleanEmail, role: cleanRole }, { onConflict: "email" });
+    if (wlError) {
+      console.error("[admin/create] gagal upsert whitelist:", wlError.message);
+    }
+
+    // 3) Kirim kredensial ke email admin baru via Gmail SMTP.
+    const mail = await sendAdminCredentialsEmail({
+      to: cleanEmail,
+      email: cleanEmail,
+      password: cleanPassword,
+      role: cleanRole,
+    });
+    if (!mail.ok) {
+      console.error("[admin/create] gagal kirim email:", mail.error);
+    }
+
+    return res.json({
+      success: true,
+      emailSent: !!mail.ok,
+      message: mail.ok
+        ? `Akun admin ${cleanEmail} dibuat & kredensial terkirim ke email.`
+        : `Akun admin ${cleanEmail} dibuat, tapi email kredensial gagal dikirim.`,
+    });
+  } catch (e) {
+    console.error("[admin/create] error:", e);
+    return res.status(500).json({ success: false, message: e.message || "Gagal membuat akun admin." });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`🚀 Backend IPAN STORE jalan di http://localhost:${PORT}`);
   console.log(`   CORS diizinkan untuk: ${ALLOWED_ORIGINS.join(", ")}`);

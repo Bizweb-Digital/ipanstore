@@ -191,7 +191,7 @@ const Order = () => {
         const discount = result.discount ?? 0;
         const total = result.total ?? selected.price;
         setPromoApplied({ code: c, discount, total });
-        setPromoMsg(`Kode ${c} berlaku! Anda hemat Rp ${discount.toLocaleString("id-ID")}.`);
+        setPromoMsg(`Kode ${c} berlaku! Kamu hemat Rp ${discount.toLocaleString("id-ID")}.`);
       } catch {
         setPromoMsg("Gagal memeriksa kode promo. Coba lagi.");
       } finally {
@@ -214,6 +214,7 @@ const Order = () => {
   };
 
   const handleCheckout = async () => {
+    if (loading) return; // B11 — cegah double-submit checkout
     setError(null);
     if (qr && !qrExpired) return;
     if (paid) return;
@@ -390,8 +391,9 @@ const Order = () => {
                 {/* Form */}
                 <div className="space-y-4 mb-6">
                   <div>
-                    <label className="block text-xs font-medium text-zinc-400 mb-1.5">Nama Lengkap *</label>
+                    <label htmlFor="order-name" className="block text-xs font-medium text-zinc-400 mb-1.5">Nama Lengkap *</label>
                     <input
+                      id="order-name"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Nama kamu"
@@ -399,8 +401,9 @@ const Order = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-zinc-400 mb-1.5">Email *</label>
+                    <label htmlFor="order-email" className="block text-xs font-medium text-zinc-400 mb-1.5">Email *</label>
                     <input
+                      id="order-email"
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
@@ -409,8 +412,9 @@ const Order = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-zinc-400 mb-1.5">No. WhatsApp (opsional)</label>
+                    <label htmlFor="order-wa" className="block text-xs font-medium text-zinc-400 mb-1.5">No. WhatsApp (opsional)</label>
                     <input
+                      id="order-wa"
                       value={wa}
                       onChange={(e) => setWa(e.target.value)}
                       placeholder="08xxxxxxxxxx"
@@ -421,11 +425,12 @@ const Order = () => {
 
                 {/* Kode Promo */}
                 <div className="rounded-xl border border-white/16 bg-[#131314]/60 p-4 mb-4">
-                  <label className="block text-xs font-medium text-zinc-400 mb-2">
+                  <label htmlFor="order-promo" className="block text-xs font-medium text-zinc-400 mb-2">
                     Kode Promo (opsional)
                   </label>
                   <div className="flex gap-2">
                     <input
+                      id="order-promo"
                       value={promoInput}
                       onChange={(e) => {
                         setPromoInput(e.target.value.toUpperCase());
@@ -467,6 +472,10 @@ const Order = () => {
                     <span className="text-sm text-zinc-400">Paket</span>
                     <span className="text-sm font-medium text-[#F4F4F5]">{selected.name}</span>
                   </div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm text-zinc-400">Harga Paket</span>
+                    <span className="text-sm font-medium text-[#F4F4F5]">{formatRupiah(selected.price)}</span>
+                  </div>
                   {promoApplied && (
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-sm text-zinc-400">Diskon ({promoApplied.code})</span>
@@ -475,8 +484,8 @@ const Order = () => {
                       </span>
                     </div>
                   )}
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-zinc-400">Total Bayar</span>
+                  <div className="flex items-center justify-between border-t border-white/10 pt-2 mt-2">
+                    <span className="text-sm text-zinc-300">Total Bayar</span>
                     <span className="font-mono text-xl font-bold text-[#F4F4F5]">
                       {formatRupiah(promoApplied ? promoApplied.total : selected.price)}
                     </span>
@@ -521,7 +530,7 @@ const Order = () => {
                   )}
                 </Button>
 
-        <p className="mt-4 flex items-start gap-2 text-[11px] text-zinc-500 leading-relaxed">
+        <p className="mt-4 flex items-start gap-2 text-[11px] text-zinc-300 leading-relaxed">
           <ShieldCheck className="h-3.5 w-3.5 text-[#94A3B8] mt-0.5 shrink-0" />
           Pembayaran diproses aman melalui payment gateway. Data kamu terenkripsi.
         </p>
@@ -584,13 +593,13 @@ const Order = () => {
                             {formatRupiah(qr.totalAmount ?? (promoApplied ? promoApplied.total : selected.price))}
                           </span>
                         </p>
-                        <p className="mt-2 text-[11px] text-zinc-500">
+                        <p className="mt-2 text-[11px] text-zinc-300">
                           Kode pesanan: <span className="font-mono">{qr.orderId}</span>
                         </p>
                         <p className="mt-2 inline-flex items-center gap-1.5 text-[12px] font-mono text-amber-300/90">
                           <Loader2 className="h-3.5 w-3.5 animate-spin" /> Sisa waktu: {countdown}
                         </p>
-                        <p className="mt-3 text-[11px] text-zinc-500 leading-relaxed">
+                        <p className="mt-3 text-[11px] text-zinc-300 leading-relaxed">
                           Buka aplikasi e-wallet / m-banking (GoPay, OVO, DANA, ShopeePay, dll), pilih
                           QRIS, lalu scan QR di atas. Status ter-update otomatis.
                         </p>

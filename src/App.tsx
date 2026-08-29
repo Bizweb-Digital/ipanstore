@@ -17,6 +17,7 @@ const Paket = lazy(() => import("./pages/Paket"));
 const Order = lazy(() => import("./pages/Order"));
 const TestimoniPage = lazy(() => import("./pages/TestimoniPage"));
 const Faq = lazy(() => import("./pages/Faq"));
+const CekOrder = lazy(() => import("./pages/CekOrder"));
 const Kontak = lazy(() => import("./pages/Kontak"));
 const Garansi = lazy(() => import("./pages/Garansi"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -48,6 +49,7 @@ const App = () => {
               <Route path="/order" element={<Order />} />
               <Route path="/testimoni" element={<TestimoniPage />} />
               <Route path="/faq" element={<Faq />} />
+              <Route path="/cek-order" element={<CekOrder />} />
               <Route path="/kontak" element={<Kontak />} />
               <Route path="/garansi" element={<Garansi />} />
               

@@ -132,10 +132,11 @@ const Kontak = () => {
 
                   <form onSubmit={handleSubmit} className="space-y-5">
                     <div>
-                      <label className="block font-mono text-[11px] uppercase tracking-[0.18em] text-[#F4F4F5]/50 mb-2">
+                      <label htmlFor="kontak-nama" className="block font-mono text-[11px] uppercase tracking-[0.18em] text-[#F4F4F5]/50 mb-2">
                         Nama / Nickname
                       </label>
                       <input
+                        id="kontak-nama"
                         type="text"
                         required
                         placeholder="Contoh: Budi Gaming"
@@ -143,10 +144,11 @@ const Kontak = () => {
                       />
                     </div>
                     <div>
-                      <label className="block font-mono text-[11px] uppercase tracking-[0.18em] text-[#F4F4F5]/50 mb-2">
+                      <label htmlFor="kontak-kendala" className="block font-mono text-[11px] uppercase tracking-[0.18em] text-[#F4F4F5]/50 mb-2">
                         Kendala PC / Spesifikasi
                       </label>
                       <textarea
+                        id="kontak-kendala"
                         required
                         rows={4}
                         placeholder="Contoh: Spek saya i3 RAM 8GB, main FF pas war sering drop FPS ke 20..."

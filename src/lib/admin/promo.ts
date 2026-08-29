@@ -24,7 +24,7 @@ export async function lookupPromoCode(
 
     const url = import.meta.env.VITE_BACKEND_URL;
     if (!url) {
-      console.warn("VITE_BACKEND_URL belum diisi, skip promo validation");
+      // Backend belum dikonfigurasi — skip validasi promo secara silent.
       return null;
     }
 
@@ -96,6 +96,9 @@ export function applyPromo(price: number, promo: PromoCode, now = new Date()): P
 export async function lookupPromoCodeFromDb(code: string): Promise<PromoCode | null> {
   if (!code.trim()) return null;
   try {
+    // Dynamic import agar fungsi DB opsional ini tidak ikut ter-bundle
+    // ke halaman publik yang hanya memakai lookupPromoCode (via backend).
+    const { supabase } = await import("./supabase");
     const { data, error } = await supabase
       .from("promo_codes")
       .select("*")

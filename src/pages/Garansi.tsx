@@ -234,8 +234,9 @@ export default function Garansi() {
               <div className="gaming-card p-6 md:p-7">
                 <div className="space-y-4 md:space-y-5">
                   <div>
-                    <label className="block font-mono text-[11px] font-medium uppercase tracking-wide text-zinc-400 mb-2">Nama Lengkap — sesuai saat order *</label>
+                    <label htmlFor="garansi-nama" className="block font-mono text-[11px] font-medium uppercase tracking-wide text-zinc-400 mb-2">Nama Lengkap — sesuai saat order *</label>
                     <input
+                      id="garansi-nama"
                       value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
                       placeholder="Contoh: Budi Santoso"
@@ -245,8 +246,9 @@ export default function Garansi() {
                   </div>
 
                   <div>
-                    <label className="block font-mono text-[11px] font-medium uppercase tracking-wide text-zinc-400 mb-2">Paket yang diklaim *</label>
+                    <label htmlFor="garansi-paket" className="block font-mono text-[11px] font-medium uppercase tracking-wide text-zinc-400 mb-2">Paket yang diklaim *</label>
                     <select
+                      id="garansi-paket"
                       value={serviceSlug}
                       onChange={(e) => setServiceSlug(e.target.value)}
                       className="w-full rounded-xl bg-[#131314] border border-white/10 px-4 py-3 text-sm leading-none text-[#F4F4F5] focus:outline-none focus:border-[#94A3B8]/50 focus:ring-1 focus:ring-[#94A3B8]/20 transition-colors"
@@ -259,8 +261,9 @@ export default function Garansi() {
                   </div>
 
                   <div>
-                    <label className="block font-mono text-[11px] font-medium uppercase tracking-wide text-zinc-400 mb-2">Tanggal Order — opsional, kalau ingat</label>
+                    <label htmlFor="garansi-tanggal" className="block font-mono text-[11px] font-medium uppercase tracking-wide text-zinc-400 mb-2">Tanggal Order — opsional, kalau ingat</label>
                     <input
+                      id="garansi-tanggal"
                       type="date"
                       value={orderDate}
                       onChange={(e) => setOrderDate(e.target.value)}
@@ -270,8 +273,9 @@ export default function Garansi() {
                   </div>
 
                   <div>
-                    <label className="block font-mono text-[11px] font-medium uppercase tracking-wide text-zinc-400 mb-2">Keluhan / Alasan Klaim *</label>
+                    <label htmlFor="garansi-keluhan" className="block font-mono text-[11px] font-medium uppercase tracking-wide text-zinc-400 mb-2">Keluhan / Alasan Klaim *</label>
                     <textarea
+                      id="garansi-keluhan"
                       value={complaint}
                       onChange={(e) => setComplaint(e.target.value)}
                       rows={5}

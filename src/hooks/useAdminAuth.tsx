@@ -2,14 +2,22 @@ import { useState, useEffect, createContext, useContext, useCallback } from 'rea
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/admin/supabase';
 import type { Database } from '@/lib/admin/supabase';
+import { logAudit } from '@/lib/admin/audit';
 
 type AdminUser = Database['public']['Tables']['admin_users']['row'];
+
+type SignInErrorKind = 'wrong_credentials' | 'not_admin' | 'whitelist_error' | 'unknown';
+
+interface SignInResult {
+  error: Error | null;
+  kind?: SignInErrorKind;
+}
 
 interface AuthContextType {
   user: User | null;
   adminUser: AdminUser | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signIn: (email: string, password: string) => Promise<SignInResult>;
   signOut: () => Promise<void>;
 }
 
@@ -69,7 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initAuth();
   }, []);
 
-  const signIn = useCallback(async (email: string, password: string) => {
+  const signIn = useCallback(async (email: string, password: string): Promise<SignInResult> => {
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email,
@@ -77,24 +85,72 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (error) {
-        return { error: new Error(error.message) };
+        // Pesan ke UI dibuat generik oleh pemanggil — jangan bocorkan detail.
+        return { error: new Error(error.message), kind: 'wrong_credentials' };
       }
 
+      // Login Supabase sukses (password BENAR) — verifikasi whitelist admin_users.
+      // PENTING: bedakan kegagalan QUERY (RLS/jaringan) dari "memang bukan admin".
+      // Dulu keduanya dibalas "Email atau password salah" sehingga user mengira
+      // password-nya berubah padahal password benar.
+      const { data: adminData, error: whitelistError } = await supabase
+        .from('admin_users')
+        .select('email')
+        .eq('email', email)
+        .maybeSingle();
+
+      if (whitelistError) {
+        // Query whitelist gagal (bukan karena password). Jangan bohongi user.
+        await logAudit(email, 'login_whitelist_error', { message: whitelistError.message });
+        await supabase.auth.signOut();
+        setUser(null);
+        setAdminUser(null);
+        return {
+          error: new Error('Gagal memeriksa akses admin. Coba beberapa saat lagi atau hubungi pengelola.'),
+          kind: 'whitelist_error',
+        };
+      }
+
+      if (!adminData) {
+        // Password benar, tapi email memang tidak terdaftar di whitelist admin.
+        await logAudit(email, 'login_rejected_not_admin');
+        await supabase.auth.signOut();
+        setUser(null);
+        setAdminUser(null);
+        return {
+          error: new Error('Email ini tidak terdaftar sebagai admin.'),
+          kind: 'not_admin',
+        };
+      }
+
+      // Audit login sukses (tidak mengganggu flow jika gagal).
+      await logAudit(email, 'login_success');
       return { error: null };
     } catch (err) {
-      return { error: err instanceof Error ? err : new Error('Sign in failed') };
+      return {
+        error: err instanceof Error ? err : new Error('Sign in failed'),
+        kind: 'unknown',
+      };
     }
   }, []);
 
   const signOut = useCallback(async () => {
     try {
+      const email = user?.email ?? adminUser?.email;
       await supabase.auth.signOut();
       setUser(null);
       setAdminUser(null);
-    } catch (error) {
-      console.error('Sign out error:', error);
+      if (email) {
+        // Audit logout (tidak mengganggu flow jika gagal).
+        await logAudit(email, 'logout');
+      }
+    } catch {
+      // Penanganan senyap: logout gagal tidak perlu ditampilkan ke user,
+      // sesi lokal tetap dibersihkan.
+      setUser(null);
+      setAdminUser(null);
     }
-  }, []);
+  }, [user, adminUser]);
 
   return (
     <AuthContext.Provider value={{ user, adminUser, loading, signIn, signOut }}>

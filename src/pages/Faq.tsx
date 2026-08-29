@@ -29,7 +29,7 @@ const FALLBACK_FAQS = [
   },
   {
     q: "Apakah FPS benar-benar pasti naik?",
-    a: "Secara sistem, sumber daya yang sebelumnya terbuang akan dialihkan ke game. Namun, angka peningkatan FPS tergantung pada batas maksimal hardware (VGA & CPU) Anda. Kami menjamin potensi FPS maksimal keluar dari PC Anda.",
+    a: "Secara sistem, sumber daya yang sebelumnya terbuang akan dialihkan ke game. Namun, angka peningkatan FPS tergantung pada batas maksimal hardware (VGA & CPU) kamu. Kami menjamin potensi FPS maksimal keluar dari PC kamu.",
   },
   {
     q: "Apa itu IPAN APP SettinX dan kenapa lebih unggul?",
@@ -37,15 +37,15 @@ const FALLBACK_FAQS = [
   },
   {
     q: "Bagaimana cara order dan proses pengerjaannya?",
-    a: "Cukup klik tombol 'Order via WhatsApp'. Admin akan merekomendasikan paket yang tepat untuk spek PC/laptop Anda. Setelah pembayaran, kami akan meremote PC Anda melalui UltraViewer. Anda tinggal duduk santai dan melihat proses optimasi secara live.",
+    a: "Cukup klik tombol 'Order via WhatsApp'. Admin akan merekomendasikan paket yang tepat untuk spek PC/laptop kamu. Setelah pembayaran, kami akan meremote PC kamu melalui UltraViewer. Kamu tinggal duduk santai dan melihat proses optimasi secara live.",
   },
   {
     q: "Apakah ada konsultasi gratis sebelum membeli?",
-    a: "Tentu! Konsultasi 100% gratis tanpa syarat. Kirim spesifikasi PC/laptop Anda via WhatsApp beserta keluhannya (misalnya: lag saat war Free Fire, emulator force close, FPS naik-turun), maka admin akan merekomendasikan paket atau solusi yang paling sesuai.",
+    a: "Tentu! Konsultasi 100% gratis tanpa syarat. Kirim spesifikasi PC/laptop kamu via WhatsApp beserta keluhannya (misalnya: lag saat war Free Fire, emulator force close, FPS naik-turun), maka admin akan merekomendasikan paket atau solusi yang paling sesuai.",
   },
   {
     q: "Berapa lama proses optimasi selesai?",
-    a: "Tergantung paket dan kondisi awal PC. Rata-rata 30 menit – 2 jam. Untuk paket Full Optimization yang mencakup Windows Mod, proses bisa sedikit lebih lama. Semua pengerjaan dilakukan live via remote, jadi Anda bisa melihat langsung hasilnya.",
+    a: "Tergantung paket dan kondisi awal PC. Rata-rata 30 menit – 2 jam. Untuk paket Full Optimization yang mencakup Windows Mod, proses bisa sedikit lebih lama. Semua pengerjaan dilakukan live via remote, jadi kamu bisa melihat langsung hasilnya.",
   },
   {
     q: "Apakah ada garansi dan support setelah optimasi?",
@@ -53,7 +53,7 @@ const FALLBACK_FAQS = [
   },
   {
     q: "Apakah data dan file di PC saya aman?",
-    a: "100% aman. Kami hanya menonaktifkan service Windows yang tidak penting dan membersihkan cache/registry sampah. Semua file pribadi, dokumen, foto, dan game Anda tetap utuh. Untuk paket tertentu yang membutuhkan install ulang, kami selalu konfirmasi dan backup data dulu sebelumnya.",
+    a: "100% aman. Kami hanya menonaktifkan service Windows yang tidak penting dan membersihkan cache/registry sampah. Semua file pribadi, dokumen, foto, dan game kamu tetap utuh. Untuk paket tertentu yang membutuhkan install ulang, kami selalu konfirmasi dan backup data dulu sebelumnya.",
   },
 ];
 
@@ -82,7 +82,7 @@ const Faq = () => {
 
           setFaqs([...baseFaqs, ...dbFaqs]);
         } else {
-          console.log("No active FAQs from Supabase, using fallback");
+          // Tidak ada FAQ aktif di Supabase — pakai fallback secara silent.
           setFaqs(FALLBACK_FAQS);
         }
       } catch (err) {

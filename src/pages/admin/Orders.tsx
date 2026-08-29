@@ -196,11 +196,20 @@ export default function AdminOrders() {
       toast.error('VITE_BACKEND_URL belum dikonfigurasi — backend tidak bisa dipanggil.');
       return;
     }
+    // Backend mewajibkan header x-admin-secret. Ambil dari env — JANGAN hardcode.
+    const adminSecret = (import.meta.env.VITE_ADMIN_API_SECRET as string | undefined)?.trim();
+    if (!adminSecret) {
+      toast.error('VITE_ADMIN_API_SECRET belum diset di file .env. Tambahkan dulu lalu restart dev server.');
+      return;
+    }
     setIsResending(true);
     try {
       const res = await fetch(`${BACKEND_URL}/api/settinx/resend`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-secret': adminSecret,
+        },
         body: JSON.stringify({ orderId: order.invoice_number }),
       });
       const data = await res.json().catch(() => ({}));
