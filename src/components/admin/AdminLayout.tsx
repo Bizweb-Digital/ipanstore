@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { Toaster } from 'react-hot-toast';
@@ -17,7 +17,9 @@ import {
   ScrollText,
   BadgePercent,
   ShieldCheck,
+  Users,
 } from 'lucide-react';
+import { getMyRole } from '@/lib/admin/admins';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -69,6 +71,12 @@ const navigationItems = [
     label: 'Reports',
     icon: FileText,
   },
+  {
+    path: '/admin/admins',
+    label: 'Admins',
+    icon: Users,
+    superAdminOnly: true,
+  },
 ];
 
 const ADMIN_LOGO = '/logo-transparent.png';
@@ -78,6 +86,24 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const { user, adminUser, signOut } = useAdminAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+  // Ambil role user dari tabel admin_users (toleran kolom role belum ada).
+  useEffect(() => {
+    if (!user?.email) return;
+    let cancelled = false;
+    getMyRole(user.email).then((role) => {
+      if (!cancelled) setIsSuperAdmin(role === 'super_admin');
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.email]);
+
+  // Viewer tidak melihat menu khusus super admin (mis. Admins).
+  const visibleNavItems = navigationItems.filter(
+    (item) => !item.superAdminOnly || isSuperAdmin
+  );
 
   const isActive = (path: string) => {
     if (path === '/admin') {
@@ -138,7 +164,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
         {/* Navigation */}
         <nav className="flex-1 px-2 py-4 space-y-1">
-          {navigationItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
             return (
@@ -200,7 +226,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
             {/* Navigation */}
             <nav className="flex-1 px-4 py-4 space-y-1">
-              {navigationItems.map((item) => {
+              {visibleNavItems.map((item) => {
                 const Icon = item.icon;
                 const active = isActive(item.path);
                 return (

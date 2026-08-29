@@ -362,7 +362,7 @@ const TestimoniPage = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Rating */}
               <div>
-                <label className="block text-xs font-medium text-zinc-400 mb-2">Rating Kamu</label>
+                <span className="block text-xs font-medium text-zinc-400 mb-2">Rating Kamu</span>
                 <div className="flex items-center gap-1">
                   {[1, 2, 3, 4, 5].map((n) => (
                     <button
@@ -383,8 +383,9 @@ const TestimoniPage = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-zinc-400 mb-1.5">Nama *</label>
+                <label htmlFor="testimoni-nama" className="block text-xs font-medium text-zinc-400 mb-1.5">Nama *</label>
                 <input
+                  id="testimoni-nama"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                   placeholder="Nama kamu"
@@ -393,8 +394,9 @@ const TestimoniPage = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-zinc-400 mb-1.5">Pesan Testimoni *</label>
+                <label htmlFor="testimoni-pesan" className="block text-xs font-medium text-zinc-400 mb-1.5">Pesan Testimoni *</label>
                 <textarea
+                  id="testimoni-pesan"
                   value={form.message}
                   onChange={(e) => setForm({ ...form, message: e.target.value })}
                   placeholder="Ceritakan pengalaman kamu setelah optimasi di IPAN STORE..."

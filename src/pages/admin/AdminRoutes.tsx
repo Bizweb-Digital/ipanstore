@@ -2,9 +2,11 @@ import { lazy, Suspense } from "react";
 import { Route, Routes } from "react-router-dom";
 import PageSkeleton from "@/components/PageSkeleton";
 import ProtectedRoute from "@/components/admin/ProtectedRoute";
+import RequireSuperAdmin from "@/components/admin/RequireSuperAdmin";
 import { AuthProvider } from "@/hooks/useAdminAuth";
 
 const AdminLogin = lazy(() => import("./Login"));
+const AdminResetPassword = lazy(() => import("./ResetPassword"));
 const AdminDashboard = lazy(() => import("./Dashboard"));
 const AdminOrders = lazy(() => import("./Orders"));
 const AdminServices = lazy(() => import("./Services"));
@@ -14,12 +16,14 @@ const AdminReports = lazy(() => import("./Reports"));
 const AdminPromos = lazy(() => import("./Promos"));
 const AdminAuditLog = lazy(() => import("./AuditLog"));
 const AdminGaransi = lazy(() => import("./Garansi"));
+const AdminAdmins = lazy(() => import("./Admins"));
 
 const AdminRoutes = () => (
   <AuthProvider>
     <Suspense fallback={<PageSkeleton />}>
       <Routes>
         <Route path="login" element={<AdminLogin />} />
+        <Route path="reset-password" element={<AdminResetPassword />} />
         <Route path="" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
         <Route path="orders" element={<ProtectedRoute><AdminOrders /></ProtectedRoute>} />
         <Route path="services" element={<ProtectedRoute><AdminServices /></ProtectedRoute>} />
@@ -29,6 +33,7 @@ const AdminRoutes = () => (
         <Route path="audit" element={<ProtectedRoute><AdminAuditLog /></ProtectedRoute>} />
         <Route path="reports" element={<ProtectedRoute><AdminReports /></ProtectedRoute>} />
         <Route path="garansi" element={<ProtectedRoute><AdminGaransi /></ProtectedRoute>} />
+        <Route path="admins" element={<ProtectedRoute><RequireSuperAdmin><AdminAdmins /></RequireSuperAdmin></ProtectedRoute>} />
       </Routes>
     </Suspense>
   </AuthProvider>

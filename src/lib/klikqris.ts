@@ -3,7 +3,9 @@
  * (https://klikqris.com/dokumentasi)
  */
 
-import { BACKEND_URL } from "@/lib/doku";
+// URL backend pembayaran (dipindahkan dari lib/doku agar tidak bergantung
+// pada modul Doku yang sudah tidak dipakai — B12 dead code cleanup).
+const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL as string) || "";
 
 export interface KlikQrisPaymentRequest {
   orderId: string;
@@ -83,7 +85,6 @@ export async function createKlikQrisPayment(
       raw: data.raw ?? data,
     };
   } catch (e) {
-    console.warn("createKlikQrisPayment error:", e);
     return { error: e instanceof Error ? e.message : "Gagal menghubungi backend." };
   }
 }
@@ -111,7 +112,6 @@ export async function checkKlikQrisStatus(orderId: string): Promise<KlikQrisStat
     const status = (inner?.status as string) || (data.status as string) || null;
     return { status, paid: isPaidStatus(status), raw: data };
   } catch (e) {
-    console.warn("checkKlikQrisStatus error:", e);
     return { status: null, paid: false, error: e instanceof Error ? e.message : "Gagal cek status." };
   }
 }

@@ -13,6 +13,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { MessageSquare, Plus, Search, Edit, Trash2, Eye, XCircle, Download, CheckCircle2, ImagePlus, Loader2 } from 'lucide-react';
 import { toastTestimonial, showSuccessToast, showErrorToast } from '@/lib/admin/toast';
 import { supabase } from '@/lib/admin/supabase';
@@ -42,6 +52,8 @@ export default function AdminTestimonials() {
   const [isSaving, setIsSaving] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const logAudit = useAuditLogger();
 
   const fetchTestimonials = async () => {
@@ -250,35 +262,38 @@ export default function AdminTestimonials() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Yakin hapus testimonial ini?')) {
-      return;
-    }
+  const handleDelete = async () => {
+    if (!deletingId) return;
+    const id = deletingId;
 
     try {
+      setIsDeleting(true);
       // Get image URL before deleting to optionally delete from storage
       const testimonial = testimonials.find(t => t.id === id);
 
       const { error } = await supabase.from('testimonials').delete().eq('id', id);
       if (error) throw error;
 
-      // Try to delete image from storage if exists
+      // Try to delete image from storage if exists (best-effort)
       if (testimonial?.image_url) {
         try {
           const urlParts = testimonial.image_url.split('/');
           const fileName = urlParts[urlParts.length - 1];
           await supabase.storage.from('testimonial-images').remove([fileName]);
-        } catch (imgErr) {
-          console.warn('Failed to delete image from storage:', imgErr);
+        } catch {
+          // Abaikan — row utama sudah terhapus, sisa file di storage tidak fatal.
         }
       }
 
       await logAudit('testimonial.delete', id);
       toastTestimonial.deleted();
+      setDeletingId(null);
       await fetchTestimonials();
     } catch (error: any) {
       console.error('Failed to delete testimonial:', error);
       showErrorToast('Gagal menghapus testimonial', error.message);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -447,7 +462,7 @@ export default function AdminTestimonials() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleDelete(testimonial.id)}
+                              onClick={() => setDeletingId(testimonial.id)}
                               className="text-red-500 hover:text-red-500 hover:bg-red-500/10"
                             >
                               <Trash2 className="w-4 h-4" />

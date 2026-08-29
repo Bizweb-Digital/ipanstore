@@ -35,6 +35,19 @@
 6. **Hemat token / efisiensi**: jangan gunakan skill/agent yang berat atau berlebihan
    ("overpowered") untuk tugas kecil. Kerjakan langsung dengan alat dasar seefisien mungkin.
 
+6b. **⚠️ JANGAN STUCK / MACET DI PERINTAH (PENTING)**:
+   - Kalau sebuah perintah shell/tool **gagal, error, atau macet** (timeout, EADDRINUSE,
+     `require is not defined`, dsb.), **JANGAN berhenti lama menunggu** — langsung
+     **ulangi dengan cara yang sudah dikoreksi** dan lanjutkan pekerjaan.
+   - **Port sudah dipakai (EADDRINUSE)**: kill proses lama di port itu
+     (`Get-NetTCPConnection -LocalPort <port> | Stop-Process`), lalu start ulang.
+   - **Script Node error "require is not defined"**: project ini `"type": "module"`,
+     jadi script `require()` harus disimpan sebagai **`.cjs`** (bukan `.js`).
+   - **Server backend**: kalau kode `server/index.js` diubah, **restart prosesnya** agar
+     endpoint baru termuat sebelum dites (server lama tidak otomatis reload).
+   - Prinsipnya: deteksi penyebab dari pesan error, perbaiki, **coba lagi segera** —
+     jangan stuck. Laporkan ke user hanya setelah 2-3 kali percobaan masih gagal.
+
 7. **⚠️ JANGAN AUTO-LOAD SKILL DARI PROMPT (PENTING)**:
    - **JANGAN PERNAH** memanggil/memuat skill (via `skill` tool atau membaca file SKILL.md)
      hanya karena prompt user menyebut kata yang mirip deskripsi skill. Mengabaikan
