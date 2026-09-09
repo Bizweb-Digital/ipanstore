@@ -374,6 +374,11 @@ const SETTINX_DOWNLOAD_URL =
   process.env.SETTINX_DOWNLOAD_URL ||
   "https://drive.google.com/drive/folders/1oB2BIILhM-xrgseTw7yYSYwxurLayTvq?usp=sharing";
 
+// Link MediaFire produk "Ipan Module SettinX 1.1" (dari .env, tidak di-hardcode).
+const SETTINX_MODULE_DOWNLOAD_URL =
+  process.env.SETTINX_MODULE_1_1_DOWNLOAD_URL ||
+  "https://www.mediafire.com/file/b01bckwvih4jpwi/Ipan_Module_SettinX_1.1.rar/file";
+
 const emailTransporter = SMTP_USER
   ? nodemailer.createTransport({
       host: SMTP_HOST,
@@ -488,6 +493,96 @@ async function sendSettinXEmail({ to, customerName, invoiceNumber, amount, paidA
       from: MAIL_FROM,
       to: safeTo,
       subject: `✅ Pembayaran Diterima — Download IPAN APP SettinX V1 (${safeInvoice || ""})`,
+      html,
+    });
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+}
+
+/**
+ * Kirim email produk "Ipan Module SettinX 1.1" + invoice ke pembeli.
+ * Modul ini TANPA lisensi/login — hanya berisi link download MediaFire.
+ * Mengembalikan { ok, error? }.
+ */
+async function sendModuleSettinxEmail({ to, customerName, invoiceNumber, amount, paidAt }) {
+  if (!emailTransporter) return { ok: false, error: "SMTP belum dikonfigurasi (SMTP_USER kosong)." };
+  const safeTo = String(to ?? "").trim();
+  if (!isValidEmail(safeTo)) {
+    return { ok: false, error: "Format email pembeli tidak valid." };
+  }
+  const safeName = sanitizeForHeader(customerName, 100);
+  const safeInvoice = sanitizeForHeader(invoiceNumber, 64);
+
+  const formattedAmount = new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+  }).format(amount || 0);
+
+  const paidLabel = paidAt
+    ? new Intl.DateTimeFormat("id-ID", { dateStyle: "long", timeStyle: "short" }).format(new Date(paidAt))
+    : new Date().toLocaleString("id-ID");
+
+  const downloadUrl = SETTINX_MODULE_DOWNLOAD_URL;
+
+  const html = `
+  <div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#0f0f10;color:#e4e4e7;border-radius:12px;overflow:hidden;border:1px solid #27272a">
+    <div style="background:linear-gradient(135deg,#18181b,#3f3f46);padding:28px 32px">
+      <div style="font-size:22px;font-weight:800;letter-spacing:-0.5px">IPAN <span style="color:#a1a1aa">STORE</span></div>
+      <div style="font-size:12px;color:#a1a1aa;margin-top:2px">Payment Confirmation</div>
+    </div>
+    <div style="padding:28px 32px">
+      <p style="font-size:16px;font-weight:600;margin:0 0 4px">Halo, ${escapeHtml(safeName || "Pelanggan")} 👋</p>
+      <p style="color:#a1a1aa;font-size:14px;margin:0 0 20px">Terima kasih atas pembelian Anda. Pembayaran telah kami terima ✅</p>
+
+      <table style="width:100%;border-collapse:collapse;font-size:14px">
+        <tr>
+          <td style="padding:8px 0;color:#a1a1aa">No. Invoice</td>
+          <td style="padding:8px 0;text-align:right;font-family:monospace">${escapeHtml(safeInvoice || "-")}</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 0;color:#a1a1aa">Produk</td>
+          <td style="padding:8px 0;text-align:right">IPAN Module SettinX 1.1</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 0;color:#a1a1aa">Status</td>
+          <td style="padding:8px 0;text-align:right;color:#4ade80;font-weight:600">LUNAS</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 0;color:#a1a1aa">Total Dibayar</td>
+          <td style="padding:8px 0;text-align:right;font-size:16px;font-weight:800;color:#f4f4f5">${formattedAmount}</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 0;color:#a1a1aa">Waktu</td>
+          <td style="padding:8px 0;text-align:right">${escapeHtml(paidLabel)}</td>
+        </tr>
+      </table>
+
+      <div style="background:#18181b;border:1px solid #27272a;border-radius:10px;padding:18px 20px;margin:22px 0">
+        <div style="font-weight:700;margin-bottom:6px">📦 Download IPAN Module SettinX 1.1</div>
+        <div style="font-size:13px;color:#a1a1aa;margin-bottom:12px">Klik tombol di bawah untuk mengunduh modul (.rar) beserta file pendukungnya.</div>
+        <a href="${downloadUrl}" style="display:inline-block;background:#f4f4f5;color:#18181b;text-decoration:none;font-weight:700;padding:12px 24px;border-radius:8px;font-size:14px">⬇️ Download Ipan Module SettinX 1.1</a>
+      </div>
+
+      <p style="font-size:12px;color:#71717a;line-height:1.6">
+        Jika tombol tidak berfungsi, salin tautan berikut:<br/>
+        <a href="${downloadUrl}" style="color:#a1a1aa;word-break:break-all">${downloadUrl}</a>
+      </p>
+
+      <p style="font-size:12px;color:#71717a;margin-top:24px;border-top:1px solid #27272a;padding-top:16px">
+        Untuk bantuan &amp; aktivasi lisensi, hubungi kami via WhatsApp di website IPAN STORE.<br/>
+        © ${new Date().getFullYear()} IPAN STORE
+      </p>
+    </div>
+  </div>`;
+
+  try {
+    await emailTransporter.sendMail({
+      from: MAIL_FROM,
+      to: safeTo,
+      subject: `✅ Pembayaran Diterima — Download IPAN Module SettinX 1.1 (${safeInvoice || ""})`,
       html,
     });
     return { ok: true };
@@ -817,6 +912,47 @@ app.post("/api/klikqris-create-order", orderLimiter, async (req, res) => {
   }
 });
 
+// ── Klasifikasi produk SettinX ───────────────────────────────────────────────
+// Mengembalikan 'module_1_1' (Ipan Module SettinX 1.1, link MediaFire),
+// 'app_v1' (IPAN APP SettinX V1, kredensial Firebase), atau null (bukan SettinX).
+// Prioritas module dulu krn nama "Ipan Module SettinX 1.1" ikut cocok dgn /settinx/i.
+async function classifySettinxProduct(order, svcSlugName = {}) {
+  const haystack =
+    `${order?.invoice_number || ""} ${order?.item_name || ""} ${order?.package_name || ""} ` +
+    `${order?.service_name || ""} ${svcSlugName.slug || ""} ${svcSlugName.name || ""}`;
+  const s = haystack.toLowerCase();
+
+  // /module/i bisa nyangkut di invoice seperti "IPANIPANMODULE..." / slug "ipanmodule"
+  // (tanpa word boundary) → jangan pakai \b. Tidak ada service lain bernama "module",
+  // jadi aman. 1.1 bisa ditulis "SettinX 1.1", "settinx-1-1", dikapitalisasi, dsb.
+  if (/module/i.test(s) || /settinx\s*1\s*[.\-]?\s*1/i.test(s)) return "module_1_1";
+  if (/settinx|app[-\s]?settinx/i.test(s)) return "app_v1";
+  return null;
+}
+
+// ── DOUBLE CONFIRMATION (server-side) ────────────────────────────────────────
+// Verifikasi DEFINITIF status pembayaran ke API KlikQris langsung (server-to-server
+// pakai API key + id_merchant). Webhook saja tidak cukup dipercaya — bisa dipalsukan.
+// Email/fulfillment HANYA jalan jika query ke KlikQris membalas status SUCCESS/PAID.
+async function isKlikQrisPaid(orderId) {
+  try {
+    if (!KLIKQRIS_API_KEY || !KLIKQRIS_ID_MERCHANT) return false;
+    const r = await fetch(`${KLIKQRIS_BASE_URL}/qris/status/${encodeURIComponent(orderId)}`, {
+      method: "GET",
+      headers: {
+        "x-api-key": KLIKQRIS_API_KEY,
+        "id_merchant": KLIKQRIS_ID_MERCHANT,
+      },
+    });
+    const data = await r.json().catch(() => ({}));
+    const apiStatus = String(data?.data?.status || data?.status || "").trim();
+    return apiStatus === "SUCCESS" || apiStatus === "PAID";
+  } catch (e) {
+    console.error("isKlikQrisPaid error:", e?.message || e);
+    return false;
+  }
+}
+
 // ── Helper: Proses fulfillment order jika baru saja LUNAS (PAID/SUCCESS) ───────
 // Dipanggil oleh webhook AND polling status untuk menangani payment confirmation.
 // Idempotent: skip jika order sudah PAID.
@@ -834,10 +970,24 @@ async function processPaymentConfirmation(orderId, payload = null) {
     return { processed: false, reason: 'already_paid' };
   }
 
-  const status = payload?.status || 'PAID';
-  if (status !== "PAID" && status !== "SUCCESS") {
+  // ⚠️ VERIFIKASI DEFINITIF: hanya berlaku bila status PAID/SUCCESS ATAU webhook
+  // ber-signature valid via konfirmasi ulang ke API KlikQris. Ini memastikan
+  // "website benar-benar memastikan pembayaran KlikQris sudah sukses terbayar".
+  const looksPaid = String(payload?.status || "").toUpperCase();
+  if (looksPaid !== "PAID" && looksPaid !== "SUCCESS") {
     return { processed: false, reason: 'not_paid_yet' };
   }
+
+  // JANGAN langsung percaya payload webhook. Konfirmasi ulang server-side ke API
+  // status KlikQris. Jika verifikasi gagal/jaringan error → skip kirim email
+  // (aman: lebih baik tidak kirim daripada kirim produk tanpa bayar).
+  const confirmedPaid = await isKlikQrisPaid(orderId);
+  if (!confirmedPaid) {
+    console.warn(`🚫 Pembayaran ${orderId} TIDAK TERKONFIRMASI di KlikQris (status payload=${looksPaid}) — email produk DITAHAN.`);
+    return { processed: false, reason: 'unconfirmed_payment' };
+  }
+
+  const status = payload?.status || 'PAID';
 
   // Update order status + paid_at
   await updateOrder(orderId, {
@@ -850,29 +1000,54 @@ async function processPaymentConfirmation(orderId, payload = null) {
   // notifikasi memang hanya via Gmail). Fire-and-forget, tidak memblokir webhook.
   sendPaidEmail(order).catch((e) => console.error("Paid email error:", e?.message || e));
 
-  // Identifikasi apakah ini paket SettinX
-  let isSettinX = /settinx/i.test(order.invoice_number || "");
-  if (!isSettinX && order.service_id && supabase) {
+  // Identifikasi tipe produk SettinX (module_1_1 vs app_v1 vs null)
+  let svcSlugName = { slug: "", name: "" };
+  if (order.service_id && supabase) {
     const { data: svc } = await supabase
       .from("services")
       .select("slug, name")
       .eq("id", order.service_id)
       .single();
-    if (svc && /settinx/i.test(svc.slug || svc.name || "")) {
-      isSettinX = true;
-    }
+    if (svc) svcSlugName = { slug: svc.slug || "", name: svc.name || "" };
   }
+  const productType = await classifySettinxProduct(order, svcSlugName);
 
-  if (!isSettinX) {
+  if (!productType) {
     return { processed: true, reason: 'non_settinx_product', order };
   }
 
-  // Kirim email otomatis untuk SettinX V1
-  if (!order.customer_email) {
-    console.warn(`⚠️  SettinX SUCCESS tapi email kosong — skip kirim.`);
+  // Kirim email otomatis ke pembeli. Butuh email valid.
+  if (!isValidEmail(order.customer_email)) {
+    console.warn(`⚠️  Produk SettinX SUCCESS tapi email kosong/tidak valid — skip kirim.`);
     return { processed: true, reason: 'no_customer_email', order };
   }
 
+  // ── Produk "Ipan Module SettinX 1.1": cukup link download MediaFire ───────
+  // Tanpa lisensi Firebase. Format terkirim hanya jika pembayaran sudah LUNAS.
+  if (productType === "module_1_1") {
+    console.log(`📦 IPAN Module SettinX 1.1 TERBAYAR — kirim link MediaFire ke ${order.customer_email} (invoice ${orderId})...`);
+    const moduleResult = await sendModuleSettinxEmail({
+      to: order.customer_email,
+      customerName: order.customer_name,
+      invoiceNumber: orderId,
+      amount: payload?.total_amount || order.amount,
+      paidAt: new Date().toISOString(),
+    });
+
+    if (moduleResult.ok) {
+      await updateOrder(orderId, {
+        email_sent: true,
+        email_sent_at: new Date().toISOString(),
+        settinx_type: "module_1_1",
+      });
+      console.log(`📧 Email Module SettinX TERKIRIM: ${order.customer_email} (invoice ${orderId})`);
+    } else {
+      console.error(`📧 Email Module SettinX GAGAL ke ${order.customer_email}: ${moduleResult.error}`);
+    }
+    return { processed: true, result: moduleResult, order };
+  }
+
+  // ── Produk "IPAN APP SettinX V1": generate kredensial Firebase ───────────
   // Generate kredensial Firebase (username/password/license key) OTOMATIS.
   // Aplikasi SettinX login memakai email+password+license(UID), jadi kita buat
   // akun di sini lalu sertakan kredensialnya dalam email. Jika Firebase belum
@@ -898,7 +1073,7 @@ async function processPaymentConfirmation(orderId, payload = null) {
     } catch (_) { /* abaikan */ }
   }
 
-  console.log(`📧 Mengirim email SettinX ke ${order.customer_email} (invoice ${orderId})...`);
+  console.log(`📧 Mengirim email SettinX V1 ke ${order.customer_email} (invoice ${orderId})...`);
   const result = await sendSettinXEmail({
     to: order.customer_email,
     customerName: order.customer_name,
@@ -912,12 +1087,13 @@ async function processPaymentConfirmation(orderId, payload = null) {
     await updateOrder(orderId, {
       email_sent: true,
       email_sent_at: new Date().toISOString(),
+      settinx_type: "app_v1",
       settinx_license_uid: licenseUid || order.settinx_license_uid || null,
       settinx_license_error: licenseErr || null,
     });
-    console.log(`📧 Email SettinX TERKIRIM: ${order.customer_email} (invoice ${orderId})`);
+    console.log(`📧 Email SettinX V1 TERKIRIM: ${order.customer_email} (invoice ${orderId})`);
   } else {
-    console.error(`📧 Email SettinX GAGAL ke ${order.customer_email}: ${result.error}`);
+    console.error(`📧 Email SettinX V1 GAGAL ke ${order.customer_email}: ${result.error}`);
   }
 
   return { processed: true, result, credentials, licenseErr, order };
@@ -952,16 +1128,24 @@ app.post("/api/klikqris-webhook", async (req, res) => {
     }
 
     // DOUBLE SECURITY (sesuai dokumentasi KlikQris):
-    // Bandingkan signature dari webhook dengan signature yang disimpan saat create order.
+    // Signature webhook WAJIB cocok dengan signature tersimpan saat create order.
+    // Jika webhook menyertakan signature yang TIDAK cocok dengan yang tersimpan → pasti
+    // fake/replay, TOLAK langsung (constant-time via crypto.timingSafeEqual).
+    // Jika webhook TANPA signature → biarkan lolos ke verifikasi server-side
+    // (isKlikQrisPaid) yang merupakan otoritas definitif; processPaymentConfirmation
+    // tetap menahan email bila API status KlikQris tidak membalas SUCCESS/PAID.
     const order = await getOrder(orderId);
-    if (
-      order &&
-      order.klikqris_signature &&
-      payload?.signature &&
-      String(payload.signature) !== String(order.klikqris_signature)
-    ) {
-      console.warn(`⚠️  Signature webhook TIDAK COCOK untuk ${orderId} — kemungkinan fake webhook, ditolak.`);
-      return res.status(401).json({ success: false, message: "Invalid signature" });
+    const storedSig = order?.klikqris_signature;
+    const incomingSig = String(payload?.signature || "");
+
+    if (storedSig && incomingSig) {
+      const sigOk =
+        incomingSig.length === storedSig.length &&
+        crypto.timingSafeEqual(Buffer.from(incomingSig), Buffer.from(storedSig));
+      if (!sigOk) {
+        console.warn(`⚠️  Signature webhook TIDAK COCOK untuk ${orderId} — fake webhook, ditolak.`);
+        return res.status(401).json({ success: false, message: "Invalid signature" });
+      }
     }
 
     if (!order) {
@@ -1688,21 +1872,45 @@ app.post("/api/settinx/resend", requireAdminSecret, async (req, res) => {
     }
 
     // Pastikan ini benar-benar produk SettinX.
-    const isSettinX = /settinx/i.test(order.invoice_number || "");
-    if (!isSettinX && order.service_id && supabase) {
+    let svcSlugName = { slug: "", name: "" };
+    if (order.service_id && supabase) {
       const { data: svc } = await supabase
         .from("services")
         .select("slug, name")
         .eq("id", order.service_id)
         .single();
-      if (svc && /settinx/i.test(svc.slug || svc.name || "")) isSettinX = true;
+      if (svc) svcSlugName = { slug: svc.slug || "", name: svc.name || "" };
     }
-    if (!isSettinX) {
-      return res.status(400).json({ success: false, message: "Order ini bukan produk IPAN APP SettinX V1." });
+    const productType = await classifySettinxProduct(order, svcSlugName);
+    if (!productType) {
+      return res.status(400).json({ success: false, message: "Order ini bukan produk SettinX." });
     }
-    if (!order.customer_email) {
-      return res.status(400).json({ success: false, message: "Order tidak memiliki email pembeli." });
+    if (!isValidEmail(order.customer_email)) {
+      return res.status(400).json({ success: false, message: "Order tidak memiliki email pembeli yang valid." });
     }
+
+    // ── Produk "Ipan Module SettinX 1.1": kirim ulang link MediaFire ───────
+    if (productType === "module_1_1") {
+      const resendResult = await sendModuleSettinxEmail({
+        to: order.customer_email,
+        customerName: order.customer_name,
+        invoiceNumber: order.invoice_number,
+        amount: order.amount,
+        paidAt: order.paid_at,
+      });
+      if (!resendResult.ok) {
+        return res.status(502).json({ success: false, message: `Gagal kirim email: ${resendResult.error}` });
+      }
+      await updateOrder(order.invoice_number || order.id, {
+        email_sent: true,
+        email_sent_at: new Date().toISOString(),
+        settinx_type: "module_1_1",
+      });
+      console.log(`🔁 Module SettinX RE-SENT: ${order.customer_email} (invoice ${order.invoice_number})`);
+      return res.json({ success: true, message: "Email download berhasil dikirim ulang." });
+    }
+
+    // ── Produk "IPAN APP SettinX V1": kredensial Firebase ─────────────────
 
     let credentials = null;
     let licenseErr = null;

@@ -191,6 +191,13 @@ export default function AdminOrders() {
     return /settinx/.test(invoice) || /settinx/.test(serviceName) || /settinx/.test(serviceSlug);
   }, [selectedOrder]);
 
+  const isModuleSettinxProduct = useMemo(() => {
+    if (!selectedOrder) return false;
+    const serviceName = (selectedOrder.services?.name || '').toLowerCase();
+    const serviceSlug = (selectedOrder.services?.slug || '').toLowerCase();
+    return /module/.test(serviceName) || /module/.test(serviceSlug) || serviceSlug === 'ipanmodule';
+  }, [selectedOrder]);
+
   const resendSettinXLicense = async (order: Order) => {
     if (!BACKEND_URL) {
       toast.error('VITE_BACKEND_URL belum dikonfigurasi — backend tidak bisa dipanggil.');
@@ -830,17 +837,21 @@ export default function AdminOrders() {
                   {isSettinXProduct && (
                     <div className="mt-4 border-t border-white/10 pt-3 space-y-2">
                       <div className="text-xs text-muted-foreground">
-                        Kredensial akan dikirim ulang ke email pembeli beserta link download. Untuk
-                        produk SettinX V1, tombol ini membuat/memakai kembali akun Firebase
-                        kemudian mengirim email berisi Username, Password &amp; License Key.
+                        {isModuleSettinxProduct ? (
+                          <>Klik tombol untuk mengirim ulang link download <strong>Ipan Module SettinX 1.1</strong> (MediaFire) ke email pembeli beserta ringkasan invoice.</>
+                        ) : (
+                          <>Kredensial akan dikirim ulang ke email pembeli beserta link download. Untuk
+                            produk SettinX V1, tombol ini membuat/memakai kembali akun Firebase
+                            kemudian mengirim email berisi Username, Password &amp; License Key.</>
+                        )}
                       </div>
-                      {selectedOrder.settinx_license_uid && (
+                      {!isModuleSettinxProduct && selectedOrder.settinx_license_uid && (
                         <div className="flex justify-between text-xs">
                           <span className="text-muted-foreground">License Key (UID)</span>
                           <span className="font-mono text-[11px] break-all">{selectedOrder.settinx_license_uid}</span>
                         </div>
                       )}
-                      {selectedOrder.settinx_license_error && (
+                      {!isModuleSettinxProduct && selectedOrder.settinx_license_error && (
                         <div className="text-[11px] text-red-400 break-all">
                           Error sebelumnya: {selectedOrder.settinx_license_error}
                         </div>
@@ -858,7 +869,8 @@ export default function AdminOrders() {
                           </>
                         ) : (
                           <>
-                            <KeyRound className="w-4 h-4" /> Generate &amp; Kirim Ulang Kredensial
+                            <KeyRound className="w-4 h-4" />
+                            {isModuleSettinxProduct ? 'Kirim Ulang Link Download' : 'Generate & Kirim Ulang Kredensial'}
                           </>
                         )}
                       </Button>

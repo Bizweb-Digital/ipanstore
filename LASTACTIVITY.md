@@ -1,10 +1,16 @@
 # LASTACTIVITY — IPAN STORE
 
-## STATUS: ✅ "Failed to fetch" TERATASI — Backend & Frontend produksi pulih (deploy selesai)
+## STATUS: ✅ Kolom `settinx_type` di tabel `orders` — sukses ditambahkan (patch SQL user)
 
 ## Rekap SEMUA Perubahan (Sesi Ini, kronologis)
 
-### 1. Polish UI kartu paket (Layanan/Paket/Order) — ✅ dibuild & ter-deploy
+### 1. Patch kolom `settinx_type` di tabel orders — ✅ dijalankan user
+- File patch: `database/migrations/sql_patches/supabase_patch_orders_add_settinx_type.sql` (atau file SQL quick-patch yang dibuat sebelumnya).
+- SQL yang dijalankan: `ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS settinx_type TEXT;`
+- Tujuan: menyimpan jenis produk SettinX saat webhook/resend (`module_1_1` untuk "Ipan Module SettinX 1.1", `app_v1` untuk "IPAN APP SettinX V1").
+- Hasil: **Success. No rows returned** — kolom baru berhasil dibuat tanpa mengubah data lama.
+
+### 2. Polish UI kartu paket (Layanan/Paket/Order) — ✅ dibuild & ter-deploy
 `src/pages/Layanan.tsx`:
 - Subtitle "Modul & paket tambahan dari tim IPAN STORE." → `leading-relaxed max-w-xl mx-auto`, judul `mb-3`.
 - Header card APP SETTINX → `flex items-start justify-between gap-3 mb-5` (badge "LISENSI LIFETIME" sejajar
@@ -100,14 +106,15 @@
 - [ ] Audit policies tabel testimonials/faqs/promo_codes (paralel dengan patch RLS).
 - [ ] Admin form Services: warning inline kalau slug tidak match regex `^[a-z0-9]+(?:-[a-z0-9]+)*$`.
 - [ ] Halaman `/paket` masih pakai array statis; extend auto-inject products from DB.
-- [ ] Produk "Ipan Module SettinX 1.1" di DB masih kategori 'Optimize' — ubah ke 'APP SETTINX' via admin
-      supaya muncul di tab APP SETTINX.
+- [x] ~~Produk "Ipan Module SettinX 1.1" di DB masih kategori 'Optimize' — ubah ke 'APP SETTINX' via admin
+      supaya muncul di tab APP SETTINX.~~ ✅ Sudah diubah user via dashboard Supabase.
 - [ ] Bersihkan file junk untracked di VPS (daftar di atas).
 
 ## Riwayat Sesi
 
 | Waktu | Aktivitas |
 |---|---|
+| 2026-09-10 | Patch SQL kolom `settinx_type` di tabel `orders` berhasil dijalankan user (Success). |
 | 2026-09-09 | FIX total "Failed to fetch": backend PM2 (helmet+notify.js), redeploy frontend, fix BOM nginx.conf. Web produksi & API 200. |
 | 2026-09-09 | Commit+push+deploy: ecd76e7 (backend+kategori+UI+bundle), 271633c (BOM), 6a19831 (docs). |
 | 2026-09-09 | Polish UI kartu paket Layanan/Paket/Order + parseFeatures bullets. |
