@@ -4,6 +4,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/admin/supabase';
+import type { ServiceCategory } from '@/lib/services';
 
 export interface Service {
   id: string;
@@ -11,10 +12,14 @@ export interface Service {
   name: string;
   description: string;
   price: number;
+  category: ServiceCategory;
   is_active: boolean;
   created_at: string;
   updated_at: string;
 }
+
+const SERVICE_COLUMNS =
+  'id, slug, name, description, price, category, is_active, created_at, updated_at';
 
 export function useServices() {
   const [services, setServices] = useState<Service[]>([]);
@@ -26,11 +31,11 @@ export function useServices() {
       try {
         const { data, error } = await supabase
           .from('services')
-          .select('*')
+          .select(SERVICE_COLUMNS)
           .order('created_at', { ascending: false });
 
         if (error) throw error;
-        setServices(data || []);
+        setServices((data as unknown as Service[]) || []);
       } catch (err: any) {
         setError(err.message);
         console.error('Failed to fetch services:', err);
@@ -47,11 +52,11 @@ export function useServices() {
     try {
       const { data, error } = await supabase
         .from('services')
-        .select('*')
+        .select(SERVICE_COLUMNS)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setServices(data || []);
+      setServices((data as unknown as Service[]) || []);
     } catch (err: any) {
       setError(err.message);
       console.error('Failed to fetch services:', err);
@@ -71,7 +76,7 @@ export function useServices() {
           .update({ ...data, updated_at: new Date().toISOString() })
           .eq('id', id)
           .select();
-        
+
         if (error) throw error;
         return { data: updatedData?.[0] || null, error: null };
       } else {
@@ -79,7 +84,7 @@ export function useServices() {
           .from('services')
           .insert({ ...data })
           .select();
-        
+
         if (error) throw error;
         return { data: insertedData?.[0] || null, error: null };
       }
@@ -119,12 +124,12 @@ export function useService(id?: string) {
         setLoading(true);
         const { data, error } = await supabase
           .from('services')
-          .select('*')
+          .select(SERVICE_COLUMNS)
           .eq('id', id)
           .single();
 
         if (error) throw error;
-        setService(data);
+        setService((data as unknown as Service) || null);
       } catch (err: any) {
         setError(err.message);
         console.error(`Failed to fetch service ${id}:`, err);

@@ -329,40 +329,41 @@ const Paket = () => {
                             highlighted ? "border-zinc-600" : ""
                           }`}
                         >
-                      <div className="flex items-center justify-between mb-4 min-h-[24px]">
-                        {p.highlight ? (
-                          <span className="inline-flex items-center rounded-md bg-zinc-50 text-zinc-900 font-mono text-[10px] font-medium uppercase tracking-[0.18em] px-2.5 py-1">
-                            {p.highlight}
-                          </span>
-                        ) : (
-                          <span />
-                        )}
-                        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#F4F4F5]/50">
-                          {p.category}
-                        </span>
-                      </div>
+                          {/* Header: icon + badge, aligned top */}
+                          <div className="flex items-start justify-between gap-3 mb-5 min-h-[24px]">
+                            {p.highlight ? (
+                              <span className="inline-flex items-center rounded-md bg-zinc-50 text-zinc-900 font-mono text-[10px] font-medium uppercase tracking-[0.18em] px-2.5 py-1">
+                                {p.highlight}
+                              </span>
+                            ) : (
+                              <span className="w-24" aria-hidden />
+                            )}
+                            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#F4F4F5]/50">
+                              {p.category}
+                            </span>
+                          </div>
 
-                      <h3 className="text-lg lg:text-xl font-semibold tracking-tight text-[#F4F4F5] mb-2">{p.name}</h3>
-                      <div className="mb-8">
-                        <span className="font-mono text-3xl font-bold text-[#F4F4F5]">
-                          {p.price}
-                        </span>
-                      </div>
+                          <h3 className="text-lg lg:text-xl font-semibold tracking-tight text-[#F4F4F5] mb-1">{p.name}</h3>
+                          <div className="mb-5">
+                            <span className="font-mono text-2xl md:text-3xl font-bold text-[#F4F4F5]">
+                              {p.price}
+                            </span>
+                          </div>
 
-                      <ul className="space-y-3 mb-8 flex-1">
-                        {p.features.map((f) => (
-                          <li key={f} className="flex items-start gap-3 text-sm text-zinc-400">
-                            <Check className="h-4 w-4 text-[#F4F4F5]/50 mt-0.5 shrink-0" strokeWidth={2.5} />
-                            <span className="leading-snug">{f}</span>
-                          </li>
-                        ))}
-                      </ul>
+                          <ul className="space-y-3 mb-8 flex-1">
+                            {p.features.map((f) => (
+                              <li key={f} className="flex items-start gap-3 text-sm text-zinc-400">
+                                <Check className="h-4 w-4 text-[#F4F4F5]/50 mt-0.5 shrink-0" strokeWidth={2.5} />
+                                <span className="leading-snug">{f}</span>
+                              </li>
+                            ))}
+                          </ul>
 
-                      <Button asChild variant={highlighted ? "default" : "outline"} className="w-full">
-                        <Link to={`/order?paket=${p.id}`}>
-                          Order Sekarang
-                        </Link>
-                      </Button>
+                          <Button asChild variant={highlighted ? "default" : "outline"} className="w-full">
+                            <Link to={`/order?paket=${p.id}`}>
+                              Order Sekarang
+                            </Link>
+                          </Button>
                         </div>
                       );
                     })}
