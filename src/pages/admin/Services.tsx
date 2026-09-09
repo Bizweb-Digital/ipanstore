@@ -36,6 +36,10 @@ import {
   Download,
 } from 'lucide-react';
 import { useServices, Service } from '@/hooks/useServices';
+import type { ServiceCategory } from '@/lib/services';
+import {
+  SERVICE_CATEGORIES,
+} from '@/lib/services';
 import { toastService, showErrorToast } from '@/lib/admin/toast';
 import { exportToCsv } from '@/lib/admin/csv';
 import { useAuditLogger } from '@/hooks/useAuditLog';
@@ -81,13 +85,16 @@ export default function AdminServices() {
 
   const handleOpenCreate = () => {
     setEditingService({
-      id: '', // Empty means create
+      id: '',
       name: '',
       slug: '',
       description: '',
-      price: undefined,
+      price: 0,
+      category: 'Optimize',
       is_active: true,
-    } as Service);
+      created_at: '',
+      updated_at: '',
+    } as unknown as Service);
     setShowDialog(true);
   };
 
@@ -96,38 +103,112 @@ export default function AdminServices() {
     setEditingService(null);
   };
 
+  const validateServiceInput = (
+    svc: Service,
+  ): { ok: boolean; message?: string } => {
+    if (!svc.name.trim()) {
+      return { ok: false, message: 'Nama layanan wajib diisi' };
+    }
+    if (svc.name.trim().length < 3) {
+      return { ok: false, message: 'Nama layanan minimal 3 karakter' };
+    }
+
+    const slugClean = (svc.slug || '').trim();
+    if (!slugClean) {
+      return { ok: false, message: 'Slug wajib diisi' };
+    }
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slugClean)) {
+      return {
+        ok: false,
+        message:
+          'Slug hanya boleh huruf kecil, angka, dan tanda strip (-). Contoh: "boost-fps-free-fire"',
+      };
+    }
+
+    const priceNum =
+      typeof svc.price === 'number'
+        ? svc.price
+        : parseInt(String(svc.price ?? ''), 10);
+    if (!Number.isFinite(priceNum) || priceNum <= 0) {
+      return { ok: false, message: 'Harga harus lebih dari 0 (Rp)' };
+    }
+
+    return { ok: true };
+  };
+
+  const checkSlugUnique = async (slug: string): Promise<boolean> => {
+    const trimmed = slug.trim();
+    if (!trimmed) return true;
+    const supabase = (await import('@/lib/admin/supabase')).supabase;
+    const { data, error } = await supabase
+      .from('services')
+      .select('id')
+      .eq('slug', trimmed)
+      .maybeSingle();
+    if (error) {
+      console.error('checkSlugUnique error:', error);
+      throw error;
+    }
+    // Saat edit, abaikan row yang sama
+    if (data && data.id !== editingService?.id) {
+      return false;
+    }
+    return true;
+  };
+
   const handleSave = async () => {
-    if (!editingService?.name.trim()) {
-      showErrorToast('Validasi gagal', 'Nama layanan wajib diisi');
+    if (!editingService) return;
+
+    // Normalisasi harga: pastikan number ≥ 1 sebelum validasi & insert
+    const normalizedPrice =
+      typeof editingService.price === 'number'
+        ? editingService.price
+        : parseInt(String(editingService.price ?? ''), 10);
+
+    const candidate: Service = {
+      ...editingService,
+      slug: (editingService.slug || '').trim(),
+      name: (editingService.name || '').trim(),
+      price: Number.isFinite(normalizedPrice) ? normalizedPrice : 0,
+      description: editingService.description || '',
+    };
+
+    const v = validateServiceInput(candidate);
+    if (!v.ok) {
+      showErrorToast('Validasi gagal', v.message);
       return;
     }
 
     try {
       setIsSaving(true);
 
-      let serviceData: Omit<Service, 'id' | 'created_at' | 'updated_at'>;
-      
+      // Cek slug unik sebelum kirim ke Supabase
+      const unique = await checkSlugUnique(candidate.slug);
+      if (!unique) {
+        showErrorToast(
+          'Slug sudah dipakai',
+          `Slug "${candidate.slug}" sudah digunakan oleh layanan lain. Gunakan slug lain.`,
+        );
+        return;
+      }
+
+      const { id: _ignoredId, created_at: _c, updated_at: _u, ...payload } =
+        candidate;
+
       if (editingService.id) {
-        // Update existing service - remove id from payload
-        const { id, ...updateData } = editingService;
-        serviceData = updateData;
-        
-        await updateService(editingService.id, serviceData);
-        await logAudit('service.update', editingService.id, { 
-          name: editingService.name, 
-          slug: editingService.slug, 
-          price: editingService.price 
+        await updateService(editingService.id, payload);
+        await logAudit('service.update', editingService.id, {
+          name: candidate.name,
+          slug: candidate.slug,
+          price: candidate.price,
         });
         toastService.updated();
       } else {
-        // Create new service
-        serviceData = editingService as Omit<Service, 'id' | 'created_at' | 'updated_at'>;
-        
-        await updateService(undefined, serviceData);
-        await logAudit('service.create', null, { 
-          name: editingService.name, 
-          slug: editingService.slug, 
-          price: editingService.price 
+        await updateService(undefined, payload);
+        await logAudit('service.create', null, {
+          name: candidate.name,
+          slug: candidate.slug,
+          price: candidate.price,
         });
         toastService.created();
       }
@@ -135,8 +216,28 @@ export default function AdminServices() {
       handleCloseDialog();
       await refetch();
     } catch (error: unknown) {
-      console.error('Failed to save service:', error);
-      showErrorToast('Gagal menyimpan layanan', error instanceof Error ? error.message : undefined);
+      console.error('Failed to save service (raw error object):', error);
+      // Tampilkan detail error Supabase selengkap mungkin
+      const anyErr = error as {
+        message?: string;
+        details?: string;
+        hint?: string;
+        code?: string;
+      };
+      const lines = [
+        anyErr?.message ? `Pesan: ${anyErr.message}` : null,
+        anyErr?.details ? `Detail: ${anyErr.details}` : null,
+        anyErr?.hint ? `Saran: ${anyErr.hint}` : null,
+        anyErr?.code ? `Kode: ${anyErr.code}` : null,
+      ].filter(Boolean) as string[];
+      showErrorToast(
+        'Gagal menyimpan layanan',
+        lines.length > 0
+          ? lines.join('\n')
+          : error instanceof Error
+            ? error.message
+            : 'Error tidak diketahui. Lihat console untuk detail.',
+      );
     } finally {
       setIsSaving(false);
     }
@@ -380,6 +481,31 @@ export default function AdminServices() {
                       setEditingService({ ...editingService, name: e.target.value })
                     }
                   />
+                </div>
+
+                {/* Category */}
+                <div className="space-y-2">
+                  <Label htmlFor="category">Kategori *</Label>
+                  <select
+                    id="category"
+                    className="flex h-10 w-full rounded-md border border-white/10 bg-[#101827] px-3 py-2 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={(editingService.category as string) || 'Optimize'}
+                    onChange={(e) =>
+                      setEditingService({
+                        ...editingService,
+                        category: e.target.value as ServiceCategory,
+                      })
+                    }
+                  >
+                    {SERVICE_CATEGORIES.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-muted-foreground">
+                    Menentukan tab di halaman Layanan publik tempat produk ini muncul.
+                  </p>
                 </div>
 
                 {/* Slug */}

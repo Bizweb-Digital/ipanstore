@@ -1,69 +1,75 @@
 # LASTACTIVITY — IPAN STORE
 
-## STATUS: ✅ Fitur Multi-Admin + Reset Password + Tambah Admin Otomatis (email kredensial) — SELESAI
+## STATUS: 🔧 Backend VPS diperbaiki (online) — MENUNGGU KONFIRMASI redeploy frontend
 
-## Yang Dikerjakan (Sesi Ini)
+## Yang Dikerjakan (Sesi Ini) — FIX "Failed to fetch" di halaman Order
 
-### 1. Logo Ipan Store kembali di halaman login admin
-- `src/pages/admin/Login.tsx`: ikon `Store` (lucide) diganti logo asli (picture/webp, sama seperti Navbar).
-- Teks subjudul jadi "Login Admin".
+### 1. Backend PRODUKSI mati → sudah diperbaiki ✅
+Gejala: `api.ipanstore.id/api/health` → **502 Bad Gateway**, halaman order "Failed to fetch".
+Penyebab di VPS (`100.89.140.16`, path `/project/website/padel/IpanStore/ipanstore`):
+- `server/node_modules/helmet` hilang (npm install belum jalan berisi versi baru).
+- `server/lib/notify.js` ada di repo lokal tapi **belum pernah di-commit** → di VPS file
+  tidak ada → PM2 crash `ERR_MODULE_NOT_FOUND`.
+Fix yang sudah dilakukan:
+- ✅ `npm install --omit=dev` di `server/` VPS (helmet terpasang).
+- ✅ scp `server/lib/notify.js` dari lokal → VPS.
+- ✅ `pm2 restart ipanstore-backend --update-env` → port 5159 listening.
+- ✅ Verifikasi: `/api/health` = 200; endpoint QRIS menerima request (`{"success":false,"message":"amount dan order_id wajib diisi."}` 400 = normal, validasi bekerja).
+- ✅ Test payload valid dari PC: `POST /api/klikqris-create-order` → **HTTP 200 + qris_url + qris_image**.
 
-### 2. Reset password via email (bukan toast WhatsApp lagi)
-- `src/pages/admin/Login.tsx`: klik "Lupa password?" → form minta email (inline, 2 mode
-  login/forgot) → `supabase.auth.resetPasswordForEmail()` dengan redirect ke
-  `/admin/reset-password`. Pesan sukses netral (tidak bocorkan email terdaftar).
-- `src/pages/admin/ResetPassword.tsx` (BARU): halaman tujuan link email — deteksi event
-  `PASSWORD_RECOVERY`, form password baru + konfirmasi (min 8 char, harus cocok),
-  `supabase.auth.updateUser()`, lalu redirect ke login. Ada state link tidak valid.
-- `src/pages/admin/AdminRoutes.tsx`: route publik `reset-password`.
-- Supabase Dashboard (manual oleh user):
-  - Redirect URLs: `http://localhost:8080/admin/reset-password`, `https://ipanstore.id/admin/reset-password`.
-  - Custom SMTP (Gmail `muhammadrizvandysukma@gmail.com`, smtp.gmail.com:465, App Password
-    dari `server/.env`) — email reset sekarang dikirim dari IPAN STORE, bukan noreply Supabase.
-  - ✅ Sudah dites user: email reset masuk & halaman password baru berfungsi.
+### 2. AKAR MASALAH TERSISA (butuh deploy frontend) ⏳
+Bundle frontend yang di-serve container `ipanstore` masih yang LAMA:
+- `dist/index.html` → `assets/index-mlP4BELe.js` → `Order-DdYmm95A.js` yang memakai
+  `VITE_BACKEND_URL=http://localhost:5159`.
+- Akibat: browser pengunjung memanggil `localhost` mereka sendiri → "Failed to fetch".
+- `.env` di server root juga masih `https://sever-h81m-s2ph.tail23dc7f.ts.net` (URL lama),
+  harus diganti `https://api.ipanstore.id`.
+Langkah deploy yang menunggu konfirmasi user:
+1. Buat `.env.production` dengan `VITE_BACKEND_URL=https://api.ipanstore.id`.
+2. `npm run build` → dist dengan URL benar.
+3. Commit + push (`github.com-bizwebdigital`) + `git pull` di VPS.
+4. Update `.env` server root → URL benar, rebuild container ipanstore (`docker compose up --build -d`).
 
-### 3. Multi-admin (role) + policy RLS aman
-- Kolom `role` (`super_admin`/`viewer`) di `admin_users` + kolom audit (`admin_audit_log`).
-- **FIX infinite recursion RLS**: policy lama pakai subquery ke tabel yang sama → error 500
-  "infinite recursion detected in policy". Solusi: fungsi `public.is_admin(email)` dengan
-  `SECURITY DEFINER` (bypass RLS) + 4 policy (select/insert/update/delete) memakai fungsi itu.
-- `src/components/admin/RequireSuperAdmin.tsx` (BARU): guard halaman khusus super_admin.
-- Halaman `src/pages/admin/Admins.tsx` (BARU): list/ubah role/hapus admin (whitelist).
+### 3. Polish UI kartu paket (sebelumnya, sudah dibuild lokal) ✅
+- `Layanan/Paket/Order.tsx` + `lib/services.ts` parseFeatures — build lokal sukses (9.10s).
 
-### 4. Login admin: pesan error jujur (bug "password kok salah")
-- `src/hooks/useAdminAuth.tsx`: pisahkan 3 kasus — `wrong_credentials` (password salah),
-  `not_admin` ("Email ini tidak terdaftar sebagai admin"), `whitelist_error` (gagal baca
-  whitelist/RLS/jaringan). Dulu semua dibalas "Email atau password salah" → user mengira
-  password berubah padahal benar.
-- `src/pages/admin/Login.tsx`: kasus `not_admin`/`whitelist_error` TIDAK menambah counter
-  lockout (tidak ada lagi lockout yang menyesatkan), pesan ditampilkan apa adanya.
-- Lockout tersimpan di `localStorage: admin_login_attempts` (reset via DevTools console).
+## Riwayat Sesi
 
-### 5. Tambah Admin otomatis (tanpa buka Supabase Dashboard lagi)
-- `server/index.js`: endpoint BARU `POST /api/admin/create` (proteksi `x-admin-secret`):
-  1. `supabase.auth.admin.createUser()` (service role) — email+password+email_confirm.
-  2. Upsert whitelist `admin_users` (email, role).
-  3. Kirim kredensial (email/password/role) ke admin baru via Gmail SMTP
-     (`sendAdminCredentialsEmail`, template HTML dark IPAN STORE + tombol login).
-- `src/lib/admin/admins.ts`: helper BARU `createAdminAccount()` → panggil backend
-  (`VITE_BACKEND_URL` + header `x-admin-secret` dari `VITE_ADMIN_API_SECRET`).
-- `src/pages/admin/Admins.tsx`: form tambah sekarang Email + Password + Role; tombol
-  "Tambah & Kirim Email"; info box diperbarui (tidak perlu manual ke Supabase lagi).
-- ✅ Sudah dites end-to-end via endpoint: `success:true, emailSent:true` (akun uji dibuat,
-  email terkirim, lalu akun uji dihapus dari Auth + whitelist).
+| Waktu | Aktivitas |
+|---|---|
+| 2026-09-09 | Fix backend VPS (helmet + notify.js) → api.ipanstore.id 200; QRIS end-to-end OK |
+| 2026-09-09 | Polish UI kartu paket + parseFeatures bullets |
+| 2026-09-09 | Tambah kolom category + verifikasi 8 layanan |
+| 2026-09-09 | Patch supabase add_category dijalankan user |
 
-### 6. Lain-lain
-- `.env` root: tambah `VITE_ADMIN_API_SECRET` (sama dengan `ADMIN_API_SECRET` server).
-- `.env.example` + `server/.env.example`: dokumentasikan `VITE_ADMIN_API_SECRET`,
-  `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`.
-- `AGENTS.md`: aturan 6b "JANGAN STUCK" (EADDRINUSE → kill port & restart; script Node
-  `require()` → simpan `.cjs` karena `"type":"module"`; restart backend setelah ubah kode).
+---
 
-## Deploy
-- `git push origin main` → ssh `root@100.89.140.16` → `git pull && docker compose down && up --build -d`.
-- Live: https://ipanstore.id (web, port 5007) + https://api.ipanstore.id (backend, port 5159).
+## Catatan Teknis
 
-## CHECKLIST BERIKUTNYA (opsional)
-- [ ] Ganti App Password Gmail (pernah terekspos di screenshot) → update `server/.env` + Custom SMTP Supabase.
-- [ ] Pertimbangkan secret `ADMIN_API_SECRET` yang lebih panjang (32 hex) untuk produksi.
-- [ ] Domain lama `ipanstore.my.id` / `api.ipanstore.my.id`: redirect 301 / hapus dari Cloudflare.
+- **Backward compatibility:** bila ada row lama di DB tanpa `category`,
+  backfill via `UPDATE ... SET category = CASE WHEN slug ILIKE '%settinx%' THEN 'APP SETTINX' ... END`
+  jadi otomatis sebelum NOT NULL dipasang. Aman.
+- **Closed-list kategori:** karena DB pakai CHECK constraint, typo kategori akan ditolak
+  Supabase saat INSERT. Frontend dropdown membaca `SERVICE_CATEGORIES` agar selalu sinkron.
+- **Fallback graceful:** `resolveCategory(row)` di helper publik tetap memetakan slug → kategori
+  kalau baris legacy belum punya `category`. Tidak akan broken.
+- **Cache invalidation:** karena halaman `/layanan` cuma fetch sekali saat mount, setelah
+  Anda tambah layanan baru di admin perlu hard-reload (Ctrl+Shift+R). Iterasi berikut bisa
+  pakai React Query atau realtime Supabase channel kalau perlu.
+
+## Pertanyaan User Dikonfirmasi
+
+| Q# | Pertanyaan | Jawaban User |
+|----|------------|--------------|
+| Q1 | Gabung vs pisah tab APP SETTINX          | Gabung aja |
+| Q2 | Schema closed-list vs open-list            | Oke (closed-list) |
+| Q3 | Slug final                                  | Oke (`ipan-module-settinx-1-1`) |
+| Q4 | Scope eksekusi                              | A + B (full) |
+
+## Saran Tambahan (BELUM dilakukan)
+
+- [ ] Auto-refresh Daftar Layanan di admin ketika ada perubahan real-time (Supabase channel).
+- [ ] Audit policies untuk tabel testimonials/faqs/promo_codes: paralel dengan patch ini.
+- [ ] Admin form Services: tampilkan warning kalau slug tidak match regex `^[a-z0-9]+(?:-[a-z0-9]+)*$`
+      (kita sudah validasi manual di submit, tapi UX akan lebih baik dengan auto-format hint).
+- [ ] Halaman `/paket` masih pakai array statis; mungkin extend juga auto-inject products from DB.

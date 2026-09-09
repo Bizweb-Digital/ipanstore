@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowRight, Settings, Cpu, Monitor, PenTool, Flame, Laptop2, ShieldCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import ScrollStackCards from "@/components/effects/ScrollStackCards";
 import AnimatedTabs from "@/components/effects/AnimatedTabs";
 import { AuroraText } from "@/components/ui/aurora-text";
 import { breadcrumbJsonLd } from "@/lib/seo";
+import type { ActiveService } from "@/lib/services";
 
 const services = [
   {
@@ -134,6 +135,31 @@ const TABS: { key: TabKey; label: string }[] = [
 
 const Layanan = () => {
   const [activeTab, setActiveTab] = useState<TabKey>("Optimize");
+  const [settinxExtras, setSettinxExtras] = useState<ActiveService[]>([]);
+
+  // Ambil produk APP SETTINX tambahan dari tabel Supabase (managed via admin).
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const { fetchActiveServices, toActiveService } = await import(
+          "@/lib/services"
+        );
+        const rows = await fetchActiveServices();
+        if (cancelled || !rows) return;
+        const extras = rows
+          .map(toActiveService)
+          .filter((r) => r.category === "APP SETTINX");
+        setSettinxExtras(extras);
+      } catch (err) {
+        console.error("Gagal memuat produk APP SETTINX:", err);
+      }
+    }
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const filteredServices = services.filter((s) => s.category === activeTab);
 
@@ -201,8 +227,90 @@ const Layanan = () => {
         <PageBackground opacity={0.15} />
             <div className="container mx-auto px-4 relative z-10">
               {activeTab === "APP SETTINX" ? (
-                <div key={activeTab} className="max-w-5xl mx-auto animate-fade-up">
+                <div key={activeTab} className="max-w-5xl mx-auto animate-fade-up space-y-12">
                   <AppSettinxSection compact />
+
+                  {/* Produk APP SETTINX lain yang dikelola via admin */}
+                  {settinxExtras.length > 0 && (
+                    <div className="space-y-6">
+                      <Reveal>
+                        <h2 className="text-xl md:text-2xl font-bold text-center text-[#F4F4F5] tracking-tight mb-3">
+                          Produk APP SETTINX Lainnya
+                        </h2>
+                        <p className="text-center text-zinc-400 text-sm leading-relaxed max-w-xl mx-auto">
+                          Modul & paket tambahan dari tim IPAN STORE.
+                        </p>
+                      </Reveal>
+                      <ScrollStackCards itemDistance={70} itemStackDistance={20} baseScale={0.93} itemScale={0.028}>
+                        {settinxExtras.map((s) => (
+                          <div
+                            key={s.id}
+                            className="gaming-card p-6 md:p-8 group"
+                            data-settinx-extra-slug={s.slug}
+                          >
+                            {/* Header: icon + badge, aligned top */}
+                            <div className="flex items-start justify-between gap-3 mb-5">
+                              <div className="h-11 w-11 rounded-lg bg-[#131314] border border-white/16 flex items-center justify-center group-hover:border-white/24 transition-colors duration-200 shrink-0">
+                                <Flame className="h-5 w-5 text-[#94A3B8]" strokeWidth={1.75} />
+                              </div>
+                              {s.highlight ? (
+                                <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#F4F4F5]/50">
+                                  {s.highlight}
+                                </span>
+                              ) : (
+                                <span className="w-24" aria-hidden />
+                              )}
+                            </div>
+
+                            <h3 className="text-lg font-semibold tracking-tight text-[#F4F4F5] mb-1">
+                              {s.name}
+                            </h3>
+                            <p className="text-gaming-primary font-bold text-base mb-5">
+                              {s.priceLabel}
+                            </p>
+                            {s.features.length > 0 && (
+                              <div className="mb-6">
+                                <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#F4F4F5]/50 mb-3">
+                                  Benefit Utama:
+                                </p>
+                                <ul className="space-y-2">
+                                  {s.features.map((b) => (
+                                    <li
+                                      key={b}
+                                      className="flex items-start gap-2.5 text-sm text-zinc-400"
+                                    >
+                                      <ShieldCheck
+                                        className="h-3.5 w-3.5 text-[#F4F4F5]/50 shrink-0 mt-0.5"
+                                        strokeWidth={2.5}
+                                      />
+                                      <span>{b}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                            <Button
+                              asChild
+                              variant="outline"
+                              className="w-full mt-auto"
+                            >
+                              <a
+                                href={`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(
+                                  `Halo min, saya tertarik dengan ${s.name}`,
+                                )}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                Tanya Layanan Ini
+                                <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+                              </a>
+                            </Button>
+                          </div>
+                        ))}
+                      </ScrollStackCards>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div key={activeTab} className="max-w-3xl mx-auto">

@@ -346,25 +346,26 @@ const Order = () => {
                           {p.highlight}
                         </span>
                       )}
-                      <span className="font-mono text-[9px] uppercase tracking-[0.16em] text-[#F4F4F5]/50">
+                      {/* Header: category badge aligned */}
+                      <span className="font-mono text-[9px] uppercase tracking-[0.16em] text-[#F4F4F5]/50 block mb-1">
                         {p.category}
                       </span>
-                      <h3 className="mt-1 font-semibold tracking-tight text-[#F4F4F5]">
+                      <h3 className="font-semibold tracking-tight text-[#F4F4F5] mb-0.5">
                         {p.name}
                       </h3>
-                      <div className="mt-1 font-mono text-xl font-bold text-[#F4F4F5]">
+                      <div className="font-mono text-xl font-bold text-[#F4F4F5] mb-3">
                         {p.priceLabel}
                       </div>
-                      <ul className="mt-3 space-y-1.5">
+                      <ul className="space-y-1.5 mb-2">
                         {p.features.slice(0, 3).map((f) => (
-                          <li key={f} className="flex items-start gap-2 text-xs text-zinc-400">
+                          <li key={f} className="flex items-start gap-2 text-xs text-zinc-400 leading-snug">
                             <Check className="h-3.5 w-3.5 text-[#94A3B8] mt-0.5 shrink-0" strokeWidth={2.5} />
-                            {f}
+                            <span>{f}</span>
                           </li>
                         ))}
                       </ul>
                       <span
-                        className={`mt-4 inline-flex items-center gap-1.5 text-xs font-medium ${
+                        className={`mt-2 inline-flex items-center gap-1.5 text-xs font-medium ${
                           active ? "text-[#94A3B8]" : "text-zinc-500"
                         }`}
                       >
