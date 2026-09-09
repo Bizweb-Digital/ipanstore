@@ -1,33 +1,52 @@
 # LASTACTIVITY — IPAN STORE
 
-## STATUS: 🔧 Backend VPS diperbaiki (online) — MENUNGGU KONFIRMASI redeploy frontend
+## STATUS: ✅ "Failed to fetch" TERATASI — Backend & Frontend produksi pulih (deploy selesai)
 
-## Yang Dikerjakan (Sesi Ini) — FIX "Failed to fetch" di halaman Order
+## Yang Dikerjakan (Sesi Ini) — FIX "Failed to fetch" di halaman Order (LENGKAP)
 
-### 1. Backend PRODUKSI mati → sudah diperbaiki ✅
-Gejala: `api.ipanstore.id/api/health` → **502 Bad Gateway**, halaman order "Failed to fetch".
-Penyebab di VPS (`100.89.140.16`, path `/project/website/padel/IpanStore/ipanstore`):
-- `server/node_modules/helmet` hilang (npm install belum jalan berisi versi baru).
-- `server/lib/notify.js` ada di repo lokal tapi **belum pernah di-commit** → di VPS file
-  tidak ada → PM2 crash `ERR_MODULE_NOT_FOUND`.
-Fix yang sudah dilakukan:
-- ✅ `npm install --omit=dev` di `server/` VPS (helmet terpasang).
-- ✅ scp `server/lib/notify.js` dari lokal → VPS.
-- ✅ `pm2 restart ipanstore-backend --update-env` → port 5159 listening.
-- ✅ Verifikasi: `/api/health` = 200; endpoint QRIS menerima request (`{"success":false,"message":"amount dan order_id wajib diisi."}` 400 = normal, validasi bekerja).
-- ✅ Test payload valid dari PC: `POST /api/klikqris-create-order` → **HTTP 200 + qris_url + qris_image**.
+### Ringkasan hasil
+- **Gejala awal**: `https://ipanstore.id/order` → "Failed to fetch"; `api.ipanstore.id/api/health` → 502.
+- **Status akhir**: `https://ipanstore.id/order` = 200, `https://api.ipanstore.id/api/health` = 200,
+  QRIS end-to-end = 200 (qris_url + qris_image). DEV lokal juga 200.
 
-### 2. AKAR MASALAH TERSISA (butuh deploy frontend) ⏳
-Bundle frontend yang di-serve container `ipanstore` masih yang LAMA:
-- `dist/index.html` → `assets/index-mlP4BELe.js` → `Order-DdYmm95A.js` yang memakai
-  `VITE_BACKEND_URL=http://localhost:5159`.
-- Akibat: browser pengunjung memanggil `localhost` mereka sendiri → "Failed to fetch".
-- `.env` di server root juga masih `https://sever-h81m-s2ph.tail23dc7f.ts.net` (URL lama),
-  harus diganti `https://api.ipanstore.id`.
-Langkah deploy yang menunggu konfirmasi user:
-1. Buat `.env.production` dengan `VITE_BACKEND_URL=https://api.ipanstore.id`.
-2. `npm run build` → dist dengan URL benar.
-3. Commit + push (`github.com-bizwebdigital`) + `git pull` di VPS.
+### 1. Backend produksi mati → diperbaiki ✅
+Penyebab di VPS (`100.89.140.16`):
+- `server/node_modules/helmet` hilang (dependensi baru belum di-install di VPS).
+- `server/lib/notify.js` ada di lokal tapi belum pernah di-commit → di VPS tidak ada → PM2 crash `ERR_MODULE_NOT_FOUND`.
+Fix:
+- `npm install --omit=dev` di `server/` VPS (helmet terpasang).
+- scp `server/lib/notify.js` → VPS.
+- `pm2 restart ipanstore-backend --update-env` → port 5159 listening.
+- Verifikasi: health 200, QRIS create-order 200.
+
+### 2. Deploy frontend (akar masalah) ✅ selesai
+- `.env` server root diubah `VITE_BACKEND_URL=https://sever-h81m-s2ph.tail23dc7f.ts.net` → `https://api.ipanstore.id`.
+- Build baru dari lokal (`VITE_BACKEND_URL=https://api.ipanstore.id`) → bundle `index-BMMCKAfr.js` +
+  Order pakai API URL benar (bukan `http://localhost:5159`).
+- Commit `ecd76e7` (fix backend + deploy bundle + kategori + polish UI) & `271633c` (hapus BOM nginx.conf) → push.
+- di VPS: dist lama di-arsip `dist.bak-prodef`, dist baru di-SCP, `docker compose up --build -d`.
+- Sempat nginx crash `[emerg] unknown directive "server"` karena **BOM (UTF-8 BOM) di awal nginx.conf** →
+  dihapus BOM di VPS (sed) & di lokal (byte strip), commit `271633c`.
+- `git pull` di VPS fast-forward sukses; container serve `index-BMMCKAfr.js`.
+
+### 3. Catatan deploy untuk sesi berikutnya
+- Saat `git pull` di VPS: bila ada file untracked yang menabrak (Dockerfile/docker-compose/nginx.conf/notify.js),
+  backup dulu ke `.backup-untracked/` lalu pull (isi sudah dicek sama dengan remote).
+- PENTING: `nginx.conf` jangan disimpan ber-BOM (nginx error). Sudah bersih di repo.
+- Banyak file "junk" untracked di VPS (`.backup-untracked/`, `dist.bak-*`, `nginx.conf.bak-local`, `server/orders.json`, dll.) bisa dibersihkan nanti — tidak mempengaruhi repo.
+
+### 4. Polish UI kartu paket (sudah dibuild, ikut ter-deploy) ✅
+- `Layanan/Paket/Order.tsx` + `lib/services.ts` parseFeatures bullets.
+
+## Riwayat Sesi
+
+| Waktu | Aktivitas |
+|---|---|
+| 2026-09-09 | Fix error "Failed to fetch": backend PM2 (helmet+notify.js), redeploy frontend, fix BOM nginx.conf. Web produksi pulih 200. |
+| 2026-09-09 | Commit + push + deploy (ecd76e7, 271633c) |
+| 2026-09-09 | Polish UI kartu paket + parseFeatures bullets |
+| 2026-09-09 | Tambah kolom category + verifikasi 8 layanan |
+| 2026-09-09 | Patch supabase add_category dijalankan user |
 4. Update `.env` server root → URL benar, rebuild container ipanstore (`docker compose up --build -d`).
 
 ### 3. Polish UI kartu paket (sebelumnya, sudah dibuild lokal) ✅
