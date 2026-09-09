@@ -2,93 +2,114 @@
 
 ## STATUS: ✅ "Failed to fetch" TERATASI — Backend & Frontend produksi pulih (deploy selesai)
 
-## Yang Dikerjakan (Sesi Ini) — FIX "Failed to fetch" di halaman Order (LENGKAP)
+## Rekap SEMUA Perubahan (Sesi Ini, kronologis)
 
-### Ringkasan hasil
-- **Gejala awal**: `https://ipanstore.id/order` → "Failed to fetch"; `api.ipanstore.id/api/health` → 502.
-- **Status akhir**: `https://ipanstore.id/order` = 200, `https://api.ipanstore.id/api/health` = 200,
-  QRIS end-to-end = 200 (qris_url + qris_image). DEV lokal juga 200.
+### 1. Polish UI kartu paket (Layanan/Paket/Order) — ✅ dibuild & ter-deploy
+`src/pages/Layanan.tsx`:
+- Subtitle "Modul & paket tambahan dari tim IPAN STORE." → `leading-relaxed max-w-xl mx-auto`, judul `mb-3`.
+- Header card APP SETTINX → `flex items-start justify-between gap-3 mb-5` (badge "LISENSI LIFETIME" sejajar
+  dengan ikon, tidak loncat ke atas); fallback spacer `<span className="w-24">` jika highlight kosong.
+- Title `mb-1`, price `mb-5` (spacing proporsional).
 
-### 1. Backend produksi mati → diperbaiki ✅
-Penyebab di VPS (`100.89.140.16`):
-- `server/node_modules/helmet` hilang (dependensi baru belum di-install di VPS).
-- `server/lib/notify.js` ada di lokal tapi belum pernah di-commit → di VPS tidak ada → PM2 crash `ERR_MODULE_NOT_FOUND`.
-Fix:
-- `npm install --omit=dev` di `server/` VPS (helmet terpasang).
-- scp `server/lib/notify.js` → VPS.
-- `pm2 restart ipanstore-backend --update-env` → port 5159 listening.
-- Verifikasi: health 200, QRIS create-order 200.
+`src/pages/Paket.tsx`:
+- Header card → `items-start justify-between gap-3 mb-5 min-h-[24px]`.
+- Badge highlight (REKOMENDASI / PALING LARIS / PRO CHOICE / TOURNAMENT SECURE) sejajar atas; title `mb-1`, price `mb-5`.
 
-### 2. Deploy frontend (akar masalah) ✅ selesai
-- `.env` server root diubah `VITE_BACKEND_URL=https://sever-h81m-s2ph.tail23dc7f.ts.net` → `https://api.ipanstore.id`.
-- Build baru dari lokal (`VITE_BACKEND_URL=https://api.ipanstore.id`) → bundle `index-BMMCKAfr.js` +
-  Order pakai API URL benar (bukan `http://localhost:5159`).
-- Commit `ecd76e7` (fix backend + deploy bundle + kategori + polish UI) & `271633c` (hapus BOM nginx.conf) → push.
-- di VPS: dist lama di-arsip `dist.bak-prodef`, dist baru di-SCP, `docker compose up --build -d`.
-- Sempat nginx crash `[emerg] unknown directive "server"` karena **BOM (UTF-8 BOM) di awal nginx.conf** →
-  dihapus BOM di VPS (sed) & di lokal (byte strip), commit `271633c`.
-- `git pull` di VPS fast-forward sukses; container serve `index-BMMCKAfr.js`.
+`src/pages/Order.tsx`:
+- Card paket rapi: category `block mb-1`, title `mb-0.5`, price `mb-3`, list fitur `mb-2 leading-snug`, CTA "Terpilih" `mt-2`.
 
-### 3. Catatan deploy untuk sesi berikutnya
-- Saat `git pull` di VPS: bila ada file untracked yang menabrak (Dockerfile/docker-compose/nginx.conf/notify.js),
-  backup dulu ke `.backup-untracked/` lalu pull (isi sudah dicek sama dengan remote).
-- PENTING: `nginx.conf` jangan disimpan ber-BOM (nginx error). Sudah bersih di repo.
-- Banyak file "junk" untracked di VPS (`.backup-untracked/`, `dist.bak-*`, `nginx.conf.bak-local`, `server/orders.json`, dll.) bisa dibersihkan nanti — tidak mempengaruhi repo.
+`src/lib/services.ts`:
+- `parseFeatures()` — hanya ambil baris ber-bullet (•/-/*/*) untuk list fitur kartu;
+  paragraf intro/penjelasan deskripsi tidak lagi masuk ke kartu Order.
 
-### 4. Polish UI kartu paket (sudah dibuild, ikut ter-deploy) ✅
-- `Layanan/Paket/Order.tsx` + `lib/services.ts` parseFeatures bullets.
+### 2. Kategori Layanan eksplisit → ✅ (sudah dijalankan user + code ter-deploy)
+- Kolom `category TEXT NOT NULL` di tabel Supabase `services` + backfill otomatis (8 layanan OK).
+- Closed-list `CHECK` constraint: `"Optimize" | "SET PC" | "Anti Cheat" | "APP SETTINX"`.
+- `src/lib/services.ts`: export `SERVICE_CATEGORIES`, `resolveCategory()` fallback slug-derived.
+- `src/hooks/useServices.ts`: field `category` di interface Service.
+- `src/pages/admin/Services.tsx`: dropdown "Kategori *" di form + validasi client-side (price, slug regex, slug unik).
+- `src/pages/Layanan.tsx`: tab APP SETTINX render section "Produk APP SETTINX Lainnya" dari DB.
+- Patch SQL:
+  - `database/migrations/sql_patches/supabase_patch_services_add_category.sql`
+  - `database/migrations/sql_patches/supabase_patch_services_rls_audit.sql`
 
-## Riwayat Sesi
+### 3. Fix "Failed to fetch" di halaman Order → ✅ (akar masalah 2 lapis)
 
-| Waktu | Aktivitas |
+**Lapisan 1 — Backend produksi mati (502):**
+- Penyebab di VPS (`100.89.140.16`, path `/project/website/padel/IpanStore/ipanstore`):
+  - `server/node_modules/helmet` hilang (dependensi baru belum di-install di VPS).
+  - `server/lib/notify.js` ada di lokal tapi belum pernah di-commit → tidak ada di VPS → PM2 crash `ERR_MODULE_NOT_FOUND`.
+- Fix:
+  - `npm install --omit=dev` di `server/` VPS (helmet terpasang).
+  - scp `server/lib/notify.js` → VPS.
+  - `pm2 restart ipanstore-backend --update-env` → port 5159 listening.
+  - Verifikasi: `/api/health` 200; `POST /api/klikqris-create-order` payload valid → 200 + qris_url + qris_image.
+
+**Lapisan 2 — Bundle frontend lama (http://localhost:5159):**
+- Container `ipanstore` menyajikan bundle lama `index-mlP4BELe.js` → `Order-DdYmm95A.js` yang
+  memakai `VITE_BACKEND_URL=http://localhost:5159` → browser pengunjung memanggil localhost sendiri → "Failed to fetch".
+- Fix:
+  - `.env` server root: `VITE_BACKEND_URL=https://sever-h81m-s2ph.tail23dc7f.ts.net` → `https://api.ipanstore.id`.
+  - Build baru dari lokal dengan `VITE_BACKEND_URL=https://api.ipanstore.id` → bundle `index-BMMCKAfr.js` + Order pakai API URL benar.
+  - Di VPS: dist lama di-arsip `dist.bak-prodef`, dist baru di-SCP, `docker compose up --build -d`.
+
+**Bonus bug nginx (ketahuan saat deploy):**
+- nginx crash `[emerg] unknown directive "server"` karena **BOM (UTF-8 BOM) di awal `nginx.conf`**.
+- Fix: hapus BOM di VPS (`sed`) & di lokal (byte strip), commit `271633c`.
+
+### 4. Git — commit & deploy (semua sudah push)
+| Commit | Isi |
 |---|---|
-| 2026-09-09 | Fix error "Failed to fetch": backend PM2 (helmet+notify.js), redeploy frontend, fix BOM nginx.conf. Web produksi pulih 200. |
-| 2026-09-09 | Commit + push + deploy (ecd76e7, 271633c) |
-| 2026-09-09 | Polish UI kartu paket + parseFeatures bullets |
-| 2026-09-09 | Tambah kolom category + verifikasi 8 layanan |
-| 2026-09-09 | Patch supabase add_category dijalankan user |
-4. Update `.env` server root → URL benar, rebuild container ipanstore (`docker compose up --build -d`).
+| `ecd76e7` | fix backend produksi (helmet+notify.js) + kategori layanan + polish UI + parseFeatures + file baru (Dockerfile, docker-compose, nginx.conf, notify.js, Admins, CekOrder, dst.) |
+| `271633c` | fix: hapus BOM dari nginx.conf |
+| `6a19831` | docs: update LASTACTIVITY |
+- Deploy: `git pull` di VPS (fast-forward), `docker compose up --build -d`.
 
-### 3. Polish UI kartu paket (sebelumnya, sudah dibuild lokal) ✅
-- `Layanan/Paket/Order.tsx` + `lib/services.ts` parseFeatures — build lokal sukses (9.10s).
-
-## Riwayat Sesi
-
-| Waktu | Aktivitas |
+### 5. Status verifikasi akhir
+| Endpoint | Status |
 |---|---|
-| 2026-09-09 | Fix backend VPS (helmet + notify.js) → api.ipanstore.id 200; QRIS end-to-end OK |
-| 2026-09-09 | Polish UI kartu paket + parseFeatures bullets |
-| 2026-09-09 | Tambah kolom category + verifikasi 8 layanan |
-| 2026-09-09 | Patch supabase add_category dijalankan user |
+| `https://ipanstore.id/order` | ✅ 200 (serve `index-BMMCKAfr.js`) |
+| `https://ipanstore.id` | ✅ 200 |
+| `https://api.ipanstore.id/api/health` | ✅ 200 |
+| `POST https://api.ipanstore.id/api/klikqris-create-order` (payload valid) | ✅ 200 + qris_url |
+| DEV `http://localhost:8080` | ✅ 200 |
+| DEV API `http://localhost:5159` | ✅ 200 |
 
----
+## Catatan teknis penting untuk sesi berikutnya
 
-## Catatan Teknis
+- **VPS `git pull` bisa gagal** jika file untracked menabrak (Dockerfile/docker-compose/nginx.conf/notify.js).
+  Cara aman: cek `diff` dengan `git show origin/main:<file>`; jika sama → backup ke `.backup-untracked/` lalu pull.
+- **JANGAN simpan `nginx.conf` ber-BOM** — nginx akan error `unknown directive "server"`.
+  Sudah bersih di repo.
+  Verifikasi: `head -c 3 file | od -c` harus bukan `357 273 277`.
+- File "junk" untracked di VPS (`.backup-untracked/`, `dist.bak-*`, `nginx.conf.bak-local`,
+  `nginx.conf.new`, `server/orders.json`, `server/test-supabase.mjs`) bisa dibersihkan — tidak memengaruhi repo.
+- Backend di VPS jalan via **PM2** (`ipanstore-backend`, port 5159), bukan Docker.
+  Frontend jalan via **Docker** (`ipanstore`, port 5007→80).
+- Cache browser: setelah deploy gunakan hard-reload (Ctrl+Shift+R) agar bundle baru termuat.
 
-- **Backward compatibility:** bila ada row lama di DB tanpa `category`,
-  backfill via `UPDATE ... SET category = CASE WHEN slug ILIKE '%settinx%' THEN 'APP SETTINX' ... END`
-  jadi otomatis sebelum NOT NULL dipasang. Aman.
-- **Closed-list kategori:** karena DB pakai CHECK constraint, typo kategori akan ditolak
-  Supabase saat INSERT. Frontend dropdown membaca `SERVICE_CATEGORIES` agar selalu sinkron.
-- **Fallback graceful:** `resolveCategory(row)` di helper publik tetap memetakan slug → kategori
-  kalau baris legacy belum punya `category`. Tidak akan broken.
-- **Cache invalidation:** karena halaman `/layanan` cuma fetch sekali saat mount, setelah
-  Anda tambah layanan baru di admin perlu hard-reload (Ctrl+Shift+R). Iterasi berikut bisa
-  pakai React Query atau realtime Supabase channel kalau perlu.
+## Backward compatibility & desain kategori (dari sesi sebelumnya)
 
-## Pertanyaan User Dikonfirmasi
-
-| Q# | Pertanyaan | Jawaban User |
-|----|------------|--------------|
-| Q1 | Gabung vs pisah tab APP SETTINX          | Gabung aja |
-| Q2 | Schema closed-list vs open-list            | Oke (closed-list) |
-| Q3 | Slug final                                  | Oke (`ipan-module-settinx-1-1`) |
-| Q4 | Scope eksekusi                              | A + B (full) |
+- Row lama tanpa `category` di-backfill otomatis sebelum NOT NULL dipasang.
+- Karena CHECK constraint, typo kategori ditolak Supabase saat INSERT; dropdown baca `SERVICE_CATEGORIES` agar sinkron.
+- `resolveCategory(row)` fallback slug→kategori untuk baris legacy.
 
 ## Saran Tambahan (BELUM dilakukan)
 
 - [ ] Auto-refresh Daftar Layanan di admin ketika ada perubahan real-time (Supabase channel).
-- [ ] Audit policies untuk tabel testimonials/faqs/promo_codes: paralel dengan patch ini.
-- [ ] Admin form Services: tampilkan warning kalau slug tidak match regex `^[a-z0-9]+(?:-[a-z0-9]+)*$`
-      (kita sudah validasi manual di submit, tapi UX akan lebih baik dengan auto-format hint).
-- [ ] Halaman `/paket` masih pakai array statis; mungkin extend juga auto-inject products from DB.
+- [ ] Audit policies tabel testimonials/faqs/promo_codes (paralel dengan patch RLS).
+- [ ] Admin form Services: warning inline kalau slug tidak match regex `^[a-z0-9]+(?:-[a-z0-9]+)*$`.
+- [ ] Halaman `/paket` masih pakai array statis; extend auto-inject products from DB.
+- [ ] Produk "Ipan Module SettinX 1.1" di DB masih kategori 'Optimize' — ubah ke 'APP SETTINX' via admin
+      supaya muncul di tab APP SETTINX.
+- [ ] Bersihkan file junk untracked di VPS (daftar di atas).
+
+## Riwayat Sesi
+
+| Waktu | Aktivitas |
+|---|---|
+| 2026-09-09 | FIX total "Failed to fetch": backend PM2 (helmet+notify.js), redeploy frontend, fix BOM nginx.conf. Web produksi & API 200. |
+| 2026-09-09 | Commit+push+deploy: ecd76e7 (backend+kategori+UI+bundle), 271633c (BOM), 6a19831 (docs). |
+| 2026-09-09 | Polish UI kartu paket Layanan/Paket/Order + parseFeatures bullets. |
+| 2026-09-09 | Kolom category + backfill 8 layanan + dropdown admin + tab APP SETTINX render DB. |
+| 2026-09-09 | Patch supabase add_category & rls_audit dijalankan user. |
