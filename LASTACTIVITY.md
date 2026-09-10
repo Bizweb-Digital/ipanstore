@@ -1,14 +1,93 @@
 # LASTACTIVITY — IPAN STORE
 
-## STATUS: ✅ Kolom `settinx_type` di tabel `orders` — sukses ditambahkan (patch SQL user)
+## STATUS: 🔐 FIX keamanan kredensial SettinX (hapus password plaintext di Firestore, rotate password saat reuse/resend, tolak webhook order palsu) — BELUM commit/push/deploy
+
+## ⚠️ PERUBAHAN SESI INI (keamanan — menunggu konfirmasi commit/push/deploy)
+
+### P0. Password SettinX TIDAK lagi disimpan plaintext di Firestore
+- **Sebelum**: `server/lib/settinxLicense.js` menyimpan field `password` plaintext di collection `settinx_licenses`
+  (Firestore). Siapa pun dengan akses read Firestore (admin, bocoran key, dll.) bisa melihat password login app.
+- **Sesudah**: hanya `passwordHash` (SHA-256, satu arah) disimpan. `findExistingLicense()` kini mengembalikan
+  `passwordHash` (bukan `password`). Password otoritatif hanya ada di Firebase Auth; dihasilkan/dirotasi saat
+  perlu dan dikirim via email, TIDAK disimpan.
+- ⚠️ **Data lama**: dokumen `settinx_licenses` yang sudah ada masih berisi field `password` plaintext —
+  perlu dihapus manual di Firestore Dashboard (lihat catatan di bawah).
+
+### P0. Reuse license → password di-ROTATE otomatis
+- `assignSettinxLicense()` saat menemukan email yang sama (reuse) kini memanggil `auth.updateUser()` dengan
+  password baru → pembeli dapat password segar setiap beli, password lama mati.
+
+### P1. Webhook KlikQris menolak order palsu
+- `POST /api/klikqris-webhook` sekarang melakukan `getOrder(orderId)` DI AWAL dan menolak (404) bila order
+  tidak pernah dibuat di DB. Sebelumnya webhook BISA membuat order baru sendiri (celah "ciptakan order palsu"
+  untuk barang gratis) — blok itu dihapus.
+
+### P1. Endpoint `/api/settinx/resend` → rotate password
+- Resend V1 kini pakai `rotateSettinxPassword()` (password baru setiap kirim ulang), bukan mengirim ulang
+  password lama dari Firestore. License (UID) tetap sama. Bila license belum ada → buat baru.
+
+### P1. Refactor caller email → `resolveSettinxCredentials()`
+- Helper baru: coba `assignSettinxLicense` (auto-rotate saat reuse) → fallback `rotateSettinxPassword` bila
+  akun gagal dibuat. Memastikan email SELALU berisi password segar (bukan record tanpa password dari
+  `findExistingLicense`). Dipakai di 3 tempat: proses webhook V1, loop order admin, tidak di resend (resend
+  sudah langsung rotate).
+
+### 🔒 Data lama yang perlu dibersihkan manual (SQL/Firestore)
+- Dokumen lama di Firestore `settinx_licenses` yang masih punya field `password` plaintext:
+  buka **Firestore Dashboard** → collection `settinx_licenses` → hapus field `password` saja di tiap dokumen.
+  Aplikasi tidak bisa login dengan password lama lagi; password baru didapat via admin "Generate & Kirim Ulang
+  Kredensial" (endpoint resend yang sudah di-rotate).
+- Tidak ada migrasi Supabase baru yang wajib dijalankan.
+
+### Status verifikasi
+- `node --check server/index.js` ✅, `node --check server/lib/settinxLicense.js` ✅.
+- Belum dites end-to-end di server live (butuh restart PM2 + percobaan resend).
+- **BELUM commit / push / deploy** — menunggu persetujuan user (aturan AGENTS.md).
 
 ## Rekap SEMUA Perubahan (Sesi Ini, kronologis)
 
-### 1. Patch kolom `settinx_type` di tabel orders — ✅ dijalankan user
-- File patch: `database/migrations/sql_patches/supabase_patch_orders_add_settinx_type.sql` (atau file SQL quick-patch yang dibuat sebelumnya).
-- SQL yang dijalankan: `ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS settinx_type TEXT;`
-- Tujuan: menyimpan jenis produk SettinX saat webhook/resend (`module_1_1` untuk "Ipan Module SettinX 1.1", `app_v1` untuk "IPAN APP SettinX V1").
-- Hasil: **Success. No rows returned** — kolom baru berhasil dibuat tanpa mengubah data lama.
+### 0. ⚠️ FIX server-side: tambah ADMIN_API_SECRET di VPS — ✅ tuntas
+- **Akar masalah**: backend produksi dijalankan via **PM2** (`ipanstore-backend`, fork, cwd `server/`,
+  port 5159) — BUKAN di Docker. Docker di VPS hanya serve frontend static (nginx, port 5007).
+  Jadi `docker compose restart` TIDAK memuat ulang secret backend; yang benar adalah `pm2 restart`.
+- `.env` server VPS tidak punya `ADMIN_API_SECRET` → semua endpoint admin produksi
+  (resend, create-admin) menolak 401, padahal frontend build sudah membawa `5f6e3d427b890c1a`.
+- **Fix**: tambah `ADMIN_API_SECRET=5f6e3d427b890c1a` di `/project/website/padel/IpanStore/ipanstore/server/.env`
+  (langsung di VPS, file ini gitignored — tidak perlu commit), lalu `pm2 restart ipanstore-backend`.
+- **Verifikasi**: `POST https://api.ipanstore.id/api/settinx/resend` dengan header
+  `x-admin-secret` kini `success:true` (sebelumnya 401). `pm2 restart` baru pid 551195, port 5159 up.
+
+### 1. Tes end-to-end kirim produk "Ipan Module SettinX 1.1" — ✅ email nyata terkirim (2x terkonfirmasi)
+- Order dummy QRIS dibuat via API produksi: invoice `IPNMOD20260910062600`,
+  nama `ipan`, WA `082119117699`, email `ipanasik123@gmail.com`, produk
+  `Ipan Module SettinX 1.1` (Rp 50.521, status PENDING, payment QRIS).
+- Order tersimpan di tabel `orders` (service id `f4358811...` = slug `ipanmodule`).
+- Trigger kirim email produk via endpoint `/api/settinx/resend` (backend lokal port 5159
+  = kode & DB & SMTP produksi yang sama). Hasil: `success:true` — email link download
+  MediaFire terkirim oleh pengirim `muhammadrizvandysukma@gmail.com` → `ipanasik123@gmail.com`.
+- Verifikasi DB: `email_sent:true`, `email_sent_at:2026-09-09T23:33:42Z`, `settinx_type:module_1_1`.
+- ⚠️ **Temuan bug**: server VPS `.env` TIDAK punya `ADMIN_API_SECRET` →
+  semua endpoint admin di produksi (termasuk tombol "Kirim Ulang" di dashboard admin)
+  menolak 401. Frontend produksi SUDAH berisi secret `5f6e3d427b890c1a` (ter-bake di dist).
+  FIX: tambahkan `ADMIN_API_SECRET=5f6e3d427b890c1a` ke `/project/.../server/.env` di VPS
+  lalu restart container. Sampai itu dilakukan, tes resend lewat API produksi gagal 401.
+  → ✅ SUDAH DIKERJAKAN sesi ini (lihat bagian 0): secret ditambahkan + `pm2 restart`. **Fix tuntas.**
+
+### 1. Fitur "Ipan Module SettinX 1.1" — ✅ deployed & live
+- `server/index.js`: classifier produk SettinX membedakan `module_1_1` (Ipan Module SettinX 1.1)
+  vs `app_v1` (IPAN APP SettinX V1) → auto-email setelah LUNAS berisi link MediaFire
+  (env `SETTINX_MODULE_1_1_DOWNLOAD_URL`) + ringkasan invoice; endpoint `/api/settinx/resend`
+  menangani email link download Module terpisah dari generate kredensial Firebase V1.
+- `server/.env.example`: tambah `SETTINX_MODULE_1_1_DOWNLOAD_URL`.
+- `src/pages/admin/Orders.tsx`: tombol admin "Kirim Ulang Link Download" vs
+  "Generate & Kirim Ulang Kredensial" tergantung tipe produk; kondisi tampil license UID/error
+  hanya untuk V1.
+- `database/migrations/sql_patches/add_settinx_type_column.sql`: patch idempotent
+  `ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS settinx_type TEXT;`
+- Test: `/api/health` OK; auto-email Module (via resend admin) berhasil terkirim ke buyer test;
+  `email_sent` trackable setelah kolom ada; `npm run build` lolos.
+- **Deploy**: commit `db6e958`, push `main`, server pull + `docker compose up --build -d`.
+  Frontend `https://ipanstore.id` → 200, API `https://api.ipanstore.id/api/health` → 200.
 
 ### 2. Polish UI kartu paket (Layanan/Paket/Order) — ✅ dibuild & ter-deploy
 `src/pages/Layanan.tsx`:
@@ -114,6 +193,8 @@
 
 | Waktu | Aktivitas |
 |---|---|
+| 2026-09-10 | 🔐 FIX keamanan SettinX: password plaintext dihapus dari Firestore (hash SHA-256), reuse/resend rotate password, webhook tolak order palsu, refactor resolveSettinxCredentials. BELUM commit/push/deploy. |
+| 2026-09-10 | Deploy fitur Ipan Module SettinX 1.1 (commit db6e958 push+deploy). Frontend & API produksi 200. |
 | 2026-09-10 | Patch SQL kolom `settinx_type` di tabel `orders` berhasil dijalankan user (Success). |
 | 2026-09-09 | FIX total "Failed to fetch": backend PM2 (helmet+notify.js), redeploy frontend, fix BOM nginx.conf. Web produksi & API 200. |
 | 2026-09-09 | Commit+push+deploy: ecd76e7 (backend+kategori+UI+bundle), 271633c (BOM), 6a19831 (docs). |
