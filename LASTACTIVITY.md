@@ -1,8 +1,8 @@
 # LASTACTIVITY — IPAN STORE
 
-## STATUS: 🔐 FIX keamanan kredensial SettinX (hapus password plaintext di Firestore, rotate password saat reuse/resend, tolak webhook order palsu) — BELUM commit/push/deploy
+## STATUS: ✅ 🔐 FIX keamanan kredensial SettinX ter-commit + ter-push + ter-deploy (commit ce465d3)
 
-## ⚠️ PERUBAHAN SESI INI (keamanan — menunggu konfirmasi commit/push/deploy)
+## PERUBAHAN SESI INI (keamanan — ✅ SUDAH commit/push/deploy)
 
 ### P0. Password SettinX TIDAK lagi disimpan plaintext di Firestore
 - **Sebelum**: `server/lib/settinxLicense.js` menyimpan field `password` plaintext di collection `settinx_licenses`
@@ -41,8 +41,14 @@
 
 ### Status verifikasi
 - `node --check server/index.js` ✅, `node --check server/lib/settinxLicense.js` ✅.
-- Belum dites end-to-end di server live (butuh restart PM2 + percobaan resend).
-- **BELUM commit / push / deploy** — menunggu persetujuan user (aturan AGENTS.md).
+- **✅ SUDAH commit `ce465d3` + push `origin/main` + deploy** (VPS `git pull` + `docker compose up --build -d`).
+- Verifikasi live: `https://ipanstore.id` → HTTP 200.
+
+### 🔒 Data lama yang perlu dibersihkan manual (Firestore)
+- Dokumen lama `settinx_licenses` yang masih menyimpan field `password` plaintext PERLU dihapus manual
+  di Firestore Dashboard (hanya hapus field `password`, biarkan `passwordHash`/Field lainnya).
+  Aplikasi tidak bisa login dengan password lama lagi; password baru didapat via admin
+  "Generate & Kirim Ulang Kredensial" (resend yang sudah di-rotate). 🔴 Belum dikerjakan user.
 
 ## Rekap SEMUA Perubahan (Sesi Ini, kronologis)
 
@@ -193,6 +199,7 @@
 
 | Waktu | Aktivitas |
 |---|---|
+| 2026-09-10 | ✅ Deploy FIX keamanan SettinX (commit ce465d3): password plaintext dihapus dari Firestore, reuse/resend rotate password, webhook tolak order palsu. Frontend produksi 200. |
 | 2026-09-10 | 🔐 FIX keamanan SettinX: password plaintext dihapus dari Firestore (hash SHA-256), reuse/resend rotate password, webhook tolak order palsu, refactor resolveSettinxCredentials. BELUM commit/push/deploy. |
 | 2026-09-10 | Deploy fitur Ipan Module SettinX 1.1 (commit db6e958 push+deploy). Frontend & API produksi 200. |
 | 2026-09-10 | Patch SQL kolom `settinx_type` di tabel `orders` berhasil dijalankan user (Success). |
