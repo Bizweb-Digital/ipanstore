@@ -27,8 +27,8 @@ import "dotenv/config";
 import rateLimit from "express-rate-limit";
 import {
   assignSettinxLicense,
-  findExistingLicense,
   initSettinxFirebase,
+  rotateSettinxPassword,
 } from "./lib/settinxLicense.js";
 import { sendPaidEmail } from "./lib/notify.js";
 
@@ -930,6 +930,27 @@ async function classifySettinxProduct(order, svcSlugName = {}) {
   return null;
 }
 
+// ── Resolve kredensial SettinX untuk email ───────────────────────────────────
+// Urutan: buat/pakai ulang via assignSettinxLicense (rotate password bila reuse).
+// Jika membuat akun gagal tapi license lama ada → rotateSettinxPassword sebagai
+// fallback (menghasilkan password segar). Tidak pernah bergantung pada password
+// yang disimpan (plaintext sudah dihapus dari Firestore).
+async function resolveSettinxCredentials(customerEmail, customerName, invoiceNumber) {
+  try {
+    return await assignSettinxLicense({ customerEmail, customerName, invoiceNumber });
+  } catch (e) {
+    console.warn(`resolveSettinxCredentials: assignSettinxLicense gagal (${e.message}) — coba rotate license lama.`);
+  }
+  try {
+    return await rotateSettinxPassword(customerEmail);
+  } catch (e2) {
+    if (e2.code !== "LICENSE_NOT_FOUND") {
+      console.warn(`resolveSettinxCredentials: rotateSettinxPassword gagal (${e2.message}).`);
+    }
+  }
+  return null;
+}
+
 // ── DOUBLE CONFIRMATION (server-side) ────────────────────────────────────────
 // Verifikasi DEFINITIF status pembayaran ke API KlikQris langsung (server-to-server
 // pakai API key + id_merchant). Webhook saja tidak cukup dipercaya — bisa dipalsukan.
@@ -1056,21 +1077,13 @@ async function processPaymentConfirmation(orderId, payload = null) {
   let licenseUid = null;
   let licenseErr = null;
   try {
-    const lic = await assignSettinxLicense({
-      customerEmail: order.customer_email,
-      customerName: order.customer_name,
-      invoiceNumber: orderId,
-    });
+    const lic = await resolveSettinxCredentials(order.customer_email, order.customer_name, orderId);
+    if (!lic) throw new Error("Tidak ada kredensial SettinX yang tersedia.");
     credentials = lic;
     licenseUid = lic.licenseKey;
   } catch (e) {
     licenseErr = e.message;
-    console.error(`⚠️  SettinX license GAGAL dibuat untuk ${order.customer_email}:`, e.message);
-    // Fallback: coba ambil license lama supaya email tetap punya kredensial.
-    try {
-      const existing = await findExistingLicense(order.customer_email);
-      if (existing) credentials = existing;
-    } catch (_) { /* abaikan */ }
+    console.error(`⚠️  SettinX license GAGAL untuk ${order.customer_email}:`, e.message);
   }
 
   console.log(`📧 Mengirim email SettinX V1 ke ${order.customer_email} (invoice ${orderId})...`);
@@ -1127,6 +1140,19 @@ app.post("/api/klikqris-webhook", async (req, res) => {
       return res.json({ success: true });
     }
 
+    // Tolak webhook untuk order yang TIDAK PERNAH dibuat di DB. Order sah selalu
+    // dibuat lebih dulu oleh /api/klikqris-create-order (yang memastikan amount
+    // & item sesuai katalog + sudah kena rate-limit). Webhook yang bias membuat
+    // order baru sendiri = celah "ciptakan order palsu" → TOLAK, jangan simpan.
+    const order = await getOrder(orderId);
+    const storedSig = order?.klikqris_signature;
+    const incomingSig = String(payload?.signature || "");
+
+    if (!order) {
+      console.warn(`🚫 KlikQris webhook utk order tak dikenal: ${orderId} — fake/order palsu, ditolak.`);
+      return res.status(404).json({ success: false, message: "Order tidak ditemukan" });
+    }
+
     // DOUBLE SECURITY (sesuai dokumentasi KlikQris):
     // Signature webhook WAJIB cocok dengan signature tersimpan saat create order.
     // Jika webhook menyertakan signature yang TIDAK cocok dengan yang tersimpan → pasti
@@ -1134,10 +1160,6 @@ app.post("/api/klikqris-webhook", async (req, res) => {
     // Jika webhook TANPA signature → biarkan lolos ke verifikasi server-side
     // (isKlikQrisPaid) yang merupakan otoritas definitif; processPaymentConfirmation
     // tetap menahan email bila API status KlikQris tidak membalas SUCCESS/PAID.
-    const order = await getOrder(orderId);
-    const storedSig = order?.klikqris_signature;
-    const incomingSig = String(payload?.signature || "");
-
     if (storedSig && incomingSig) {
       const sigOk =
         incomingSig.length === storedSig.length &&
@@ -1146,20 +1168,6 @@ app.post("/api/klikqris-webhook", async (req, res) => {
         console.warn(`⚠️  Signature webhook TIDAK COCOK untuk ${orderId} — fake webhook, ditolak.`);
         return res.status(401).json({ success: false, message: "Invalid signature" });
       }
-    }
-
-    if (!order) {
-      console.warn(`⚠️  KlikQris webhook untuk order tak dikenal: ${orderId} — buat minimal dulu.`);
-      await saveOrder({
-        invoice_number: orderId,
-        amount: Number(payload?.total_amount) || Number(payload?.amount) || 0,
-        status: status === "PAID" || status === "SUCCESS" ? "PAID" : status,
-        paid_at: status === "PAID" || status === "SUCCESS" ? new Date().toISOString() : null,
-        doku_payment_channel: "QRIS",
-        klikqris_signature: payload?.signature || null,
-      });
-      // Tidak bisa fulfill kalau order baru dibuat — belum punya customer_email
-      return res.json({ success: true });
     }
 
     // Sudah lunas → abaikan (anti double-kirim produk/email).
@@ -1732,20 +1740,17 @@ app.post("/api/doku-webhook", async (req, res) => {
           let licenseUid = null;
           let licenseErr = null;
           try {
-            const lic = await assignSettinxLicense({
-              customerEmail: order.customer_email,
-              customerName: order.customer_name,
-              invoiceNumber: order.invoice_number,
-            });
+            const lic = await resolveSettinxCredentials(
+              order.customer_email,
+              order.customer_name,
+              order.invoice_number
+            );
+            if (!lic) throw new Error("Tidak ada kredensial SettinX yang tersedia.");
             credentials = lic;
             licenseUid = lic.licenseKey;
           } catch (e) {
             licenseErr = e.message;
-            console.error(`⚠️  SettinX license GAGAL dibuat untuk ${order.customer_email}:`, e.message);
-            try {
-              const existing = await findExistingLicense(order.customer_email);
-              if (existing) credentials = existing;
-            } catch (_) { /* abaikan */ }
+            console.error(`⚠️  SettinX license GAGAL untuk ${order.customer_email}:`, e.message);
           }
 
           console.log(`📧 Mengirim email SettinX ke ${order.customer_email} (invoice ${order.invoice_number})...`);
@@ -1911,21 +1916,27 @@ app.post("/api/settinx/resend", requireAdminSecret, async (req, res) => {
     }
 
     // ── Produk "IPAN APP SettinX V1": kredensial Firebase ─────────────────
-
+    // Rotasi password (generate baru) — jangan pernah kirim ulang password lama
+    // yang sudah pernah dikirim/di-log. License (UID) tetap sama.
     let credentials = null;
     let licenseErr = null;
     try {
-      credentials = await assignSettinxLicense({
-        customerEmail: order.customer_email,
-        customerName: order.customer_name,
-        invoiceNumber: order.invoice_number,
-      });
+      credentials = await rotateSettinxPassword(order.customer_email);
     } catch (e) {
       licenseErr = e.message;
-      try {
-        const existing = await findExistingLicense(order.customer_email);
-        if (existing) credentials = existing;
-      } catch (_) { /* abaikan */ }
+      console.error(`🔁 SettinX rotate GAGAL utk ${order.customer_email}:`, e.message);
+      // License belum ada → buat baru sekalian (email + license masih kosong di rekaman).
+      if (e.code === "LICENSE_NOT_FOUND") {
+        try {
+          credentials = await assignSettinxLicense({
+            customerEmail: order.customer_email,
+            customerName: order.customer_name,
+            invoiceNumber: order.invoice_number,
+          });
+        } catch (createErr) {
+          licenseErr = createErr.message;
+        }
+      }
     }
 
     if (!credentials) {
