@@ -1,8 +1,6 @@
 import { Link } from "react-router-dom";
 import { WA_LINK } from "../FloatingWhatsApp";
-import logo from "@/assets/logo.png";
-import logoWebp from "@/assets/logo.webp";
-import logoWebp293 from "@/assets/logo-293.webp";
+import logoTransparent from "@/assets/logo-transparent.png";
 import { FaWhatsapp, FaDiscord, FaTiktok } from "react-icons/fa";
 
 const quickLinks = [
@@ -53,18 +51,15 @@ const Footer = () => {
                 window.location.href = "/";
               }}
             >
-              <picture>
-                <source srcSet={`${logoWebp293} 293w, ${logoWebp} 600w`} sizes="(max-width: 768px) 140px, 180px" type="image/webp" />
-                <img
-                  src={logo}
-                  alt="Ipan Store"
-                  width={288}
-                  height={110}
-                  className="h-16 sm:h-20 w-auto object-contain"
-                  loading="lazy"
-                  decoding="async"
-                />
-              </picture>
+              <img
+                src={logoTransparent}
+                alt="Ipan Store"
+                width={288}
+                height={114}
+                className="h-16 sm:h-20 w-auto object-contain"
+                loading="lazy"
+                decoding="async"
+              />
             </a>
             <p className="text-zinc-500 max-w-md leading-relaxed text-sm mb-8">
               Spesialis jasa optimasi PC gaming & emulator Free Fire.
@@ -130,7 +125,7 @@ const Footer = () => {
 
         <div className="border-t border-white/16 mt-10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="font-mono text-xs text-zinc-500">
-            © {new Date().getFullYear()} IPAN STORE. All rights reserved.
+            &copy; {new Date().getFullYear()} IPAN STORE - Jasa Optimasi PC Gaming & Boost FPS Free Fire. All rights reserved.
           </p>
           <p className="font-mono text-xs text-zinc-600">
             Designed for Performance

@@ -1,6 +1,34 @@
 # LASTACTIVITY — IPAN STORE
 
-## STATUS: ✅ 🔐 FIX keamanan kredensial SettinX ter-commit + ter-push + ter-deploy (commit ce465d3)
+## STATUS: ✅ Logo transparent di Navbar/Footer + teks copyright + build sukses + semua emulator Android dimatikan
+
+## PERUBAHAN SESI INI (UI logo & copyright + shutdown emulator)
+
+### 1. Logo transparan dipakai di Navbar & Footer — ✅ build sukses
+- `src/components/layout/Navbar.tsx`: import `logoTransparent` dari `@/assets/logo-transparent.png` (ganti
+  `logo.png`/`logo.webp`/`logo-293.webp`); `<img src={logoTransparent}>` (288×114, `h-10 w-auto object-contain`)
+  + `logoUrl={logoTransparent}` untuk StaggeredMenu (desktop & mobile).
+- `src/components/layout/Footer.tsx`: import `logoTransparent`; `<img src={logoTransparent}>`
+  (`h-16 sm:h-20 w-auto object-contain`) menggantikan `<picture>` WEBP.
+- File `src/assets/logo-transparent.png` (288×114 px) disalin ke `public/img/logo-transparent.png`
+  (sudah ada `public/logo-transparent.png`).
+
+### 2. Teks copyright di Footer — ✅
+- `src/components/layout/Footer.tsx`: teks bawah berubah menjadi
+  `© {new Date().getFullYear()} IPAN STORE - Jasa Optimasi PC Gaming & Boost FPS Free Fire. All rights reserved.`
+  (sebelumnya hanya `© {tahun} IPAN STORE. All rights reserved.`).
+
+### 3. Build produksi — ✅ sukses
+- `npm run build` (Vite 7.3.6) — 3729 modules, selesai ~30 detik.
+- Output `dist/`: `index-BGGYbVtr.js` (571 kB, gzip 173 kB), `Dashboard-BJxPUqpG.js`, dll.
+- Peringatan chunk > 500 kB hanya warning standar (tidak error).
+
+### 4. Semua proses emulator Android dimatikan — ✅ tidak ada sisa
+- `adb emu kill` (graceful) → lalu `Stop-Process -Force` untuk proses tersisa.
+- Proses yang dimatikan: `emulator.exe` (PID 532, 12832, 20088), `qemu-system-x86_64` (PID 10688,
+  AVD SettinX_AVD:5554), `crashpad_handler` (PID 11552), `netsimd` (PID 7028), `adb` (PID 588).
+- Verifikasi akhir: `Get-Process` bersih (tanpa emulator/qemu/adb/netsimd/crashpad) &
+  `adb devices` = daftar kosong.
 
 ## PERUBAHAN SESI INI (keamanan — ✅ SUDAH commit/push/deploy)
 
@@ -199,6 +227,7 @@
 
 | Waktu | Aktivitas |
 |---|---|
+| 2026-09-13 | Logo transparent dipakai di Navbar & Footer (268→288×114), teks copyright diperluas, `npm run build` sukses, semua proses emulator Android (emulator/qemu/adb/netsimd/crashpad) dimatikan paksa. |
 | 2026-09-10 | ✅ Deploy FIX keamanan SettinX (commit ce465d3): password plaintext dihapus dari Firestore, reuse/resend rotate password, webhook tolak order palsu. Frontend produksi 200. |
 | 2026-09-10 | 🔐 FIX keamanan SettinX: password plaintext dihapus dari Firestore (hash SHA-256), reuse/resend rotate password, webhook tolak order palsu, refactor resolveSettinxCredentials. BELUM commit/push/deploy. |
 | 2026-09-10 | Deploy fitur Ipan Module SettinX 1.1 (commit db6e958 push+deploy). Frontend & API produksi 200. |
