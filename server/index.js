@@ -562,7 +562,7 @@ async function sendModuleSettinxEmail({ to, customerName, invoiceNumber, amount,
 
       <div style="background:#18181b;border:1px solid #27272a;border-radius:10px;padding:18px 20px;margin:22px 0">
         <div style="font-weight:700;margin-bottom:6px">📦 Download IPAN Module SettinX 1.1</div>
-        <div style="font-size:13px;color:#a1a1aa;margin-bottom:12px">Klik tombol di bawah untuk mengunduh modul (.rar) beserta file pendukungnya.</div>
+        <div style="font-size:13px;color:#a1a1aa;margin-bottom:12px">Klik tombol di bawah untuk mengunduh aplikasi (.apk).</div>
         <a href="${downloadUrl}" style="display:inline-block;background:#f4f4f5;color:#18181b;text-decoration:none;font-weight:700;padding:12px 24px;border-radius:8px;font-size:14px">⬇️ Download Ipan Module SettinX 1.1</a>
       </div>
 
