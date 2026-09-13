@@ -22,6 +22,13 @@
 - Verifikasi live: `https://ipanstore.id` → 200, `https://api.ipanstore.id/api/health` → 200;
   `dist` VPS memuat `logo-transparent-BaWRk5YU.png` + bundle `index-BGGYbVtr.js` (sama dengan build lokal).
 
+### 1. Teks email Module → ".apk" — ✅ SUDAH commit/push/deploy (backend saja)
+- `server/index.js:565`: "mengunduh modul (.rar) beserta file pendukungnya" → "mengunduh aplikasi (.apk)."
+- `node --check` ✅, backend lokal restart (health ok).
+- Commit `f93d40e` + push `origin/main`; VPS `git pull` FF + `pm2 restart ipanstore-backend`
+  (pid baru, `/api/health` lokal VPS ok); `https://api.ipanstore.id/api/health` → 200.
+- Frontend tidak berubah → tanpa rebuild Docker/dist.
+
 ## PERUBAHAN SESI INI (UI logo & copyright + shutdown emulator)
 
 ### 1. Logo transparan dipakai di Navbar & Footer — ✅ build sukses
@@ -247,6 +254,7 @@
 
 | Waktu | Aktivitas |
 |---|---|
+| 2026-09-13 | ✅ Deploy teks email Module → .apk (commit f93d40e push+deploy: git pull FF, pm2 restart; API 200, tanpa rebuild frontend). |
 | 2026-09-13 | ✅ Deploy link Module SettinX 1.1 → APK baru (commit 1f5bb5e push+deploy: git pull FF, env VPS update, pm2 restart, dist baru di-SCP + rebuild Docker; frontend & API 200). |
 | 2026-09-13 | Logo transparent dipakai di Navbar & Footer (268→288×114), teks copyright diperluas, `npm run build` sukses, semua proses emulator Android (emulator/qemu/adb/netsimd/crashpad) dimatikan paksa. |
 | 2026-09-10 | ✅ Deploy FIX keamanan SettinX (commit ce465d3): password plaintext dihapus dari Firestore, reuse/resend rotate password, webhook tolak order palsu. Frontend produksi 200. |
