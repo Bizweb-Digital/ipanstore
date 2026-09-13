@@ -1,6 +1,26 @@
 # LASTACTIVITY — IPAN STORE
 
-## STATUS: ✅ Logo transparent di Navbar/Footer + teks copyright + build sukses + semua emulator Android dimatikan
+## STATUS: ✅ Link download Module SettinX 1.1 → APK baru + logo transparent + copyright — SUDAH commit/push/deploy
+
+## PERUBAHAN SESI INI (link Module APK + deploy — ✅ SUDAH commit/push/deploy)
+
+### 0. Link download "Ipan Module SettinX 1.1" diganti ke APK baru — ✅ live
+- **Lama**: `https://www.mediafire.com/file/b01bckwvih4jpwi/Ipan_Module_SettinX_1.1.rar/file` (.rar)
+- **Baru**: `https://www.mediafire.com/file/k3dqnfplzu3n8gp/Ipan_Module_SettinX.apk/file` (.apk)
+- Diubah di 2 tempat: `server/.env:52` (`SETTINX_MODULE_1_1_DOWNLOAD_URL`, gitignored — lokal saja)
+  + fallback `server/index.js:379` (ikut ter-deploy via git).
+- Catatan teks email masih menulis "mengunduh modul (.rar)" (`server/index.js:565`) — belum disesuaikan ke .apk.
+
+### Deploy sesi ini
+- Verifikasi lokal: `node --check server/index.js` ✅, `npm run build` ✅ (3729 modules, `index-BGGYbVtr.js`).
+- Commit `1f5bb5e` (logo transparent Navbar/Footer + copyright + link Module APK) + push `origin/main`.
+- VPS: `git pull` fast-forward (tanpa konflik untracked) → `server/.env` VPS di-update via `sed`
+  (nilai baru terkonfirmasi) → `pm2 restart ipanstore-backend --update-env` (pid baru, `/api/health` ok).
+- Frontend: build Docker pertama pakai layer **CACHED** (`COPY dist` lama) → `dist` lama di-arsip
+  `dist.bak-20260913`, `dist` baru hasil build lokal di-SCP ke VPS, `docker compose up --build -d` ulang
+  (konteks 12MB, `COPY dist` tidak cached).
+- Verifikasi live: `https://ipanstore.id` → 200, `https://api.ipanstore.id/api/health` → 200;
+  `dist` VPS memuat `logo-transparent-BaWRk5YU.png` + bundle `index-BGGYbVtr.js` (sama dengan build lokal).
 
 ## PERUBAHAN SESI INI (UI logo & copyright + shutdown emulator)
 
@@ -227,6 +247,7 @@
 
 | Waktu | Aktivitas |
 |---|---|
+| 2026-09-13 | ✅ Deploy link Module SettinX 1.1 → APK baru (commit 1f5bb5e push+deploy: git pull FF, env VPS update, pm2 restart, dist baru di-SCP + rebuild Docker; frontend & API 200). |
 | 2026-09-13 | Logo transparent dipakai di Navbar & Footer (268→288×114), teks copyright diperluas, `npm run build` sukses, semua proses emulator Android (emulator/qemu/adb/netsimd/crashpad) dimatikan paksa. |
 | 2026-09-10 | ✅ Deploy FIX keamanan SettinX (commit ce465d3): password plaintext dihapus dari Firestore, reuse/resend rotate password, webhook tolak order palsu. Frontend produksi 200. |
 | 2026-09-10 | 🔐 FIX keamanan SettinX: password plaintext dihapus dari Firestore (hash SHA-256), reuse/resend rotate password, webhook tolak order palsu, refactor resolveSettinxCredentials. BELUM commit/push/deploy. |
