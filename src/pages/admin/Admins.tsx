@@ -291,9 +291,22 @@ export default function AdminAdmins() {
           </CardContent>
         </Card>
 
-        {/* Dialog tambah admin — lebar dibatasi agar muat di layar mobile */}
+        {/* Dialog tambah admin — inline style di mobile agar pasti center & tidak terpotong */}
         <Dialog open={showAdd} onOpenChange={setShowAdd}>
-          <DialogContent className="w-[calc(100vw-2rem)] max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogContent
+            className="max-h-[85vh] overflow-y-auto"
+            style={{
+              position: 'fixed',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: 'calc(100vw - 2rem)',
+              maxWidth: '28rem',
+              maxHeight: '85vh',
+              overflowY: 'auto',
+              margin: 0,
+            }}
+          >
             <DialogHeader>
               <DialogTitle>Tambah Admin Baru</DialogTitle>
               <DialogDescription>

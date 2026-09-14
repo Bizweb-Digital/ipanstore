@@ -100,6 +100,16 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     };
   }, [user?.email]);
 
+  // Mencegah body scroll horizontal di mobile — akar masalah dialog "geser ke kiri".
+  useEffect(() => {
+    document.documentElement.style.overflowX = 'hidden';
+    document.body.style.overflowX = 'hidden';
+    return () => {
+      document.documentElement.style.overflowX = '';
+      document.body.style.overflowX = '';
+    };
+  }, []);
+
   // Viewer tidak melihat menu khusus super admin (mis. Admins).
   const visibleNavItems = navigationItems.filter(
     (item) => !item.superAdminOnly || isSuperAdmin
@@ -268,7 +278,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
       {/* Main Content Area */}
       <div
-        className={`flex-1 transition-all duration-300 ${
+        className={`flex-1 min-w-0 overflow-x-hidden transition-all duration-300 ${
           sidebarOpen ? 'lg:ml-64' : 'lg:ml-20'
         }`}
       >
