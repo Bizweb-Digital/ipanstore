@@ -17,7 +17,7 @@ interface SupabaseFAQ {
 const FALLBACK_FAQS = [
   {
     q: "Apa itu Jasa Optimasi PC Gaming IPAN STORE?",
-    a: "IPAN STORE adalah layanan tweak PC & emulator profesional yang membantu gamer meningkatkan FPS, mengurangi input lag, dan menstabilkan performa PC gaming. Kami melayani optimasi Windows, setting emulator Free Fire, serta tweak menu premium lewat IPAN APP SettinX.",
+    a: "IPAN STORE adalah layanan tweak PC & emulator profesional yang membantu gamer meningkatkan FPS, mengurangi input lag, dan menstabilkan performa PC gaming. Kami melayani optimasi Windows, setting emulator Free Fire, serta tweak premium lewat IPAN APP SettinX V1 dan Ipan Module SettinX 1.1.",
   },
   {
     q: "Apakah layanan ini khusus Free Fire saja?",
@@ -32,8 +32,8 @@ const FALLBACK_FAQS = [
     a: "Secara sistem, sumber daya yang sebelumnya terbuang akan dialihkan ke game. Namun, angka peningkatan FPS tergantung pada batas maksimal hardware (VGA & CPU) kamu. Kami menjamin potensi FPS maksimal keluar dari PC kamu.",
   },
   {
-    q: "Apa itu IPAN APP SettinX dan kenapa lebih unggul?",
-    a: "IPAN APP SettinX adalah aplikasi tweak premium dengan fitur DragShot Velocity, OneTap Vector, Neural AimSync, dan Emulator Overdrive. Lisensi seharga Rp 75.000 (hemat Rp 25.000 dari harga normal Rp 100.000), bayar sekali untuk lifetime, dan menggabungkan semua keunggulan paket optimasi dalam satu aplikasi otomatis.",
+    q: "Apa perbedaan IPAN APP SettinX V1 dan Ipan Module SettinX 1.1?",
+    a: "IPAN APP SettinX V1 adalah aplikasi tweak premium dengan lisensi lifetime, sedangkan Ipan Module SettinX 1.1 adalah module Android untuk semua versi Android dan merk HP. Module 1.1 membantu meningkatkan chance ratio aim headshot, menstabilkan sensitivitas dan FPS, mengurangi recoil, tanpa root, serta mendapat update gratis selamanya.",
   },
   {
     q: "Bagaimana cara order dan proses pengerjaannya?",
@@ -123,7 +123,7 @@ const Faq = () => {
                   Pertanyaan Umum
                 </h1>
                 <p className="text-zinc-400">
-                  Jawaban lengkap untuk pertanyaan yang sering diajukan seputar jasa optimasi PC gaming, boost FPS Free Fire, dan IPAN APP SettinX di IPAN STORE.
+                  Jawaban lengkap untuk pertanyaan yang sering diajukan seputar jasa optimasi PC gaming, boost FPS Free Fire, dan Ipan Module SettinX 1.1 di IPAN STORE.
                 </p>
               </div>
 

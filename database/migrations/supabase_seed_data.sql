@@ -54,12 +54,20 @@ INSERT INTO services (slug, name, description, price, is_active) VALUES
    100000,
    true);
 
--- ─── PAKET APP SETTINX (LISENSI LIFETIME) ──────────────────────────────────
+-- ─── PAKET IPAN APP SETTINX V1 (LISENSI LIFETIME) ───────────────────────────
 INSERT INTO services (slug, name, description, price, is_active) VALUES
-  ('app-settinx', 
-   'IPAN APP SettinX V1', 
-   '<p>Aplikasi tweak premium dengan LISENSI LIFETIME (1 akun = 1 PC):</p><ul><li>DragShot Velocity X</li><li>OneTap Vector X</li><li>Neural AimSync X</li><li>Emulator Overdrive X</li><li>Snapshot & Rollback</li></ul><p><em>Satu paket ini sudah mencakup semua fitur dari paket Optimize, SET PC, dan Anti Cheat.</em></p>',
-   75000,
+   ('app-settinx',
+    'IPAN APP SettinX V1',
+    '<p>Aplikasi tweak premium dengan lisensi lifetime:</p><ul><li>Lisensi lifetime (1 akun = 1 PC)</li><li>DragShot Velocity X</li><li>OneTap Vector X</li><li>Neural AimSync X</li><li>Emulator Overdrive X</li><li>Snapshot & Rollback</li></ul>',
+    75000,
+    true);
+
+-- ─── PAKET IPAN MODULE SETTINX 1.1 ─────────────────────────────────────────
+INSERT INTO services (slug, name, description, price, is_active) VALUES
+   ('module-settinx-1-1',
+    'Ipan Module SettinX 1.1',
+    '<p>Module Android dengan benefit utama:</p><ul><li>Support all Android version & semua merk HP</li><li>Meningkatkan chance ratio aim headshot</li><li>Sensitivitas lebih stabil & responsif</li><li>FPS lebih stabil, anti lag saat war</li><li>Mengurangi recoil senjata</li><li>Tanpa root, aman digunakan</li><li>Update gratis selamanya</li></ul>',
+    50000,
    true);
 
 -- ─── VERIFIKASI ────────────────────────────────────────────────────────────

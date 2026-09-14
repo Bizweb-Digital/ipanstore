@@ -150,7 +150,29 @@ const Layanan = () => {
         const extras = rows
           .map(toActiveService)
           .filter((r) => r.category === "APP SETTINX");
-        setSettinxExtras(extras);
+        const moduleFallback: ActiveService = {
+          id: "module-settinx-1-1",
+          slug: "module-settinx-1-1",
+          category: "APP SETTINX",
+          name: "Ipan Module SettinX 1.1",
+          price: 50000,
+          priceLabel: "Rp 50.000",
+          highlight: "MODULE TERBARU",
+          features: [
+            "Support all Android version & semua merk HP",
+            "Meningkatkan chance ratio aim headshot",
+            "Sensitivitas lebih stabil & responsif",
+            "FPS lebih stabil, anti lag saat war",
+            "Mengurangi recoil senjata",
+            "Tanpa root, aman digunakan",
+            "Update gratis selamanya",
+          ],
+        };
+        setSettinxExtras(
+          extras.some((service) => service.slug === moduleFallback.slug)
+            ? extras
+            : [...extras, moduleFallback],
+        );
       } catch (err) {
         console.error("Gagal memuat produk APP SETTINX:", err);
       }
@@ -231,7 +253,7 @@ const Layanan = () => {
                   <AppSettinxSection compact />
 
                   {/* Produk APP SETTINX lain yang dikelola via admin */}
-                  {settinxExtras.length > 0 && (
+                  {settinxExtras.filter((s) => s.slug !== "app-settinx").length > 0 && (
                     <div className="space-y-6">
                       <Reveal>
                         <h2 className="text-xl md:text-2xl font-bold text-center text-[#F4F4F5] tracking-tight mb-3">
@@ -242,7 +264,7 @@ const Layanan = () => {
                         </p>
                       </Reveal>
                       <ScrollStackCards itemDistance={70} itemStackDistance={20} baseScale={0.93} itemScale={0.028}>
-                        {settinxExtras.map((s) => (
+                        {settinxExtras.filter((s) => s.slug !== "app-settinx").map((s) => (
                           <div
                             key={s.id}
                             className="gaming-card p-6 md:p-8 group"
@@ -377,7 +399,7 @@ const Layanan = () => {
             </div>
           </section>
 
-        {/* IPAN APP SettinX — Section Terpisah */}
+        {/* IPAN APP SettinX V1 — Section Terpisah */}
         {activeTab !== "APP SETTINX" && (
           <AppSettinxSection />
         )}

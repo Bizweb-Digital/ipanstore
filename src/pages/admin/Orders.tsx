@@ -841,7 +841,7 @@ export default function AdminOrders() {
                           <>Klik tombol untuk mengirim ulang link download <strong>Ipan Module SettinX 1.1</strong> (MediaFire) ke email pembeli beserta ringkasan invoice.</>
                         ) : (
                           <>Kredensial akan dikirim ulang ke email pembeli beserta link download. Untuk
-                            produk SettinX V1, tombol ini membuat/memakai kembali akun Firebase
+                            produk Ipan Module SettinX 1.1, tombol ini membuat/memakai kembali akun Firebase
                             kemudian mengirim email berisi Username, Password &amp; License Key.</>
                         )}
                       </div>

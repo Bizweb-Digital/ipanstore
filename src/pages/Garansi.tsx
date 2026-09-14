@@ -15,6 +15,7 @@ const WARRANTY_SERVICES = [
   { slug: "elite", name: "ELITE", days: 14, label: "ELITE — garansi 14 hari" },
   { slug: "extreme", name: "EXTREME", days: 30, label: "EXTREME — garansi 30 hari" },
   { slug: "app-settinx", name: "IPAN APP SettinX V1", days: 14, label: "IPAN APP SettinX V1 — garansi 14 hari" },
+  { slug: "module-settinx-1-1", name: "Ipan Module SettinX 1.1", days: 14, label: "Ipan Module SettinX 1.1 — garansi 14 hari" },
 ] as const;
 
 type ClaimResult = {
@@ -99,7 +100,7 @@ export default function Garansi() {
   };
 
   const faqItems = [
-    { q: "Layanan apa saja yang bergaransi di IPAN STORE?", a: "STANDART garansi 7 hari, ELITE 14 hari, EXTREME 30 hari, dan IPAN APP SettinX V1 14 hari. Paket SET PC dan ANTICHEAT LAGA tidak termasuk garansi. Garansi dihitung sejak status order PAID/COMPLETED." },
+      { q: "Layanan apa saja yang bergaransi di IPAN STORE?", a: "STANDART garansi 7 hari, ELITE 14 hari, EXTREME 30 hari, IPAN APP SettinX V1 14 hari, dan Ipan Module SettinX 1.1 14 hari. Paket SET PC dan ANTICHEAT LAGA tidak termasuk garansi. Garansi dihitung sejak status order PAID/COMPLETED." },
     { q: "Apakah butuh invoice untuk klaim garansi?", a: "Tidak. Cukup isi nama sesuai saat order dan pilih paket. Sistem otomatis mencocokkan nama dan paket kamu dengan data order di IPAN STORE." },
     { q: "Bagaimana cara klaim garansi IPAN STORE?", a: "Isi form di halaman ini, dapatkan nomor tiket CLM, lalu lanjut ke WhatsApp dengan pesan otomatis yang sudah terisi tiket, produk, dan keluhan kamu. Admin akan verifikasi dan proses sesuai masa garansi." },
     { q: "Apa yang dicover garansi optimasi PC & Boost FPS?", a: "Garansi mengcover kendala performa setelah layanan — seperti FPS kembali drop, tweak tidak bekerja, atau Windows Mod bermasalah — selama masih dalam masa garansi dan bukan karena perubahan sistem oleh user (install ulang, update besar, ganti hardware)." },
@@ -110,7 +111,7 @@ export default function Garansi() {
     <Layout>
       <SEOHead
         title="Garansi IPAN STORE — Klaim Optimasi PC & Boost FPS Free Fire"
-        description="Klaim garansi IPAN STORE 7–30 hari untuk STANDART, ELITE, EXTREME & SettinX V1. Optimasi PC gaming & Boost FPS Free Fire via UltraViewer — tanpa invoice, cukup nama & paket."
+        description="Klaim garansi IPAN STORE 7–30 hari untuk STANDART, ELITE, EXTREME & Ipan Module SettinX 1.1. Optimasi PC gaming & Boost FPS Free Fire via UltraViewer — tanpa invoice, cukup nama & paket."
         jsonLd={[
           breadcrumbJsonLd([
             { name: "Beranda", path: "/" },
@@ -130,7 +131,7 @@ export default function Garansi() {
               Klaim <AuroraText className="font-extrabold md:font-bold">Garansi</AuroraText> Optimasi PC & Boost FPS
             </h1>
             <p className="mx-auto max-w-[58ch] md:max-w-2xl text-pretty text-[14px] md:text-[15px] leading-7 text-zinc-400">
-              Jasa <strong className="text-zinc-200 font-semibold">optimasi PC gaming & Boost FPS Free Fire</strong> bergaransi resmi. Kendala setelah tweaking Windows, setting Bluestacks, atau aktivasi SettinX V1? Cukup isi form — sistem otomatis mencocokkan <strong className="text-zinc-200 font-semibold">nama & paket</strong> dengan data order <strong className="text-zinc-200 font-semibold">tanpa perlu invoice</strong>.
+              Jasa <strong className="text-zinc-200 font-semibold">optimasi PC gaming & Boost FPS Free Fire</strong> bergaransi resmi. Kendala setelah tweaking Windows, setting Bluestacks, atau aktivasi Ipan Module SettinX 1.1? Cukup isi form — sistem otomatis mencocokkan <strong className="text-zinc-200 font-semibold">nama & paket</strong> dengan data order <strong className="text-zinc-200 font-semibold">tanpa perlu invoice</strong>.
             </p>
             <div className="mt-5 md:mt-6 flex flex-wrap justify-center gap-2">
               <span className="inline-flex rounded-full bg-white/[0.04] border border-white/10 px-3.5 py-1.5 font-mono text-[10px] md:text-[11px] font-medium uppercase tracking-[0.14em] text-zinc-300">Garansi 7–30 hari</span>

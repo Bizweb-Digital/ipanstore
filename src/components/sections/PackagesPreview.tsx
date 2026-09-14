@@ -20,6 +20,8 @@ const ORDER_ID: Record<string, string> = {
   "STANDART": "standart",
   "ELITE": "elite",
   "EXTREME": "extreme",
+  "IPAN APP SETTINX V1": "app-settinx",
+  "Ipan Module SettinX 1.1": "module-settinx-1-1",
 };
 
 // Based on the new 4 packages requirement
@@ -29,7 +31,7 @@ const packages: Pkg[] = [
     price: "Rp 50.000",
     features: [
       "Emulator ringan",
-      "Keybind emulator",
+      "Support semua versi Android",
       "Sensi X & Y",
       "FF V7A Boost FPS",
       "DPI Mouse setting",
@@ -75,6 +77,32 @@ const packages: Pkg[] = [
       "Emulator optimization",
     ],
   },
+  {
+    name: "IPAN APP SETTINX V1",
+    price: "Rp 75.000",
+    highlight: "LISENSI LIFETIME",
+    features: [
+      "Lisensi lifetime (1 akun = 1 PC)",
+      "DragShot Velocity X",
+      "OneTap Vector X",
+      "Neural AimSync X",
+      "Emulator Overdrive X",
+      "Snapshot & Rollback",
+    ],
+  },
+  {
+    name: "Ipan Module SettinX 1.1",
+    price: "Rp 50.000",
+    highlight: "MODULE TERBARU",
+    features: [
+      "Support semua versi Android & semua merk HP",
+      "Chance ratio aim headshot lebih tinggi",
+      "Sensitivitas lebih stabil & responsif",
+      "FPS lebih stabil, anti lag saat war",
+      "Mengurangi recoil senjata",
+      "Tanpa root & update gratis selamanya",
+    ],
+  },
 ];
 
 const PackagesPreview = () => {
@@ -97,9 +125,9 @@ const PackagesPreview = () => {
           </p>
         </Reveal>
 
-        <div
-          ref={ref}
-          className={`grid sm:grid-cols-2 lg:grid-cols-4 gap-5 max-w-6xl mx-auto pt-3 scroll-reveal-stagger ${revealed ? "revealed" : ""}`}
+            <div
+              ref={ref}
+              className={`grid sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-6xl mx-auto pt-3 scroll-reveal-stagger ${revealed ? "revealed" : ""}`}
         >
           {packages.map((p) => {
             const highlighted = Boolean(p.highlight);
