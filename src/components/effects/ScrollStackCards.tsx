@@ -208,6 +208,15 @@ const ScrollStackCards = ({
     }
 
     const els = Array.from(scroller.querySelectorAll("[data-stack-card]")) as HTMLElement[];
+
+    // Kartu tunggal (mis. tab ANTI CHEAT hanya 1 paket): efek stack tidak
+    // masuk akal — pinEnd jadi negatif dan kartu ter-translate keluar viewport
+    // (gejala: area kartu terlihat kosong). Render statis saja.
+    if (els.length < 2) {
+      resetToStatic();
+      return;
+    }
+
     cardsRef.current = els;
     curYRef.current = els.map(() => 0);
     curScaleRef.current = els.map(() => 1);

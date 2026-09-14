@@ -568,7 +568,23 @@ const Paket = () => {
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </a>
                     </Button>
-                    <Button asChild variant="outline" size="lg" className="w-full sm:w-auto">
+                    {/* Desktop: sejajar dengan tombol WhatsApp */}
+                    <Button asChild variant="outline" size="lg" className="hidden sm:inline-flex w-auto">
+                      <Link to="/order?paket=module-settinx-1-1" className="flex items-center justify-center">
+                        Beli Ipan Module SettinX 1.1
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </div>
+
+                  {/* Mobile only: tombol module dipisah agar tidak mepet WhatsApp */}
+                  <div className="mt-4 sm:hidden">
+                    <div className="flex items-center gap-3 mb-4">
+                      <span className="h-px flex-1 bg-white/10" />
+                      <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#F4F4F5]/40">ATAU</span>
+                      <span className="h-px flex-1 bg-white/10" />
+                    </div>
+                    <Button asChild variant="outline" size="lg" className="w-full">
                       <Link to="/order?paket=module-settinx-1-1" className="flex items-center justify-center">
                         Beli Ipan Module SettinX 1.1
                         <ArrowRight className="ml-2 h-4 w-4" />
