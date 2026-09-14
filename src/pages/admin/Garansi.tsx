@@ -69,6 +69,7 @@ const MANUAL_SERVICES = [
   { slug: "elite", name: "ELITE", days: 14 },
   { slug: "extreme", name: "EXTREME", days: 30 },
   { slug: "app-settinx", name: "IPAN APP SettinX V1", days: 14 },
+  { slug: "module-settinx-1-1", name: "Ipan Module SettinX 1.1", days: 14 },
 ] as const;
 
 function generateTicket() {

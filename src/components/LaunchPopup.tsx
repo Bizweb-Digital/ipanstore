@@ -12,9 +12,13 @@ import ElectricBorder from "@/components/effects/ElectricBorder";
 import VariableProximity from "@/components/effects/VariableProximity";
 
 const launchBenefits = [
-  "Bayar sekali, pakai selamanya (lifetime)",
-  "Gabungan semua paket optimasi dalam 1 aplikasi",
-  "Aman dengan fitur snapshot & rollback",
+  "Support all Android version & semua merk HP",
+  "Meningkatkan chance ratio aim headshot",
+  "Sensitivitas lebih stabil & responsif",
+  "FPS lebih stabil, anti lag saat war",
+  "Mengurangi recoil senjata",
+  "Tanpa root, aman digunakan",
+  "Update gratis selamanya",
 ];
 
 const LaunchPopup = () => {
@@ -38,7 +42,7 @@ const LaunchPopup = () => {
 
   const goToOrder = () => {
     setOpen(false);
-    navigate("/order?paket=app-settinx&kode=HEMAT5");
+    navigate("/order?paket=module-settinx-1-1&kode=HEMAT5");
   };
 
   const scrollToProduct = () => {
@@ -69,7 +73,7 @@ const LaunchPopup = () => {
 
             <DialogTitle className="text-2xl sm:text-3xl font-bold tracking-tight text-[#F4F4F5] mb-2">
               <VariableProximity
-                label="IPAN APP SettinX V1"
+                label="Ipan Module SettinX 1.1"
                 fromFontVariationSettings="'wght' 400, 'opsz' 9"
                 toFontVariationSettings="'wght' 1000, 'opsz' 40"
                 containerRef={popupRef}
@@ -82,8 +86,8 @@ const LaunchPopup = () => {
               id="launch-popup-desc"
               className="text-sm text-zinc-400 leading-relaxed"
             >
-              Aplikasi tweak premium untuk emulator Free Fire. Optimalkan kontrol,
-              raih FPS tinggi, dan aiming lebih presisi di setiap duel.
+              Module SettinX untuk membantu meningkatkan responsivitas, stabilitas FPS,
+              dan kenyamanan bermain Free Fire di Android.
             </DialogDescription>
 
             {/* Harga — border elektrik bergerak (sama seperti katalog SettinX) */}
@@ -96,18 +100,11 @@ const LaunchPopup = () => {
             >
               <div className="relative rounded-xl bg-[#131314]/60 p-4">
                 <div className="mb-1 flex items-center justify-center gap-2">
-                  <span className="font-mono text-sm text-zinc-600 line-through">Rp 100.000</span>
-                  <span className="gaming-tag bg-red-500/10 !text-red-300 !border-red-400/30">
-                    -5%
-                  </span>
+                  <span className="font-mono text-sm text-zinc-500">Harga module</span>
                 </div>
                 <div className="font-mono text-3xl sm:text-4xl font-bold tracking-tight text-[#F4F4F5] leading-none">
-                  Rp 75.000
+                  Rp 50.000
                 </div>
-                <p className="mt-2 text-xs text-green-400">
-                  Pakai kode <span className="font-mono font-semibold">HEMAT5</span> → cukup bayar{" "}
-                  <span className="font-mono font-semibold">Rp 71.250</span>
-                </p>
               </div>
             </ElectricBorder>
 
@@ -123,7 +120,7 @@ const LaunchPopup = () => {
 
             {/* Deadline */}
             <p className="mt-5 font-mono text-[11px] uppercase tracking-[0.14em] text-[#94A3B8]">
-              Promo Grand Launching berakhir 31 Agustus 2026
+              BENEFIT UTAMA
             </p>
 
             {/* CTA */}
@@ -133,7 +130,7 @@ const LaunchPopup = () => {
                 size="lg"
                 className="w-full bg-[#111111] text-white hover:bg-[#333333]"
               >
-                Order Sekarang
+                Tanya Layanan Ini
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
               <button

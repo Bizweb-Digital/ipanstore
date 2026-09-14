@@ -341,7 +341,7 @@ const TestimoniPage = () => {
 
               <div className="mt-14 max-w-3xl mx-auto text-center px-4">
                 <p className="text-sm md:text-base text-zinc-400 leading-relaxed">
-                  Setiap foto di atas adalah dokumentasi asli yang dikirim langsung oleh pelanggan kami via WhatsApp setelah proses optimasi PC gaming, tweak emulator Free Fire, atau aktivasi IPAN APP SettinX selesai dilakukan.
+                  Setiap foto di atas adalah dokumentasi asli yang dikirim langsung oleh pelanggan kami via WhatsApp setelah proses optimasi PC gaming, tweak emulator Free Fire, atau aktivasi Ipan Module SettinX 1.1 selesai dilakukan.
                 </p>
               </div>
             </div>

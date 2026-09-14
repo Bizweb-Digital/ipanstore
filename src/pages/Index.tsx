@@ -96,7 +96,7 @@ const Index = () => {
       <Community />
       <ClosingCTA />
 
-      {/* Popup Grand Launching SettinX V1 — tampil saat website dibuka */}
+      {/* Popup launching Ipan Module SettinX 1.1 — tampil saat website dibuka */}
       <LaunchPopup />
     </Layout>
   );

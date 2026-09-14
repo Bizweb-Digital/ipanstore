@@ -98,6 +98,7 @@ export const DOKU_PAYMENT_LINKS: Record<string, string> = {
   "extreme": "",
   "anti-cheat-laga": "",
   "app-settinx": "",
+  "module-settinx-1-1": "",
 };
 
 /**

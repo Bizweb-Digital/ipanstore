@@ -104,6 +104,15 @@ const STATIC_PACKAGES: Pkg[] = [
     highlight: "LISENSI LIFETIME",
     features: ["Lisensi lifetime (1 akun = 1 PC)", "DragShot Velocity X", "OneTap Vector X", "Neural AimSync X", "Emulator Overdrive X", "Snapshot & Rollback"],
   },
+  {
+    id: "module-settinx-1-1",
+    category: "APP SETTINX",
+    name: "Ipan Module SettinX 1.1",
+    price: 50000,
+    priceLabel: "Rp 50.000",
+    highlight: "MODULE TERBARU",
+    features: ["Support all Android version & semua merk HP", "Meningkatkan chance ratio aim headshot", "Sensitivitas lebih stabil & responsif", "FPS lebih stabil, anti lag saat war", "Mengurangi recoil senjata", "Tanpa root, aman digunakan", "Update gratis selamanya"],
+  },
 ];
 
 const formatRupiah = (n: number) =>
@@ -121,8 +130,7 @@ const Order = () => {
 
   // Paket dari tabel services Supabase (dikelola admin) dengan fallback statis.
   const { services: dbServices, fromDb } = useActiveServices(STATIC_PACKAGES as ActiveService[]);
-  const packages: Pkg[] = fromDb
-    ? dbServices.map((s) => ({
+  const dbPackages: Pkg[] = dbServices.map((s) => ({
         id: s.id,
         category: s.category,
         name: s.name,
@@ -130,8 +138,11 @@ const Order = () => {
         priceLabel: s.priceLabel,
         highlight: s.highlight,
         features: s.features,
-      }))
-    : STATIC_PACKAGES;
+      }));
+  // Saat Supabase tersedia, gunakan hanya katalog resmi dari database.
+  // Jangan menggabungkan fallback statis di sini karena dapat membuat produk
+  // SettinX tampil dua kali (satu dari DB, satu dari fallback).
+  const packages: Pkg[] = fromDb ? dbPackages : STATIC_PACKAGES;
 
   const [selectedId, setSelectedId] = useState<string>(
     packages.some((p) => p.id === preselect) ? (preselect as string) : packages[0].id
@@ -299,7 +310,7 @@ const Order = () => {
     <Layout>
       <SEOHead
         title="Order Paket Optimasi PC Gaming | IPAN STORE"
-        description="Order paket optimasi PC gaming & IPAN APP SettinX secara online. Bayar mudah via QRIS, e-Wallet, dan Virtual Account."
+        description="Order paket optimasi PC gaming & Ipan Module SettinX 1.1 secara online. Bayar mudah via QRIS, e-Wallet, dan Virtual Account."
       />
 
       {/* Header */}

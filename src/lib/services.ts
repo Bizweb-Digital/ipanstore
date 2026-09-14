@@ -77,6 +77,7 @@ export const HIGHLIGHT_BY_SLUG: Record<string, string> = {
   extreme: "PRO CHOICE",
   "anti-cheat-laga": "TOURNAMENT SECURE",
   "app-settinx": "LISENSI LIFETIME",
+  "module-settinx-1-1": "MODULE TERBARU",
 };
 
 export function formatRupiah(n: number) {

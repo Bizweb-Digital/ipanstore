@@ -1,6 +1,6 @@
 -- =====================================================
 -- IPAN STORE - QUICK PATCH: kolom tracking license SettinX di orders
--- Untuk fitur auto-generate kredensial SettinX V1 (Firebase) saat pembelian.
+-- Untuk fitur auto-generate kredensial Ipan Module SettinX 1.1 (Firebase) saat pembelian.
 --
 -- Kolom baru:
 --   settinx_license_uid  -> UID Firebase (license key) milik pembeli order ini

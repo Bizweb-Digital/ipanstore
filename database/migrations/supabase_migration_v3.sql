@@ -8,6 +8,22 @@
 --   Aman dijalankan ulang (idempotent).
 -- =====================================================
 
+-- ── 0a. Pastikan dua produk SettinX tetap tersedia di katalog ───────────────
+-- ON CONFLICT menjaga migration ini aman dijalankan ulang.
+INSERT INTO public.services (slug, name, description, price, is_active)
+VALUES
+  ('app-settinx', 'IPAN APP SettinX V1',
+   '<p>Aplikasi tweak premium dengan lisensi lifetime:</p><ul><li>Lisensi lifetime (1 akun = 1 PC)</li><li>DragShot Velocity X</li><li>OneTap Vector X</li><li>Neural AimSync X</li><li>Emulator Overdrive X</li><li>Snapshot &amp; Rollback</li></ul>',
+   75000, true),
+  ('module-settinx-1-1', 'Ipan Module SettinX 1.1',
+   '<p>Module Android dengan benefit utama:</p><ul><li>Support all Android version &amp; semua merk HP</li><li>Meningkatkan chance ratio aim headshot</li><li>Sensitivitas lebih stabil &amp; responsif</li><li>FPS lebih stabil, anti lag saat war</li><li>Mengurangi recoil senjata</li><li>Tanpa root, aman digunakan</li><li>Update gratis selamanya</li></ul>',
+   50000, true)
+ON CONFLICT (slug) DO UPDATE SET
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  price = EXCLUDED.price,
+  is_active = true;
+
 -- ── 0. Prasyarat: ekstensi & helper timestamp ────────────────────────────────
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
@@ -68,7 +84,7 @@ CREATE TRIGGER update_warranty_claims_updated_at BEFORE UPDATE ON warranty_claim
 
 -- ── 2. FUNGSI RPC: SUBMIT KLAIM GARANSI (dipanggil halaman /garansi) ─────────
 -- Pencocokan otomatis: nama customer + slug layanan ke tabel orders.
--- Garansi: standart=7 hari, elite=14 hari, extreme=30 hari, app-settinx=14 hari.
+-- Garansi: standart=7 hari, elite=14 hari, extreme=30 hari, module-settinx-1-1=14 hari.
 -- SET PC & ANTICHEAT LAGA tidak bisa diklaim (tidak ada di mapping).
 CREATE OR REPLACE FUNCTION submit_warranty_claim(
   p_customer_name TEXT,
@@ -106,7 +122,7 @@ BEGIN
     WHEN 'standart'   THEN 7
     WHEN 'elite'      THEN 14
     WHEN 'extreme'    THEN 30
-    WHEN 'app-settinx' THEN 14
+    WHEN 'module-settinx-1-1' THEN 14
     ELSE NULL
   END;
 
