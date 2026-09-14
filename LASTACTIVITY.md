@@ -1,6 +1,22 @@
 # LASTACTIVITY — IPAN STORE
 
-## STATUS: ✅ Link MediaFire "Ipan Module SettinX 1.1" → APK baru `ckyz6vnn9kxga6b` (lokal selesai — BELUM commit/push/deploy)
+## STATUS: ✅ Deploy duo SettinX (V1 + Module 1.1) — SUDAH commit/push/deploy, frontend & API 200
+
+### Sesi lanjutan — verifikasi katalog, garansi, pembayaran, dan fallback
+- Produk legacy `IPAN APP SettinX V1` dipertahankan terpisah dari `Ipan Module SettinX 1.1` di Order, Paket, preview, dan route order.
+- Seed/migration Supabase sekarang memastikan dua slug `app-settinx` (Rp 75.000) dan `module-settinx-1-1` (Rp 50.000) tersedia aktif dan idempotent.
+- Garansi publik/admin dan FAQ mencakup kedua produk SettinX; DOKU juga mengenali kedua slug.
+- Fallback katalog tetap menampilkan produk statis yang belum ada di tabel Supabase, sehingga produk lama tidak hilang saat tabel belum disinkronkan.
+- `npm run build` ✅. `git diff --check` ✅. `npm run lint` masih gagal karena error lint lama di banyak file (terutama `no-explicit-any`), tidak berasal dari perubahan sesi ini.
+- **✅ SUDAH commit `606c061` + push `origin/main` + deploy** (VPS `git pull` FF `f93d40e..606c061`, `dist` baru di-SCP + `docker compose up --build -d`, `server/.env` VPS update link APK baru + `pm2 restart ipanstore-backend`).
+- Verifikasi live: `https://ipanstore.id` → 200, `https://ipanstore.id/order` → 200, `https://api.ipanstore.id/api/health` → 200; backend VPS `/api/health` lokal → 200.
+
+### Sesi terbaru — sinkronisasi copywriting Module SettinX 1.1
+- Popup, kartu katalog, section produk, paket, order, FAQ, testimoni, dan seed database memakai referensi benefit: support all Android version & semua merk HP; meningkatkan chance ratio aim headshot; sensitivitas lebih stabil & responsif; FPS lebih stabil anti lag saat war; mengurangi recoil senjata; tanpa root, aman digunakan; update gratis selamanya.
+- Harga Module SettinX 1.1 disinkronkan menjadi Rp 50.000 pada frontend dan seed data.
+- Link order utama memakai slug `module-settinx-1-1`.
+- `npm run build` sukses. Warning hanya ukuran chunk Vite >500 kB.
+- BELUM commit/push/deploy.
 
 ## PERUBAHAN SESI INI (ganti link MediaFire Module APK — ⏳ siap commit/push)
 
@@ -279,6 +295,7 @@
 
 | Waktu | Aktivitas |
 |---|---|
+| 2026-09-14 | ✅ Deploy duo SettinX V1 + Module 1.1 (commit 606c061 push+deploy: git pull FF f93d40e..606c061, dist baru di-SCP + rebuild Docker tanpa cache, server/.env VPS update link APK ckyz6vnn9kxga6b + pm2 restart; frontend, /order & API 200). |
 | 2026-09-14 | ⏳ Ganti link MediaFire "Ipan Module SettinX 1.1" → APK baru (`ckyz6vnn9kxga6b`) di `server/.env`, `server/index.js:380` (fallback), `server/.env.example`. Alur double-confirm KlikQris diverifikasi utuh (email hanya setelah status SUCCESS/PAID terkonfirmasi ke API). `node --check` OK. BELUM commit/push/deploy — menunggu konfirmasi user. |
 | 2026-09-14 | ✅ opencode.json: tambah `klt/gpt-5.6-luna` ("Kelontong GPT-5.6 Luna (via 9Router)" + variants low/medium/high/xhigh) dari `D:\PROJECT MODULE IPAN SETTINX ANDROID\opencode.json` ke `provider.9router.models` — hanya 1 entri, lainnya tidak disentuh. JSON valid, 255→256 models. File gitignored (tanpa commit/deploy). |
 | 2026-09-13 | ✅ Deploy teks email Module → .apk (commit f93d40e push+deploy: git pull FF, pm2 restart; API 200, tanpa rebuild frontend). |
