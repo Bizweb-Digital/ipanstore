@@ -1,6 +1,29 @@
 # LASTACTIVITY — IPAN STORE
 
-## STATUS: ✅ DEPLOYED — fix kartu ANTI CHEAT hilang + CTA module settinx mobile terpisah (commit 052f4f5, asset index-Bl3s73xr.js)
+## STATUS: ✅ DEPLOYED — fix ANTI CHEAT desktop kosong (kartu tunggal skip stack) + CTA mobile module settinx (commit d8f8748, asset index-C5d-lcp3.js)
+
+### Sesi — perbaikan setelah user laporkan "masih sama" (deploy 052f4f5 tidak efektif)
+
+**Kesalahan sesi sebelumnya (diakui & dikoreksi):**
+- Fix CTA mobile **belum pernah tertulis ke file** saat commit 052f4f5 (commit hanya berisi 1 file ScrollStackCards.tsx) — deploy kemarin hanya membawa fix cleanup, CTA tidak berubah.
+- Fix cleanup kemarin juga **bukan root cause** masalah ANTI CHEAT.
+
+**1. ANTI CHEAT kosong di /paket (DESKTOP ONLY) — root cause sebenarnya:**
+- Tab ANTI CHEAT hanya punya **1 kartu**. Efek stack tetap jalan → `pinEnd = endTop - vh` negatif/salah untuk kartu tunggal → kartu ter-translate keluar viewport (area terlihat kosong).
+- Fix (d8f8748): di `ScrollStackCards`, jika `els.length < 2` → skip efek stack sepenuhnya, render statis (pakai `resetToStatic()` yang sudah ada).
+
+**2. CTA "Beli Ipan Module SettinX 1.1" mepet WhatsApp (MOBILE ONLY):**
+- Fix (d8f8748): tombol module `hidden sm:inline-flex` di baris utama; versi mobile dipindah ke blok `sm:hidden` terpisah dengan divider "ATAU". Desktop tidak berubah.
+- Terverifikasi `ATAU` ada di chunk `Paket-CWAy9z6D.js` (Paket adalah lazy chunk — bukan di index bundle).
+
+**Verifikasi deploy:** container serve `index-C5d-lcp3.js` ✅, live HTML https://ipanstore.id serve hash sama ✅. Bundle dicek mengandung guard `length<2` (2 match) dan `ATAU` (1 match) sebelum upload.
+
+**Catatan proses:** user mengingatkan — jangan task-kill proses browser user, jangan pakai localhost (preview server tidak bisa diakses), pakai Brave existing via CDP jika perlu debugging browser.
+
+---
+
+## Riwayat STATUS sebelumnya (diarsipkan)
+### ✅ DEPLOYED — fix kartu ANTI CHEAT hilang + CTA module settinx mobile terpisah (commit 052f4f5, asset index-Bl3s73xr.js)
 
 ### Sesi — fix 2 keluhan user pasca deploy v3
 
