@@ -1,6 +1,33 @@
 # LASTACTIVITY — IPAN STORE
 
-## STATUS: ✅ FIX UI v3 — stack cards (desktop fix + mobile grid), CTA SettinX mobile, admin/admins mobile, dialog mobile — ⏳ belum commit/push
+## STATUS: ✅ DEPLOYED ke ipanstore.id — fix stack cards mobile, dialog admin mobile, CTA SettinX wrap (commit 1404234 + dist upload manual)
+
+### Sesi — deploy fix UI v3 + temuan akar masalah "kode tidak berubah di HP"
+
+**🔴 AKAR MASALAH UTAMA (kenapa user 3× bilang "sama aja"):**
+- `Dockerfile` di server: `COPY dist /usr/share/nginx/html` — container nginx serve **dist/ lokal di server**, BUKAN hasil build dari repo.
+- `dist/` ada di `.gitignore` → `git push` + `git pull` di server **TIDAK mengubah file yang di-serve**.
+- Tidak ada CI/CD → semua fix frontend (fbb319c, aaec36c, 1404234) tidak pernah sampai ke browser user.
+- **Flow deploy yang benar untuk project ini:** `npm run build` lokal → `scp -r dist/* root@100.89.140.16:/project/website/padel/IpanStore/ipanstore/dist/` → `docker compose up -d --build` di server. (dist lama di-backup server-side: `dist.bak.2026XXXX`.)
+
+**Yang di-deploy sesi ini (semua sudah LIVE di ipanstore.id, asset `index-DZ6C0PfM.js` / `index-B_g6R7uE.css`):**
+1. **fbb319c** — stack cards: pinEnd per kartu (release sebelum keluar viewport), z-index dibalik, prop `desktopOnly` (mobile = kolom statis), section `overflow-clip` (Layanan/Paket/AppSettinx), CTA SettinX mobile wrap, dialog/alert base component mobile `inset-x-4`.
+2. **aaec36c** — dialog tambah admin inline style center (bypass CSS), AdminLayout `min-w-0 overflow-x-hidden` + body `overflow-x: hidden` di mobile.
+3. **1404234** — hardening `desktopOnly`: cleanup eksplisit (reset transform/zIndex/willChange) + listener `matchMedia` re-init saat viewport cross 1024px (mencegah "ghost stack").
+
+**Efek yang sekarang harus terlihat di mobile:**
+- /layanan tab OPTIMIZE & ANTI CHEAT → kartu layanan tampil **terpisah normal** (bukan menumpuk), heading "PRODUK UNGGULAN / IPAN APP SettinX V1" **tidak tertutup kartu**.
+- /admin/admins → dialog "Tambah Admin" **penuh di tengah layar**, form terlihat & bisa diisi, tidak bisa digeser keluar layar.
+- Desktop: tidak ada perubahan perilaku.
+
+**Verifikasi deploy:** `docker exec ipanstore grep ... index.html` → asset baru ✅; `curl https://ipanstore.id` → asset baru ✅; container `Up` ✅.
+
+**⚠️ Catatan untuk sesi berikutnya:** JANGAN PERNAH menganggap `git push` = deploy untuk project ini. Selalu build lokal + scp dist + rebuild container. Kalau user laporkan "masih sama", cek dulu hash asset di live HTML vs dist lokal.
+
+---
+
+## Riwayat STATUS sebelumnya (diarsipkan)
+### ✅ FIX UI v3 — stack cards (desktop fix + mobile grid), CTA SettinX mobile, admin/admins mobile, dialog mobile — ⏳ belum commit/push
 
 ### Sesi — fix stack cards & mobile view (approach baru, BUKAN pengulangan 3 percobaan gagal sebelumnya)
 
