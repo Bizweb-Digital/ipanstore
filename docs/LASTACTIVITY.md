@@ -18,6 +18,7 @@
 - **`@typescript-eslint/no-unused-expressions`** (1 error) — `src/pages/admin/Testimonials.tsx`: ternary statement → `if/else`.
 - **Verifikasi**: `npm run lint` ✅ 0 errors (11 warnings non-blocking: react-refresh/only-export-components + 1 exhaustive-deps). `npx tsc --noEmit` ✅. `npm run build` ✅ (warning chunk >500 kB sudah ada sebelumnya). `git diff --check` ✅.
 - **Catatan teknis**: sempat terjadi mojibake/BOM akibat `Set-Content -Encoding utf8` PowerShell; dipulihkan dari HEAD lalu perubahan lint diterapkan ulang dengan tool edit yang aman encoding. Verifikasi akhir: 0 BOM, 0 U+FFFD, `git diff --check` bersih.
+- **Deploy live** (SSH `100.89.140.16`): `git pull` → `npm install yet-another-react-lightbox` → `npm run build` → `docker compose up --build -d`. Container `ipanstore` (port 5007) rebuilt & running. Verifikasi: `https://ipanstore.id` & `/paket` HTTP 200. Commit `1821b84`.
 
 **B. Kartu "Ipan Module SettinX 1.1" di tab APP SETTINX /paket:**
 - **Permintaan user**: ganti kartu di tab APP SETTINX agar menampilkan Ipan Module SettinX 1.1 (copywriting referensi Image 2); **pertahankan IPAN APP SettinX V1** (termasuk section terpisah dengan screenshot).
