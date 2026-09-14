@@ -1,6 +1,31 @@
 # LASTACTIVITY — IPAN STORE
 
-## STATUS: ✅ Link download Module SettinX 1.1 → APK baru + logo transparent + copyright — SUDAH commit/push/deploy
+## STATUS: ✅ Link MediaFire "Ipan Module SettinX 1.1" → APK baru `ckyz6vnn9kxga6b` (lokal selesai — BELUM commit/push/deploy)
+
+## PERUBAHAN SESI INI (ganti link MediaFire Module APK — ⏳ siap commit/push)
+
+- **Lama**: `https://www.mediafire.com/file/k3dqnfplzu3n8gp/Ipan_Module_SettinX.apk/file`
+- **Baru**: `https://www.mediafire.com/file/ckyz6vnn9kxga6b/Ipan_Module_SettinX.apk/file`
+- Diubah di 3 tempat:
+  - `server/.env:52` (nilai aktif runtime, gitignored)
+  - `server/index.js:380` (fallback default, ikut deploy via git)
+  - `server/.env.example:62` (referensi)
+- Verifikasi alur utuh (tidak diubah, sudah benar):
+  - Form order → create KlikQris → webhook → **double-confirm** `isKlikQrisPaid()` ke API
+    KlikQris (`server/index.js:958`) → SUCCESS/PAID baru → update order `PAID` → kirim email
+    ke `customer_email` berisi link MediaFire baru (`server/index.js:1046-1060`).
+  - PENDING/EXPIRED/webhook palsu → email DITAHAN (`server/index.js:998,1006-1009`).
+  - Idempotent: order sudah `PAID`/`SUCCESS` skip fulfillment (`server/index.js:989`).
+  - Polling `/api/klikqris-status/:orderId` juga hanya fulfill jika API balas SUCCESS/PAID.
+- Verifikasi lokal: `node --check server/index.js` ✅ SYNTAX OK; link lama `k3dqnfplzu3n8gp`
+  sudah tidak ada di kode (hanya tersisa di LASTACTIVITY.md sebagai catatan riwayat).
+
+## PERUBAHAN SESI INI (opencode.json — tambah Luna via 9Router saja)
+
+- Sumber: `D:\PROJECT MODULE IPAN SETTINX ANDROID\opencode.json` → `provider.9router.models["klt/gpt-5.6-luna"]`.
+- Disisip setelah `xKiro/openai/gpt-5.6-luna` (`opencode.json:370`), isi persis sumber: `name "Kelontong GPT-5.6 Luna (via 9Router)"`, `tool_call:true`, modalities text+image→text, variants low/medium/high/xhigh.
+- Yang lain TIDAK disentuh (provider/baseURL/apiKey, `xKiro/...`, `kelontongai`, model/top tetap).
+- Verifikasi: JSON valid (`ConvertFrom-Json` OK), models 9router 255→256. `opencode.json` masuk `.gitignore:39` → tanpa commit/push/deploy.
 
 ## PERUBAHAN SESI INI (link Module APK + deploy — ✅ SUDAH commit/push/deploy)
 
@@ -254,6 +279,8 @@
 
 | Waktu | Aktivitas |
 |---|---|
+| 2026-09-14 | ⏳ Ganti link MediaFire "Ipan Module SettinX 1.1" → APK baru (`ckyz6vnn9kxga6b`) di `server/.env`, `server/index.js:380` (fallback), `server/.env.example`. Alur double-confirm KlikQris diverifikasi utuh (email hanya setelah status SUCCESS/PAID terkonfirmasi ke API). `node --check` OK. BELUM commit/push/deploy — menunggu konfirmasi user. |
+| 2026-09-14 | ✅ opencode.json: tambah `klt/gpt-5.6-luna` ("Kelontong GPT-5.6 Luna (via 9Router)" + variants low/medium/high/xhigh) dari `D:\PROJECT MODULE IPAN SETTINX ANDROID\opencode.json` ke `provider.9router.models` — hanya 1 entri, lainnya tidak disentuh. JSON valid, 255→256 models. File gitignored (tanpa commit/deploy). |
 | 2026-09-13 | ✅ Deploy teks email Module → .apk (commit f93d40e push+deploy: git pull FF, pm2 restart; API 200, tanpa rebuild frontend). |
 | 2026-09-13 | ✅ Deploy link Module SettinX 1.1 → APK baru (commit 1f5bb5e push+deploy: git pull FF, env VPS update, pm2 restart, dist baru di-SCP + rebuild Docker; frontend & API 200). |
 | 2026-09-13 | Logo transparent dipakai di Navbar & Footer (268→288×114), teks copyright diperluas, `npm run build` sukses, semua proses emulator Android (emulator/qemu/adb/netsimd/crashpad) dimatikan paksa. |
