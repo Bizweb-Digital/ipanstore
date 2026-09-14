@@ -1,4 +1,4 @@
-import { Children, isValidElement, useLayoutEffect, useRef, useCallback, type ReactNode } from "react";
+import { Children, isValidElement, useLayoutEffect, useRef, useCallback, useState, type ReactNode } from "react";
 
 /**
  * ScrollStackCards — kartu MENUMPUK halus saat halaman di-scroll ke bawah,
@@ -55,6 +55,7 @@ const ScrollStackCards = ({
   const curScaleRef = useRef<number[]>([]);
   const layoutTopsRef = useRef<number[]>([]);
   const endTopRef = useRef(0);
+  const [bpTick, setBpTick] = useState(0);
 
   const parsePercentage = useCallback((value: string | number, containerHeight: number) => {
     if (typeof value === "string" && value.includes("%")) {
@@ -186,13 +187,24 @@ const ScrollStackCards = ({
 
     // Mode desktopOnly: di viewport < lg (1024px) render sebagai kolom statis
     // — tanpa kalkulasi scroll, tanpa transform, tanpa pin.
-    const isDesktopViewport = () => window.matchMedia("(min-width: 1024px)").matches;
-    if (desktopOnly && !isDesktopViewport()) {
+    const mql = window.matchMedia("(min-width: 1024px)");
+    const resetToStatic = () => {
       const staticCards = Array.from(scroller.querySelectorAll("[data-stack-card]")) as HTMLElement[];
       staticCards.forEach((card, i) => {
-        if (i < staticCards.length - 1) card.style.marginBottom = "24px";
+        card.style.transform = "";
+        card.style.zIndex = "";
+        card.style.willChange = "auto";
+        card.style.marginBottom = i < staticCards.length - 1 ? "24px" : "";
       });
-      return;
+      cardsRef.current = [];
+    };
+
+    if (desktopOnly && !mql.matches) {
+      resetToStatic();
+      // Kalau viewport berubah jadi desktop, muat ulang efek via state flag.
+      const onChange = (e: MediaQueryListEvent) => { if (e.matches) setBpTick(t => t + 1); };
+      mql.addEventListener("change", onChange);
+      return () => mql.removeEventListener("change", onChange);
     }
 
     const els = Array.from(scroller.querySelectorAll("[data-stack-card]")) as HTMLElement[];
@@ -268,7 +280,7 @@ const ScrollStackCards = ({
       stop();
       cardsRef.current = [];
     };
-  }, [itemDistance, desktopOnly, start, stop]);
+  }, [itemDistance, desktopOnly, bpTick, start, stop]);
 
   return (
     <div ref={scrollerRef} className={`scroll-stack-cards relative w-full ${className}`.trim()}>
