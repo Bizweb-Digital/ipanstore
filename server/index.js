@@ -377,7 +377,7 @@ const SETTINX_DOWNLOAD_URL =
 // Link MediaFire produk "Ipan Module SettinX 1.1" (dari .env, tidak di-hardcode).
 const SETTINX_MODULE_DOWNLOAD_URL =
   process.env.SETTINX_MODULE_1_1_DOWNLOAD_URL ||
-  "https://www.mediafire.com/file/k3dqnfplzu3n8gp/Ipan_Module_SettinX.apk/file";
+  "https://www.mediafire.com/file/ckyz6vnn9kxga6b/Ipan_Module_SettinX.apk/file";
 
 const emailTransporter = SMTP_USER
   ? nodemailer.createTransport({
