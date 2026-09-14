@@ -244,8 +244,8 @@ const Layanan = () => {
         </Reveal>
       </section>
 
-      {/* Services — kartu MENUMPUK halus saat scroll (tanpa getaran) */}
-      <section className="relative pb-24 min-h-[50vh]">
+      {/* Services — kartu MENUMPUK halus saat scroll (desktop), kolom statis di mobile */}
+      <section className="relative pb-24 min-h-[50vh] overflow-clip">
         <PageBackground opacity={0.15} />
             <div className="container mx-auto px-4 relative z-10">
               {activeTab === "APP SETTINX" ? (
@@ -263,7 +263,7 @@ const Layanan = () => {
                           Modul & paket tambahan dari tim IPAN STORE.
                         </p>
                       </Reveal>
-                      <ScrollStackCards itemDistance={70} itemStackDistance={20} baseScale={0.93} itemScale={0.028}>
+                      <ScrollStackCards desktopOnly itemDistance={70} itemStackDistance={20} baseScale={0.93} itemScale={0.028}>
                         {settinxExtras.filter((s) => s.slug !== "app-settinx").map((s) => (
                           <div
                             key={s.id}
@@ -336,7 +336,7 @@ const Layanan = () => {
                 </div>
               ) : (
                 <div key={activeTab} className="max-w-3xl mx-auto">
-                  <ScrollStackCards itemDistance={70} itemStackDistance={20} baseScale={0.93} itemScale={0.028}>
+                   <ScrollStackCards desktopOnly itemDistance={70} itemStackDistance={20} baseScale={0.93} itemScale={0.028}>
                     {filteredServices.map((s) => (
                       <div key={s.id} className="gaming-card p-6 md:p-8 group">
                     <div className="flex items-center justify-between mb-6">

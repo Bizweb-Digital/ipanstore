@@ -28,6 +28,12 @@ interface ScrollStackCardsProps {
   baseScale?: number;
   /** Margin bawah antar kartu sebelum menumpuk (px). */
   itemDistance?: number;
+  /**
+   * Bila true: efek stack HANYA aktif di desktop (>= lg / 1024px).
+   * Di mobile/tablet kecil, children dirender sebagai kolom statis biasa
+   * (tanpa kalkulasi scroll) — menghindari bug posisi & jitter di layar kecil.
+   */
+  desktopOnly?: boolean;
 }
 
 const ScrollStackCards = ({
@@ -38,6 +44,7 @@ const ScrollStackCards = ({
   itemScale = 0.03,
   baseScale = 0.92,
   itemDistance = 60,
+  desktopOnly = false,
 }: ScrollStackCardsProps) => {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const cardsRef = useRef<HTMLElement[]>([]);
@@ -70,7 +77,9 @@ const ScrollStackCards = ({
     const stackPosPx = parsePercentage(stackPosition, vh);
 
     const endTop = endTopRef.current;
-    const pinEnd = endTop - vh / 2;
+    // Release stack SEBELUM kartu terakhir keluar viewport — agar saat user
+    // scroll terus ke bawah, tumpukan kartu TIDAK menutupi section berikutnya.
+    const pinEndBase = endTop - vh;
 
     return cards.map((card, i) => {
       if (!card) return { translateY: 0, scale: 1 };
@@ -89,6 +98,9 @@ const ScrollStackCards = ({
       const scale = 1 - eased * (1 - targetScale);
 
       // Pin via translateY.
+      // Setiap kartu punya pinEnd sendiri yang lebih awal dari kartu di bawahnya,
+      // sehingga SEMUA kartu release bersama sebelum stack keluar section.
+      const pinEnd = pinEndBase - itemStackDistance * (cards.length - 1 - i);
       let translateY = 0;
       if (scrollTop >= pinStart && scrollTop <= pinEnd) {
         translateY = scrollTop - cardTop + stackPosPx + itemStackDistance * i;
@@ -172,6 +184,17 @@ const ScrollStackCards = ({
     const scroller = scrollerRef.current;
     if (!scroller) return;
 
+    // Mode desktopOnly: di viewport < lg (1024px) render sebagai kolom statis
+    // — tanpa kalkulasi scroll, tanpa transform, tanpa pin.
+    const isDesktopViewport = () => window.matchMedia("(min-width: 1024px)").matches;
+    if (desktopOnly && !isDesktopViewport()) {
+      const staticCards = Array.from(scroller.querySelectorAll("[data-stack-card]")) as HTMLElement[];
+      staticCards.forEach((card, i) => {
+        if (i < staticCards.length - 1) card.style.marginBottom = "24px";
+      });
+      return;
+    }
+
     const els = Array.from(scroller.querySelectorAll("[data-stack-card]")) as HTMLElement[];
     cardsRef.current = els;
     curYRef.current = els.map(() => 0);
@@ -199,6 +222,10 @@ const ScrollStackCards = ({
       card.style.transformOrigin = "top center";
       card.style.backfaceVisibility = "hidden";
       card.style.transform = "translateZ(0)";
+      // Kartu TERATAS (i=0) harus selalu di depan — kalau z-index naik ke
+      // bawah, kartu bawah yang masih pinned justru menimpa kartu atas &
+      // konten section berikutnya.
+      card.style.zIndex = String(els.length - i);
     });
 
     const onScroll = () => start();
@@ -241,7 +268,7 @@ const ScrollStackCards = ({
       stop();
       cardsRef.current = [];
     };
-  }, [itemDistance, start, stop]);
+  }, [itemDistance, desktopOnly, start, stop]);
 
   return (
     <div ref={scrollerRef} className={`scroll-stack-cards relative w-full ${className}`.trim()}>

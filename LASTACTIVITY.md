@@ -1,6 +1,63 @@
 # LASTACTIVITY — IPAN STORE
 
-## STATUS: ✅ Deploy duo SettinX (V1 + Module 1.1) — SUDAH commit/push/deploy, frontend & API 200
+## STATUS: ✅ FIX UI v3 — stack cards (desktop fix + mobile grid), CTA SettinX mobile, admin/admins mobile, dialog mobile — ⏳ belum commit/push
+
+### Sesi — fix stack cards & mobile view (approach baru, BUKAN pengulangan 3 percobaan gagal sebelumnya)
+
+**1. Bug stack cards melewati batas & menutupi section bawah (Layanan/Paket/App Settinx, desktop):**
+- Akar: (a) `pinEnd` dihitung dari satu titik (`endTop - vh/2`) sehingga semua kartu release terlambat & masih pinned saat section berikutnya masuk; (b) z-index naik ke bawah (`zIndex = i`) → kartu bawah yang masih pinned menimpa kartu atas; (c) `<section>` pembungkus tanpa `overflow` clip → kartu pinned bocor keluar section.
+- Fix `src/components/effects/ScrollStackCards.tsx`:
+  - `pinEnd` sekarang **per kartu** (`pinEndBase - itemStackDistance * (n-1-i)`) dengan basis `endTop - vh` → semua kartu release bersama SEBELUM stack keluar viewport.
+  - z-index dibalik (`cards.length - i`) → kartu teratas (i=0) selalu di depan.
+  - Prop baru `desktopOnly` (default `false`): bila aktif & viewport < lg (1024px), children dirender kolom statis (margin-bottom 24px) TANPA kalkulasi/animasi scroll.
+- Fix halaman: `Layanan.tsx` (2× ScrollStackCards), `Paket.tsx`, `AppSettinxSection.tsx` → semua pakai `desktopOnly` + section `overflow-clip`. `Index.tsx` (Beranda) TIDAK disentuh.
+
+**2. Teks "Beli & Daftarkan Akun Sekarang" kurang pas (mobile only):**
+- `AppSettinxSection.tsx`: CTA `whitespace-normal sm:whitespace-nowrap text-center leading-snug px-5 sm:px-8` → mobile teks wrap rapi 2 baris, ≥sm tetap 1 baris seperti sebelumnya. Desktop tidak berubah.
+
+**3. Admin/admins mobile (screenshot user): dialog & tabel terpotong keluar layar:**
+- `src/pages/admin/Admins.tsx` (mobile only, desktop tidak berubah):
+  - Header `flex-wrap gap-3` + judul `text-2xl lg:text-3xl` → tombol "Tambah Admin" tidak terdorong keluar layar.
+  - Tabel `overflow-hidden` → `overflow-x-auto` + `min-w-[520px]` → bisa di-scroll horizontal di mobile.
+  - Dialog tambah admin & AlertDialog hapus → `w-[calc(100vw-2rem)] max-w-lg max-h-[85vh] overflow-y-auto` → selalu muat di layar mobile.
+
+**4. Dialog/AlertDialog masih terpotong di mobile (screenshot ke-2 user — `left-[50%]` di dalam page container ikut geser saat body scroll horizontal):**
+- Akar: `DialogContent`/`AlertDialogContent` memakai `fixed left-[50%] translate-x-[-50%] w-full max-w-lg` → di mobile lebar dialog = 100vw tapi `left-50%` dihitung dari lebar page container yang bisa melar karena tabel/elemen lain, sehingga dialog keluar layar.
+- Fix `src/components/ui/dialog.tsx` & `src/components/ui/alert-dialog.tsx`:
+  - Mobile: `inset-x-4 top-[50%] max-h-[85dvh] translate-y-[-50%] overflow-y-auto rounded-lg` (tanpa `left-[50%]`/`translate-x`).
+  - ≥sm: `sm:left-[50%] sm:right-auto sm:w-full sm:max-w-lg sm:translate-x-[-50%]` → perilaku desktop persis sama.
+- `AdminLayout.tsx` tidak disentuh.
+
+**Verifikasi:** `npm run lint` ✅ 0 error (11 warning lama `react-refresh` pre-existing); `npm run build` ✅ sukses (warning chunk >500kB pre-existing). BELUM commit/push/deploy — menunggu konfirmasi user.
+
+---
+
+## Riwayat STATUS sebelumnya (diarsipkan)
+### ↩️ REVERTED — semua percobaan fix scroll stack cards dibatalkan, kode kembali ke kondisi awal (bersih, sesuai commit terakhir)
+
+### Sesi — percobaan fix tabrakan stack cards vs heading SettinX (DIBATALKAN)
+- Masalah awal: di /layanan tab OPTIMIZE, tumpukan ScrollStackCards menutupi heading "PRODUK UNGGULAN / IPAN APP SettinX V1" saat scroll.
+- 3 percobaan fix (endPadding, releaseAt, per-card pin release) semuanya gagal/memperburuk tampilan menurut user.
+- Sesuai permintaan user: `git checkout` pada `src/components/effects/ScrollStackCards.tsx` & `src/pages/Layanan.tsx` → kode kembali 100% ke kondisi awal. Tidak ada perubahan tersisa selain file ini.
+- Pelajaran: mekanisme pin global ScrollStackCards sensitif; fix berikutnya perlu verifikasi visual langsung di browser sebelum diserahkan ke user.
+
+### Sesi — fix v2 (perbaikan dari v1 yang belum cukup)
+- v1 (endPadding 420) ternyata belum cukup: pin dilepas saat end-marker di TENGAH viewport (`pinEnd = endTop - vh/2`), jadi kartu masih ter-pin menutupi heading SettinX.
+- Fix v2:
+  - `ScrollStackCards.tsx`: tambah prop opsional `releaseAt` (default `"50%"` → Index/Paket/AppSettinxSection TIDAK berubah). `pinEnd = endTop - parsePercentage(releaseAt, vh)` — pin sekarang bisa dilepas lebih awal.
+  - `Layanan.tsx` HANYA tab OPTIMIZE: `releaseAt="88%"` + `endPadding=520` → pin dilepas saat end-marker di 88% viewport; heading "PRODUK UNGGULAN / IPAN APP SettinX V1" masih ~415px di bawah layar saat release, sehingga saat heading muncul tumpukan sudah bergulir naik (hasil visual sesuai target user: heading bersih di bawah stack, tidak tertutup).
+- Verifikasi: `tsc --noEmit` lolos. BELUM git commit/push (menunggu konfirmasi).
+
+### Sesi — perbaikan overlap ScrollStackCards di page Layanan (khusus tab OPTIMIZE)
+- Masalah: tumpukan kartu layanan menabrak/menutupi teks "PRODUK UNGGULAN / IPAN APP SettinX V1" (AppSettinxSection) saat discroll.
+- Akar masalah: semua kartu release bersamaan saat end-marker mencapai tengah viewport; sisa translateY kartu terakhir masih menutupi section berikutnya karena ruang kosong di bawah stack terlalu kecil.
+- Fix:
+  - `src/components/effects/ScrollStackCards.tsx`: tambah prop opsional `endPadding` (default `0` → perilaku Index/Paket/AppSettinxSection TIDAK berubah). End-marker kini diberi tinggi `1 + endPadding` px sehingga stack punya ruang release sebelum section berikutnya masuk viewport.
+  - `src/pages/Layanan.tsx`: HANYA tab OPTIMIZE → `itemDistance` 70→100 dan `endPadding={420}`; tab lain & halaman lain tidak disentuh.
+- Verifikasi: `tsc --noEmit` lolos, `npm run build` sukses. Browser tool timeout (dev server tidak merespons tool) — user diminta cek visual di localhost:8080/layanan.
+- BELUM git commit/push (menunggu konfirmasi user sesuai aturan).
+
+---
 
 ### Sesi lanjutan — verifikasi katalog, garansi, pembayaran, dan fallback
 - Produk legacy `IPAN APP SettinX V1` dipertahankan terpisah dari `Ipan Module SettinX 1.1` di Order, Paket, preview, dan route order.

@@ -76,7 +76,7 @@ const AppSettinxSection = ({ compact = false }: { compact?: boolean }) => {
 
         {/* Kartu fitur — MENUMPUK halus saat scroll ke bawah (tanpa getaran). */}
         <div className="max-w-3xl mx-auto">
-          <ScrollStackCards itemDistance={48} itemStackDistance={18} baseScale={0.94} itemScale={0.024}>
+          <ScrollStackCards desktopOnly itemDistance={48} itemStackDistance={18} baseScale={0.94} itemScale={0.024}>
             {appSettinxFeatures.map((f) => (
               <div key={f.name} className="gaming-card p-6 lg:p-8">
                 <div className="flex items-center gap-3 mb-3">
@@ -148,11 +148,11 @@ const AppSettinxSection = ({ compact = false }: { compact?: boolean }) => {
                   asChild
                   variant="default"
                   size="lg"
-                  className="w-full sm:w-auto sm:min-w-[300px]"
+                  className="w-full sm:w-auto sm:min-w-[300px] whitespace-normal sm:whitespace-nowrap text-center leading-snug px-5 sm:px-8"
                 >
                   <a href="/order?paket=app-settinx">
                     Beli &amp; Daftarkan Akun Sekarang
-                    <ArrowRight className="ml-2 h-4 w-4" />
+                    <ArrowRight className="ml-2 h-4 w-4 shrink-0" />
                   </a>
                 </Button>
               </div>
@@ -181,7 +181,7 @@ const AppSettinxSection = ({ compact = false }: { compact?: boolean }) => {
   }
 
   return (
-    <section className="relative z-10 py-24 overflow-hidden border-t border-white/16">
+    <section className="relative z-10 py-24 overflow-clip border-t border-white/16">
       <div className="container mx-auto px-4">
         {content}
       </div>
