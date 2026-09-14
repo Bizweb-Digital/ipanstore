@@ -176,15 +176,15 @@ export default function AdminAdmins() {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+        {/* Header — flex-wrap agar tombol tidak terdorong keluar layar di mobile */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-3xl font-bold font-display">Admins</h1>
+            <h1 className="text-2xl lg:text-3xl font-bold font-display">Admins</h1>
             <p className="text-muted-foreground mt-1">
               Kelola whitelist admin IPAN STORE
             </p>
           </div>
-          <Button onClick={() => setShowAdd(true)}>
+          <Button onClick={() => setShowAdd(true)} className="shrink-0">
             <UserPlus className="w-4 h-4 mr-2" />
             Tambah Admin
           </Button>
@@ -222,8 +222,8 @@ export default function AdminAdmins() {
                 <p>Belum ada admin terdaftar</p>
               </div>
             ) : (
-              <div className="rounded-lg border border-white/10 overflow-hidden">
-                <Table>
+              <div className="rounded-lg border border-white/10 overflow-x-auto">
+                <Table className="min-w-[520px]">
                   <TableHeader>
                     <TableRow className="border-white/10 hover:bg-transparent">
                       <TableHead>Email</TableHead>
@@ -291,9 +291,9 @@ export default function AdminAdmins() {
           </CardContent>
         </Card>
 
-        {/* Dialog tambah admin */}
+        {/* Dialog tambah admin — lebar dibatasi agar muat di layar mobile */}
         <Dialog open={showAdd} onOpenChange={setShowAdd}>
-          <DialogContent>
+          <DialogContent className="w-[calc(100vw-2rem)] max-w-lg max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Tambah Admin Baru</DialogTitle>
               <DialogDescription>
@@ -364,7 +364,7 @@ export default function AdminAdmins() {
 
         {/* AlertDialog konfirmasi hapus */}
         <AlertDialog open={!!deleting} onOpenChange={(open) => !open && setDeleting(null)}>
-          <AlertDialogContent>
+          <AlertDialogContent className="w-[calc(100vw-2rem)] max-w-lg">
             <AlertDialogHeader>
               <AlertDialogTitle>Hapus admin?</AlertDialogTitle>
               <AlertDialogDescription>

@@ -331,7 +331,7 @@ const Paket = () => {
       </section>
 
           {/* Package Cards / Settinx Panel */}
-          <section className="relative pb-24 min-h-[50vh]">
+          <section className="relative pb-24 min-h-[50vh] overflow-clip">
             <PageBackground opacity={0.15} />
             <div className="container mx-auto px-4 relative z-10">
               {activeTab === "APP SETTINX" ? (
@@ -357,7 +357,7 @@ const Paket = () => {
                 </div>
               ) : (
                 <div key={activeTab} className="max-w-3xl mx-auto">
-                  <ScrollStackCards itemDistance={70} itemStackDistance={20} baseScale={0.93} itemScale={0.028}>
+                  <ScrollStackCards desktopOnly itemDistance={70} itemStackDistance={20} baseScale={0.93} itemScale={0.028}>
                     {displayPackages.map((p) => {
                       const highlighted = Boolean(p.highlight);
                       return (
