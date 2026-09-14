@@ -1,6 +1,23 @@
 # LASTACTIVITY — IPAN STORE
 
-## STATUS: ✅ DEPLOYED ke ipanstore.id — fix stack cards mobile, dialog admin mobile, CTA SettinX wrap (commit 1404234 + dist upload manual)
+## STATUS: ✅ DEPLOYED — fix kartu ANTI CHEAT hilang + CTA module settinx mobile terpisah (commit 052f4f5, asset index-Bl3s73xr.js)
+
+### Sesi — fix 2 keluhan user pasca deploy v3
+
+**1. Kartu ANTI CHEAT hilang di /paket (desktop):**
+- Gejala: klik tab ANTI CHEAT → area card kosong, hanya section "Proteksi Fair Play" yang tampil.
+- Akar: `ScrollStackCards` tidak mereset `transform`/`zIndex`/`marginBottom` di cleanup unmount. Sisa state dari tab sebelumnya (stack) menempel di kartu tab baru → kartu "tersembunyi" di posisi stack.
+- Fix (052f4f5): cleanup unmount sekarang reset `transform`, `zIndex`, `willChange`, `marginBottom` ke default untuk semua kartu.
+
+**2. Mobile /paket tab OPTIMIZE — tombol "Beli Ipan Module SettinX 1.1" mepet "Pilih Paket via WhatsApp":**
+- Fix: di mobile, tombol module dipisah ke container terpisah di bawah tombol WhatsApp (divider + label "ATAU"). Desktop tidak berubah (tetap sejajar).
+
+**Verifikasi deploy:** live HTML serve `index-Bl3s73xr.js` ✅, container `Up` ✅.
+
+---
+
+## Riwayat STATUS sebelumnya (diarsipkan)
+### ✅ DEPLOYED ke ipanstore.id — fix stack cards mobile, dialog admin mobile, CTA SettinX wrap (commit 1404234 + dist upload manual)
 
 ### Sesi — deploy fix UI v3 + temuan akar masalah "kode tidak berubah di HP"
 
