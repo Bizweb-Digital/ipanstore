@@ -38,8 +38,8 @@ export function useTestimonials(serviceId?: string) {
         const { data, error } = await query;
         if (error) throw error;
         setTestimonials(data || []);
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
         console.error('Failed to fetch testimonials:', err);
       } finally {
         setLoading(false);

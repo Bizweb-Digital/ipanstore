@@ -178,7 +178,7 @@ export default function AdminGaransi() {
         );
       }
       setClaims(rows);
-    } catch (e: any) {
+    } catch (e) {
       console.error("Failed to fetch claims", e);
       toast.error("Gagal memuat klaim garansi: " + (e?.message || ""));
     } finally {
@@ -214,7 +214,7 @@ export default function AdminGaransi() {
       toast.success(`Status diubah ke ${next}`);
       if (selected?.id === id) setSelected({ ...selected, status: next });
       await fetchClaims();
-    } catch (e: any) {
+    } catch (e) {
       toast.error("Gagal ubah status: " + e.message);
     } finally {
       setUpdating(null);
@@ -232,7 +232,7 @@ export default function AdminGaransi() {
       if (error) throw error;
       toast.success("Catatan disimpan");
       await fetchClaims();
-    } catch (e: any) {
+    } catch (e) {
       toast.error("Gagal simpan catatan: " + e.message);
     } finally {
       setSavingNotes(false);
@@ -271,7 +271,7 @@ export default function AdminGaransi() {
       setShowManual(false);
       setManualForm({ customer_name: "", service_slug: "", complaint: "", order_date_hint: "", invoice_number: "", status: "PENDING", admin_notes: "" });
       await fetchClaims();
-    } catch (e: any) {
+    } catch (e) {
       toast.error("Gagal membuat klaim: " + e.message);
     } finally {
       setManualSaving(false);

@@ -140,7 +140,7 @@ const TestimoniPage = () => {
         text: "Terima kasih! Testimoni kamu terkirim dan akan tampil setelah ditinjau admin.",
       });
       setForm({ name: "", message: "", rating: 5 });
-    } catch (err: any) {
+    } catch (err) {
       setSubmitMsg({
         ok: false,
         text: err?.message?.includes("permission") || err?.message?.includes("policy")

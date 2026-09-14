@@ -66,7 +66,7 @@ export default function AdminPromos() {
         .order('created_at', { ascending: false });
       if (error) throw error;
       setPromos((data as PromoCode[]) || []);
-    } catch (err: any) {
+    } catch (err) {
       setError(err.message);
       console.error('Failed to fetch promos:', err);
     } finally {
@@ -135,10 +135,14 @@ export default function AdminPromos() {
         { code, type: editing.type, value: editing.value }
       );
 
-      editing.id ? toastPromo.updated() : toastPromo.created();
+      if (editing.id) {
+        toastPromo.updated();
+      } else {
+        toastPromo.created();
+      }
       handleClose();
       await fetchPromos();
-    } catch (err: any) {
+    } catch (err) {
       console.error('Failed to save promo:', err);
       showErrorToast('Gagal menyimpan promo', err.message);
     } finally {
@@ -154,7 +158,7 @@ export default function AdminPromos() {
       await logAudit('promo.delete', id);
       toastPromo.deleted();
       await fetchPromos();
-    } catch (err: any) {
+    } catch (err) {
       console.error('Failed to delete promo:', err);
       showErrorToast('Gagal menghapus promo', err.message);
     }
@@ -169,7 +173,7 @@ export default function AdminPromos() {
       if (error) throw error;
       await logAudit('promo.update', promo.id, { is_active: !promo.is_active });
       await fetchPromos();
-    } catch (err: any) {
+    } catch (err) {
       console.error('Failed to toggle promo:', err);
       showErrorToast('Gagal mengubah status promo', err.message);
     }

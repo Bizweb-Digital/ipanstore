@@ -9,17 +9,17 @@ interface BlurTextProps {
   direction?: 'top' | 'bottom';
   threshold?: number;
   rootMargin?: string;
-  animationFrom?: Record<string, any>;
-  animationTo?: Record<string, any>[];
+  animationFrom?: Record<string, unknown>;
+  animationTo?: Record<string, unknown>[];
   easing?: (t: number) => number;
   onAnimationComplete?: () => void;
   stepDuration?: number;
 }
 
-const buildKeyframes = (from: Record<string, any>, steps: Record<string, any>[]) => {
+const buildKeyframes = (from: Record<string, unknown>, steps: Record<string, unknown>[]) => {
   const keys = new Set([...Object.keys(from), ...steps.flatMap(s => Object.keys(s))]);
 
-  const keyframes: Record<string, any[]> = {};
+  const keyframes: Record<string, unknown[]> = {};
   keys.forEach(k => {
     keyframes[k] = [from[k], ...steps.map(s => s[k])];
   });
@@ -89,7 +89,7 @@ const BlurText = ({
       {elements.map((segment, index) => {
         const animateKeyframes = buildKeyframes(fromSnapshot, toSnapshots);
 
-        const spanTransition: any = {
+        const spanTransition: Record<string, unknown> = {
           duration: totalDuration,
           times,
           delay: (index * delay) / 1000

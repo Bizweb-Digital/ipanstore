@@ -59,7 +59,7 @@ export default function AdminFaqs() {
 
       if (error) throw error;
       setFaqs(data || []);
-    } catch (err: any) {
+    } catch (err) {
       setError(err.message);
       console.error('Failed to fetch FAQs:', err);
     } finally {
@@ -140,10 +140,14 @@ export default function AdminFaqs() {
         { question: editing.question, is_active: editing.is_active }
       );
 
-      editing.id ? toastFaq.updated() : toastFaq.created();
+      if (editing.id) {
+        toastFaq.updated();
+      } else {
+        toastFaq.created();
+      }
       handleCloseDialog();
       await fetchFaqs();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to save FAQ:', error);
       showErrorToast('Gagal menyimpan FAQ', error.message);
     } finally {
@@ -162,7 +166,7 @@ export default function AdminFaqs() {
       await logAudit('faq.delete', id);
       toastFaq.deleted();
       await fetchFaqs();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to delete FAQ:', error);
       showErrorToast('Gagal menghapus FAQ', error.message);
     }

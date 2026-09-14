@@ -69,7 +69,7 @@ export default function Garansi() {
         return;
       }
       setResult(res);
-    } catch (e: any) {
+    } catch (e) {
       setError(e?.message || "Gagal mengajukan klaim. Coba lagi.");
     } finally {
       setLoading(false);

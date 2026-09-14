@@ -7,7 +7,27 @@
 
 - **Repo**: `git@github.com-bizwebdigital:Bizweb-Digital/ipanstore.git` (branch `main`)
 - **Domain live**: `https://ipanstore.id` (Cloudflare Tunnel → container Docker port 5007)
-- **Update terakhir**: 29 Agustus 2026 — **E2E TEST ORDER + FIX PROMO KLIKQRIS** — Testing order SettinX V1 (form: ipan / ipanasik123@gmail.com / 088976496870) di live site: dengan promo HEMAT5 vs tanpa promo. Ditemukan bug: diskon promo tampil di UI tapi promo_code/discount_amount null di DB pada handler KlikQris. Fixed (server/index.js), deployed, verified live: order retest simpan HEMAT5/3750.
+- **Update terakhir**: 14 September 2026 — **FIX LINT BERSIH + KARTU MODULE SETTINX 1.1 + PERBAIKAN MCP** — (1) `npm run lint` yang lama gagal kini 0 error: fix react-hooks/rules-of-hooks (Layout.tsx), 34× no-explicit-any, 1× no-unused-expressions. (2) Tab APP SETTINX di /paket kini menampilkan kartu **Ipan Module SettinX 1.1** (Rp 50.000) — penyebab: slug DB `ipanmodule` ≠ slug kode `module-settinx-1-1`; di-update via Supabase. **IPAN APP SettinX V1 tetap dipertahankan.** (3) Perbaiki MCP: agent-browser zombi dibersihkan, playwright diarahkan ke Chrome agent-browser via `--executable-path`.
+
+
+### Sesi: FIX LINT + KARTU MODULE SETTINX 1.1 + PERBAIKAN MCP — 14 September 2026
+
+**A. Perbaikan `npm run lint` (yang sebelumnya 66 errors → kini 0 errors, 11 warnings non-blocking):**
+- **`react-hooks/rules-of-hooks`** (5 error) — `src/components/layout/Layout.tsx`: hapus guard SSR `if (typeof window === 'undefined') return null;` yang diletakkan sebelum hooks (app ini Vite SPA murni). **Tidak ada perubahan visual.**
+- **`@typescript-eslint/no-explicit-any`** (34 error, 12 file) — 31× `catch (err: any)` → `catch (err)`; `Login.tsx`: `(location.state as { from?: { pathname?: string } } | null)`; `Orders.tsx`: `(r.services as { name?: string } | null)`; `Dashboard.tsx`: 3 formatter Recharts → `number | string`.
+- **`@typescript-eslint/no-unused-expressions`** (1 error) — `src/pages/admin/Testimonials.tsx`: ternary statement → `if/else`.
+- **Verifikasi**: `npm run lint` ✅ 0 errors (11 warnings non-blocking: react-refresh/only-export-components + 1 exhaustive-deps). `npx tsc --noEmit` ✅. `npm run build` ✅ (warning chunk >500 kB sudah ada sebelumnya). `git diff --check` ✅.
+- **Catatan teknis**: sempat terjadi mojibake/BOM akibat `Set-Content -Encoding utf8` PowerShell; dipulihkan dari HEAD lalu perubahan lint diterapkan ulang dengan tool edit yang aman encoding. Verifikasi akhir: 0 BOM, 0 U+FFFD, `git diff --check` bersih.
+
+**B. Kartu "Ipan Module SettinX 1.1" di tab APP SETTINX /paket:**
+- **Permintaan user**: ganti kartu di tab APP SETTINX agar menampilkan Ipan Module SettinX 1.1 (copywriting referensi Image 2); **pertahankan IPAN APP SettinX V1** (termasuk section terpisah dengan screenshot).
+- **Penyebab**: produk module di DB live memakai slug `ipanmodule`, sedangkan seluruh kode (Paket filter, Order `?paket=`, Garansi, DOKU, PackagesPreview, LaunchPopup) mencari slug `module-settinx-1-1` → kartu module tak pernah muncul.
+- **Tindakan (DB live, via Supabase REST service-role)**: `UPDATE services SET slug='module-settinx-1-1' WHERE slug='ipanmodule'` (id `f4358811-a068-458b-8b53-e5f6145fd1f9`). Tidak ada perubahan file kode.
+- **Dampak terverifikasi**: tab APP SETTINX kini menampilkan **2 kartu** (Module 1.1 Rp 50.000 + V1 Rp 75.000); section terpisah V1 tidak berubah; **7 order historis** module tetap utuh (relasi via `service_id`/FK); link `?paket=module-settinx-1-1` kini ter-preselect; garansi 14 hari & DOKU sinkron. **Langsung live** (tanpa redeploy) karena /paket membaca Supabase. 0 baris `warranty_claims` terpengaruh.
+
+**C. Perbaikan MCP yang rusak:**
+- **agent-browser selalu timeout** → penyebab: proses zombi (daemon lama PID 17380 + belasan chrome agent-browser CPU tinggi + 9 profil chrome temp + file state basi `default.pid/engine/...`). Tindakan: kill semua proses zombi, hapus 9 profil temp, hapus file state basi. Server `agent-browser mcp` kini start bersih.
+- **playwright gagal start** → penyebab: `--browser chrome` tapi Chrome tak terinstal di lokasi default. Tindakan: edit `C:\Users\WINDOWS KERJA\opencode.json` → tambah `--executable-path C:\Users\WINDOWS KERJA\.agent-browser\browsers\chrome-152.0.7977.42\chrome.exe`. **Catatan**: butuh restart opencode agar MCP server reload konfigurasi.
 
 
 ### Sesi: E2E TEST ORDER SETTINX + FIX PROMO KLIKQRIS — 29 Agustus 2026

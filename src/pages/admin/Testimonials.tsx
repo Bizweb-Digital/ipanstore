@@ -67,7 +67,7 @@ export default function AdminTestimonials() {
 
       if (error) throw error;
       setTestimonials(data || []);
-    } catch (err: any) {
+    } catch (err) {
       setError(err.message);
       console.error('Failed to fetch testimonials:', err);
     } finally {
@@ -111,9 +111,13 @@ export default function AdminTestimonials() {
       await logAudit('testimonial.approval', testimonial.id, {
         is_approved: !testimonial.is_approved,
       });
-      testimonial.is_approved ? toastTestimonial.rejected() : toastTestimonial.approved();
+      if (testimonial.is_approved) {
+        toastTestimonial.rejected();
+      } else {
+        toastTestimonial.approved();
+      }
       await fetchTestimonials();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to toggle approval:', error);
       showErrorToast('Gagal mengubah status', error.message);
     }
@@ -217,7 +221,7 @@ export default function AdminTestimonials() {
         try {
           imageUrl = await uploadImage(imageFile);
           showSuccessToast({ type: 'testimonial', action: 'create', customTitle: 'Foto berhasil diupload' });
-        } catch (uploadErr: any) {
+        } catch (uploadErr) {
           showErrorToast('Gagal upload foto', uploadErr.message);
           setIsSaving(false);
           return;
@@ -251,10 +255,14 @@ export default function AdminTestimonials() {
         { name: payload.name, rating: payload.rating, is_approved: payload.is_approved, has_image: !!imageUrl }
       );
 
-      editing.id ? toastTestimonial.updated() : toastTestimonial.created();
+      if (editing.id) {
+        toastTestimonial.updated();
+      } else {
+        toastTestimonial.created();
+      }
       handleCloseDialog();
       await fetchTestimonials();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to save testimonial:', error);
       showErrorToast('Gagal menyimpan testimonial', error.message);
     } finally {
@@ -289,7 +297,7 @@ export default function AdminTestimonials() {
       toastTestimonial.deleted();
       setDeletingId(null);
       await fetchTestimonials();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to delete testimonial:', error);
       showErrorToast('Gagal menghapus testimonial', error.message);
     } finally {

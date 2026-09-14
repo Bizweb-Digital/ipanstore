@@ -55,7 +55,7 @@ export default function AdminAuditLog() {
       setError(null);
       const data = await fetchAuditLogs(500);
       setLogs(data);
-    } catch (err: any) {
+    } catch (err) {
       setError(err.message || 'Gagal memuat audit log');
     } finally {
       setLoading(false);
