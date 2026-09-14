@@ -278,6 +278,14 @@ const ScrollStackCards = ({
       resizeObserver.disconnect();
       io.disconnect();
       stop();
+      // Reset semua state visual agar tidak ada sisa transform saat tab
+      // berganti / komponen unmount (mencegah kartu "hilang" / ghost stack).
+      els.forEach(card => {
+        card.style.transform = "";
+        card.style.zIndex = "";
+        card.style.willChange = "auto";
+        card.style.marginBottom = "";
+      });
       cardsRef.current = [];
     };
   }, [itemDistance, desktopOnly, bpTick, start, stop]);
