@@ -286,7 +286,7 @@ export default function AdminDashboard() {
                         <Tooltip
                           contentStyle={{ background: '#18181b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 12 }}
                           labelStyle={{ color: '#a1a1aa' }}
-                          formatter={(v: any) => [formatCurrency(Number(v)), 'Revenue']}
+                          formatter={(v: number | string) => [formatCurrency(Number(v)), 'Revenue']}
                         />
                         <Area type="monotone" dataKey="revenue" stroke="#22c55e" strokeWidth={2} fill="url(#revFill)" />
                       </AreaChart>
@@ -322,7 +322,7 @@ export default function AdminDashboard() {
                           <Tooltip
                             contentStyle={{ background: '#18181b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 12 }}
                             labelStyle={{ color: '#a1a1aa' }}
-                            formatter={(v: any, name: any) => [`${v} order`, String(name)]}
+                            formatter={(v: number | string, name: number | string) => [`${v} order`, String(name)]}
                           />
                           <Legend
                             formatter={(value: string) => (
@@ -392,7 +392,7 @@ export default function AdminDashboard() {
                           <Tooltip
                             contentStyle={{ background: '#18181b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 12 }}
                             labelStyle={{ color: '#a1a1aa' }}
-                            formatter={(v: any) => [formatCurrency(Number(v)), 'Revenue']}
+                            formatter={(v: number | string) => [formatCurrency(Number(v)), 'Revenue']}
                           />
                           <Legend
                             formatter={(value: string) => (

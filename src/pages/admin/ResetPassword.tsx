@@ -82,7 +82,7 @@ export default function AdminResetPassword() {
       // Keluar dari sesi recovery agar tidak terbawa, lalu arahkan ke login.
       await supabase.auth.signOut();
       setTimeout(() => navigate('/admin/login', { replace: true }), 1500);
-    } catch (err: any) {
+    } catch (err) {
       setError(err?.message || 'Gagal mengubah password. Coba lagi atau minta link baru.');
     } finally {
       setLoading(false);

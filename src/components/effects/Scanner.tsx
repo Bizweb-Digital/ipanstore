@@ -283,7 +283,7 @@ const Scanner: React.FC<ScannerProps> = ({
     ro.observe(container);
     setSize();
 
-    let currentMouse: [number, number] = [0.5, 0.5];
+    const currentMouse: [number, number] = [0.5, 0.5];
     let targetMouse: [number, number] = [0.5, 0.5];
     let mouseActive = 0;
     let targetMouseActive = 0;
@@ -416,7 +416,9 @@ const Scanner: React.FC<ScannerProps> = ({
       ctxMap.delete(container);
       try {
         container.removeChild(canvas);
-      } catch {}
+      } catch {
+        // canvas mungkin sudah dilepas
+      }
       gl.getExtension('WEBGL_lose_context')?.loseContext();
     };
   }, []);

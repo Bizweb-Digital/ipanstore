@@ -36,8 +36,8 @@ export function useServices() {
 
         if (error) throw error;
         setServices((data as unknown as Service[]) || []);
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
         console.error('Failed to fetch services:', err);
       } finally {
         setLoading(false);
@@ -57,8 +57,8 @@ export function useServices() {
 
       if (error) throw error;
       setServices((data as unknown as Service[]) || []);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
       console.error('Failed to fetch services:', err);
     } finally {
       setLoading(false);
@@ -130,8 +130,8 @@ export function useService(id?: string) {
 
         if (error) throw error;
         setService((data as unknown as Service) || null);
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
         console.error(`Failed to fetch service ${id}:`, err);
       } finally {
         setLoading(false);

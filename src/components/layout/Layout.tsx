@@ -12,8 +12,6 @@ interface LayoutProps {
 }
 
 const Layout = ({ children }: LayoutProps) => {
-  if (typeof window === 'undefined') return null;
-
   // Detect mobile device untuk optimasi performa
   const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 

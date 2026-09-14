@@ -31,8 +31,8 @@ export function useFaqs() {
 
         if (error) throw error;
         setFaqs(data || []);
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
         console.error('Failed to fetch FAQs:', err);
       } finally {
         setLoading(false);

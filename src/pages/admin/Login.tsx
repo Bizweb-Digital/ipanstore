@@ -74,7 +74,7 @@ export default function AdminLogin() {
   const { signIn } = useAdminAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const from = (location.state as any)?.from?.pathname || '/admin';
+  const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || '/admin';
 
   // Cegah setState setelah unmount (mis. setelah navigate sukses).
   const mountedRef = useRef(true);

@@ -149,7 +149,7 @@ export default function AdminOrders() {
     return () => {
       supabase.removeChannel(channel);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [refetch]);
 
   // ── Simpan catatan admin (debounce 800ms) ─────────────────────────────────
@@ -164,7 +164,7 @@ export default function AdminOrders() {
           .eq('id', orderId);
         if (error) throw error;
         toast.success('Catatan disimpan');
-      } catch (err: any) {
+      } catch (err) {
         console.error('Failed to save notes:', err);
         toast.error('Gagal menyimpan catatan');
       } finally {
@@ -226,7 +226,7 @@ export default function AdminOrders() {
       toast.success(data.message || 'Email kredensial berhasil dikirim ulang.');
       await logAudit('SETTINX_RESEND', `Kirim ulang kredensial SettinX utk ${order.invoice_number}`);
       refetch();
-    } catch (err: any) {
+    } catch (err) {
       console.error('resendSettinXLicense error:', err);
       toast.error(err?.message || 'Gagal mengirim ulang kredensial.');
     } finally {
@@ -243,7 +243,7 @@ export default function AdminOrders() {
         { header: 'Customer', value: (r) => r.customer_name },
         { header: 'Email', value: (r) => r.customer_email },
         { header: 'Phone', value: (r) => r.customer_phone },
-        { header: 'Layanan', value: (r) => (r.services as any)?.name },
+        { header: 'Layanan', value: (r) => (r.services as { name?: string } | null)?.name },
         { header: 'Amount', value: (r) => r.amount },
         { header: 'Discount', value: (r) => r.discount_amount },
         { header: 'Promo', value: (r) => r.promo_code },
@@ -322,12 +322,12 @@ export default function AdminOrders() {
 
       // Refresh orders
       await refetch();
-      
+
       // Close detail modal if open
       if (selectedOrder?.id === orderId) {
         setShowDetail(false);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to update status:', error);
       alert('Gagal update status: ' + error.message);
     } finally {
@@ -350,7 +350,7 @@ export default function AdminOrders() {
         .order('name', { ascending: true });
       if (error) throw error;
       setServices((data as ServiceOption[]) || []);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Failed to fetch services:', err);
       toast.error('Gagal memuat daftar layanan');
     }
@@ -419,7 +419,7 @@ export default function AdminOrders() {
       });
       setPage(1);
       await refetch();
-    } catch (err: any) {
+    } catch (err) {
       console.error('Failed to create manual order:', err);
       toast.error('Gagal membuat order: ' + err.message);
     } finally {

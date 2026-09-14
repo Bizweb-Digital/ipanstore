@@ -21,7 +21,7 @@ export interface Order {
   completed_at: string | null;
   refunded_at: string | null;
   notes: string | null;
-  webhook_payload: Record<string, any> | null;
+  webhook_payload: Record<string, unknown> | null;
   email_sent: boolean;
   email_sent_at: string | null;
   settinx_license_uid: string | null;
@@ -95,8 +95,8 @@ export function useOrders(filters?: {
       if (error) throw error;
       setOrders((data as Order[]) || []);
       setTotal(count || 0);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
       console.error('Failed to fetch orders:', err);
     } finally {
       setLoading(false);
@@ -147,8 +147,8 @@ export function useOrder(invoiceNumber?: string) {
 
         if (error) throw error;
         setOrder(data);
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
         console.error(`Failed to fetch order ${invoiceNumber}:`, err);
       } finally {
         setLoading(false);
