@@ -1,8 +1,8 @@
 # LASTACTIVITY — IPAN STORE
 
-## STATUS: ⏳ GANTI LINK MODULE SETTINX 1.1 → GOOGLE DRIVE (lokal selesai, BELUM commit/push/deploy)
+## STATUS: ✅ DEPLOYED — link Module SettinX 1.1 → Google Drive (commit a6c0345, backend + frontend live)
 
-## PERUBAHAN SESI INI (link Module → Google Drive — ⏳ siap commit/push, menunggu konfirmasi user)
+## PERUBAHAN SESI INI (link Module → Google Drive — ✅ SUDAH commit/push/deploy)
 
 - **Lama**: `https://www.mediafire.com/file/ckyz6vnn9kxga6b/Ipan_Module_SettinX.apk/file`
 - **Baru**: `https://drive.google.com/file/d/1I1Hz1XfQiEFGIajiukjzhIbd-EPVxW7B/view`
@@ -22,6 +22,20 @@
 - ⚠️ Deploy nanti: `server/.env` di VPS TIDAK ikut git → harus update manual
   `SETTINX_MODULE_1_1_DOWNLOAD_URL` di VPS + `pm2 restart ipanstore-backend`.
   Frontend (`Orders.tsx`) butuh rebuild dist + SCP + `docker compose up --build -d`.
+- ### Deploy sesi ini (2026-09-16, ✅ live, user konfirmasi "gas commit push deploy")
+  - Commit `a6c0345` (termasuk sisa rule 9 AGENTS.md dari sesi tooling yang belum ter-commit)
+    + push `origin/main` (`f840eae..a6c0345`).
+  - VPS: `git pull --ff-only` FF `1404234..a6c0345` (sekaligus membawa fix ScrollStackCards +
+    Paket yang belum ter-pull) → `server/.env:57` update via `sed` ke link Drive ✅
+    → `pm2 restart ipanstore-backend --update-env` (pid 3483044, `/api/health` ok).
+  - Frontend: `npm run build` lokal (3729 modules, `index-yfGVjoXj.js` / `Orders-COt7WnwB.js`
+    verified mengandung "Google Drive") → backup `dist.bak-20260916` di VPS → SCP dist baru
+    → `docker compose up --build -d` (`COPY dist` tidak cached, 12MB) → container `Up`.
+  - Verifikasi live: `https://ipanstore.id` → 200, `/order` → 200,
+    `https://api.ipanstore.id/api/health` → 200, live HTML serve `index-yfGVjoXj.js` ✅
+    (sama dengan build lokal).
+  - Catatan: file hash lama (`Orders-BdS9UhqC.js`, `useOrders-Di2n0xLc.js`, dll.) masih ada di
+    `dist/` VPS sebagai junk tak-terreferensi — aman, kandidat bersih-bersih nanti.
 
 ### Arsip STATUS sebelumnya
 - ✅ TOOLING CLEANUP — 19 skill di-install ulang fresh, MCP dirapikan (4 server; playwright & duplikat global dihapus), engine agent-browser → Brave
@@ -468,6 +482,7 @@
 
 | Waktu | Aktivitas |
 |---|---|
+| 2026-09-16 | ✅ Deploy link Module → Google Drive (commit a6c0345 push+deploy: git pull FF 1404234..a6c0345, env VPS update + pm2 restart, dist baru di-SCP + rebuild Docker; frontend, /order & API 200, live HTML serve bundle baru). |
 | 2026-09-16 | ⏳ Ganti link "Ipan Module SettinX 1.1" MediaFire → Google Drive (`drive.google.com/file/d/1I1Hz1XfQiEFGIajiukjzhIbd-EPVxW7B/view`) di `server/index.js`, `server/.env`, `server/.env.example`, `src/pages/admin/Orders.tsx`. Email auto (webhook) + resend admin terverifikasi pakai sumber yang sama. `node --check` + `tsc` OK. BELUM commit/push/deploy — menunggu konfirmasi user. |
 | 2026-09-15 | ✅ Cleanup tooling: 19 skill reinstall fresh dari upstream, MCP → 4 server (playwright & duplikat global dihapus), engine agent-browser → Brave (setx + env config), file state basi `~/.agent-browser` dibersihkan, AGENTS.md rule 9 diperbarui. ⚠️ Butuh restart opencode. |
 | 2026-09-15 | ✅ Perubahan tooling yang sama di-propagate ke `D:\PROJECT MODULE IPAN SETTINX ANDROID` & `D:\project sempro`: opencode.json masing-masing → 4 MCP (tanpa playwright, agent-browser + `environment.AGENT_BROWSER_EXECUTABLE_PATH` Brave, root filesystem dikoreksi ke folder masing-masing; Android sebelumnya keliru `D:\ipanstore`); skill global sama (`.ai-skills/` Android tetap dipertahankan); AGENTS.md & LASTACTIVITY.md Android ditambah seksi Tooling (aturan jangan end-task Brave). |
