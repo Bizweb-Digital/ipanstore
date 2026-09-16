@@ -1,6 +1,55 @@
 # LASTACTIVITY — IPAN STORE
 
-## STATUS: ✅ DEPLOYED — fix ANTI CHEAT desktop kosong (kartu tunggal skip stack) + CTA mobile module settinx (commit d8f8748, asset index-C5d-lcp3.js)
+## STATUS: ⏳ GANTI LINK MODULE SETTINX 1.1 → GOOGLE DRIVE (lokal selesai, BELUM commit/push/deploy)
+
+## PERUBAHAN SESI INI (link Module → Google Drive — ⏳ siap commit/push, menunggu konfirmasi user)
+
+- **Lama**: `https://www.mediafire.com/file/ckyz6vnn9kxga6b/Ipan_Module_SettinX.apk/file`
+- **Baru**: `https://drive.google.com/file/d/1I1Hz1XfQiEFGIajiukjzhIbd-EPVxW7B/view`
+- Diubah di 4 tempat:
+  - `server/index.js:377-380` (fallback default + komentar, ikut deploy via git)
+  - `server/.env:51-52` (nilai aktif runtime lokal, gitignored)
+  - `server/.env.example:61-62` (referensi)
+  - `src/pages/admin/Orders.tsx:841` (teks "(MediaFire)" → "(Google Drive)" di page admin Orders)
+- Komentar `MediaFire` di `server/index.js:506,1046,1049` disesuaikan ke Google Drive.
+- Alur email TIDAK diubah, sudah benar — `sendModuleSettinxEmail()` pakai satu sumber
+  `SETTINX_MODULE_DOWNLOAD_URL` (`server/index.js:528`), dipakai di 2 jalur:
+  webhook auto setelah LUNAS (`server/index.js:1050`) + resend admin (`server/index.js:1899`).
+  Kedua jalur kini mengirim link Google Drive baru.
+- Verifikasi lokal: `node --check server/index.js` ✅ SYNTAX OK; `npx tsc --noEmit` ✅;
+  link lama `ckyz6vnn9kxga6b`/MediaFire sudah tidak ada di `server/` & `src/`
+  (hanya tersisa di LASTACTIVITY.md sebagai catatan riwayat).
+- ⚠️ Deploy nanti: `server/.env` di VPS TIDAK ikut git → harus update manual
+  `SETTINX_MODULE_1_1_DOWNLOAD_URL` di VPS + `pm2 restart ipanstore-backend`.
+  Frontend (`Orders.tsx`) butuh rebuild dist + SCP + `docker compose up --build -d`.
+
+### Arsip STATUS sebelumnya
+- ✅ TOOLING CLEANUP — 19 skill di-install ulang fresh, MCP dirapikan (4 server; playwright & duplikat global dihapus), engine agent-browser → Brave
+
+### Sesi — reinstall & cleanup tooling (skills + MCP + engine browser)
+
+**Latar:** user minta hapus semua skill & MCP yang tersedia, install ulang bersih, engine agent-browser → Brave, dan catat aturan "jangan end-task Brave" ke AGENTS.md.
+
+**1. Skill (19) di-install ulang FRESH dari sumber resmi upstream:**
+- Backup dulu: `C:\Users\WINDOWS KERJA\.agents\skills_reinstall_backup_20260915\` (19 folder lama + `.skill-lock.json.bak`).
+- Source (git clone --depth 1 ke `%TEMP%\opencode\skill_reinstall_src`): gsap-* → `greensock/gsap-skills`, ponytail* → `dietrichgebert/ponytail`, `agent-browser` → `vercel-labs/agent-browser`, `humanizer` → `blader/humanizer`, `impeccable` → `pbakaus/impeccable`, `seo-audit` → `coreyhaines31/marketingskills`, `systematic-debugging` → `obra/superpowers`.
+- Hasil: 19 folder di `~/.agents\skills\` + `SKILL.md` diverifikasi valid (name + description).
+
+**2. MCP dirapikan (hapus duplikasi + playwright):**
+- Block `mcp` di config GLOBAL (`~/.config\opencode\opencode.json`) **dihapus total** (sebelumnya duplikat project & filesystem di-root ke D:\ipanstore — berpotensi error di workspace lain).
+- Config project `D:\ipanstore\opencode.json` kini hanya 4 MCP: `sequential-thinking`, `context7`, `filesystem`, `agent-browser` + `environment.AGENT_BROWSER_EXECUTABLE_PATH` → Brave. **`playwright` dihapus** (sebelumnya browser MCP double dengan agent-browser).
+- Backup config lama dipindah ke `~/.config\opencode\_backups\`; `opencode.jsonc` global dibiarkan (hanya providers, tanpa mcp).
+
+**3. Engine agent-browser → Brave:**
+- `setx AGENT_BROWSER_EXECUTABLE_PATH "C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe"` (variabel user Windows).
+- Daemon agent-browser lama (`agent-browser-win32-x64`, PID 16504 & 12788) di-stop + file state basi di `~\.agent-browser\` (`default.*`, `diag.*`, `research.*`, `sbk-*`, dsb) dihapus → daemon fresh lahir saat opencode restart dengan engine Brave.
+- **TIDAK menyentuh proses brave.exe yang sedang berjalan.**
+
+**4. AGENTS.md diperbarui (rule 9):** engine agent-browser = Brave (env `AGENT_BROWSER_EXECUTABLE_PATH`); JANGAN PERNAH `Stop-Process`/end-task `brave.exe` — hanya daemon `agent-browser-win32-x64.exe` yang boleh di-stop untuk reset state.
+
+**⚠️ Butuh restart opencode:** perubahan MCP (4 server) & engine Brave baru aktif setelah opencode di-restart.
+
+---
 
 ### Sesi — perbaikan setelah user laporkan "masih sama" (deploy 052f4f5 tidak efektif)
 
@@ -419,6 +468,9 @@
 
 | Waktu | Aktivitas |
 |---|---|
+| 2026-09-16 | ⏳ Ganti link "Ipan Module SettinX 1.1" MediaFire → Google Drive (`drive.google.com/file/d/1I1Hz1XfQiEFGIajiukjzhIbd-EPVxW7B/view`) di `server/index.js`, `server/.env`, `server/.env.example`, `src/pages/admin/Orders.tsx`. Email auto (webhook) + resend admin terverifikasi pakai sumber yang sama. `node --check` + `tsc` OK. BELUM commit/push/deploy — menunggu konfirmasi user. |
+| 2026-09-15 | ✅ Cleanup tooling: 19 skill reinstall fresh dari upstream, MCP → 4 server (playwright & duplikat global dihapus), engine agent-browser → Brave (setx + env config), file state basi `~/.agent-browser` dibersihkan, AGENTS.md rule 9 diperbarui. ⚠️ Butuh restart opencode. |
+| 2026-09-15 | ✅ Perubahan tooling yang sama di-propagate ke `D:\PROJECT MODULE IPAN SETTINX ANDROID` & `D:\project sempro`: opencode.json masing-masing → 4 MCP (tanpa playwright, agent-browser + `environment.AGENT_BROWSER_EXECUTABLE_PATH` Brave, root filesystem dikoreksi ke folder masing-masing; Android sebelumnya keliru `D:\ipanstore`); skill global sama (`.ai-skills/` Android tetap dipertahankan); AGENTS.md & LASTACTIVITY.md Android ditambah seksi Tooling (aturan jangan end-task Brave). |
 | 2026-09-14 | ✅ Deploy duo SettinX V1 + Module 1.1 (commit 606c061 push+deploy: git pull FF f93d40e..606c061, dist baru di-SCP + rebuild Docker tanpa cache, server/.env VPS update link APK ckyz6vnn9kxga6b + pm2 restart; frontend, /order & API 200). |
 | 2026-09-14 | ⏳ Ganti link MediaFire "Ipan Module SettinX 1.1" → APK baru (`ckyz6vnn9kxga6b`) di `server/.env`, `server/index.js:380` (fallback), `server/.env.example`. Alur double-confirm KlikQris diverifikasi utuh (email hanya setelah status SUCCESS/PAID terkonfirmasi ke API). `node --check` OK. BELUM commit/push/deploy — menunggu konfirmasi user. |
 | 2026-09-14 | ✅ opencode.json: tambah `klt/gpt-5.6-luna` ("Kelontong GPT-5.6 Luna (via 9Router)" + variants low/medium/high/xhigh) dari `D:\PROJECT MODULE IPAN SETTINX ANDROID\opencode.json` ke `provider.9router.models` — hanya 1 entri, lainnya tidak disentuh. JSON valid, 255→256 models. File gitignored (tanpa commit/deploy). |

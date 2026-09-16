@@ -838,7 +838,7 @@ export default function AdminOrders() {
                     <div className="mt-4 border-t border-white/10 pt-3 space-y-2">
                       <div className="text-xs text-muted-foreground">
                         {isModuleSettinxProduct ? (
-                          <>Klik tombol untuk mengirim ulang link download <strong>Ipan Module SettinX 1.1</strong> (MediaFire) ke email pembeli beserta ringkasan invoice.</>
+                          <>Klik tombol untuk mengirim ulang link download <strong>Ipan Module SettinX 1.1</strong> (Google Drive) ke email pembeli beserta ringkasan invoice.</>
                         ) : (
                           <>Kredensial akan dikirim ulang ke email pembeli beserta link download. Untuk
                             produk Ipan Module SettinX 1.1, tombol ini membuat/memakai kembali akun Firebase
