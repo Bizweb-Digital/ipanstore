@@ -87,6 +87,14 @@
         (`C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe`)
      2. **MS Edge** — fallback kalau Brave gagal
         (`C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`)
+   - **Engine agent-browser WAJIB Brave**: env `AGENT_BROWSER_EXECUTABLE_PATH`
+     sudah di-set ke path brave.exe (variabel user Windows + field `environment`
+     di block `mcp.agent-browser` config project). Jangan mengubah ke Chrome/Chromium.
+   - **⚠️ JANGAN PERNAH end-task / task-kill / `Stop-Process`** proses `brave.exe` yang
+     sedang berjalan (banyak proses brave.exe di Task Manager = multi-process Chromium
+     yang normal). Cukup tutup tab/halaman browser. Hanya proses
+     `agent-browser-win32-x64.exe` (daemon agent-browser sendiri) yang boleh dihentikan
+     untuk reset state, dan itupun bukan Brave.
    - **JANGAN install Chrome atau Chromium** (jangan jalankan `npx playwright install
      chrome/chromium`). User tidak ingin browser baru di-install di PC-nya.
    - **JANGAN copy/rename .exe browser** (mis. rename `msedge.exe` → `chrome.exe` atau

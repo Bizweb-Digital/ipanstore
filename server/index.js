@@ -374,10 +374,10 @@ const SETTINX_DOWNLOAD_URL =
   process.env.SETTINX_DOWNLOAD_URL ||
   "https://drive.google.com/drive/folders/1oB2BIILhM-xrgseTw7yYSYwxurLayTvq?usp=sharing";
 
-// Link MediaFire produk "Ipan Module SettinX 1.1" (dari .env, tidak di-hardcode).
+// Link Google Drive produk "Ipan Module SettinX 1.1" (dari .env, tidak di-hardcode).
 const SETTINX_MODULE_DOWNLOAD_URL =
   process.env.SETTINX_MODULE_1_1_DOWNLOAD_URL ||
-  "https://www.mediafire.com/file/ckyz6vnn9kxga6b/Ipan_Module_SettinX.apk/file";
+  "https://drive.google.com/file/d/1I1Hz1XfQiEFGIajiukjzhIbd-EPVxW7B/view";
 
 const emailTransporter = SMTP_USER
   ? nodemailer.createTransport({
@@ -503,7 +503,7 @@ async function sendSettinXEmail({ to, customerName, invoiceNumber, amount, paidA
 
 /**
  * Kirim email produk "Ipan Module SettinX 1.1" + invoice ke pembeli.
- * Modul ini TANPA lisensi/login — hanya berisi link download MediaFire.
+ * Modul ini TANPA lisensi/login — hanya berisi link download Google Drive.
  * Mengembalikan { ok, error? }.
  */
 async function sendModuleSettinxEmail({ to, customerName, invoiceNumber, amount, paidAt }) {
@@ -1043,10 +1043,10 @@ async function processPaymentConfirmation(orderId, payload = null) {
     return { processed: true, reason: 'no_customer_email', order };
   }
 
-  // ── Produk "Ipan Module SettinX 1.1": cukup link download MediaFire ───────
+  // ── Produk "Ipan Module SettinX 1.1": cukup link download Google Drive ───
   // Tanpa lisensi Firebase. Format terkirim hanya jika pembayaran sudah LUNAS.
   if (productType === "module_1_1") {
-    console.log(`📦 IPAN Module SettinX 1.1 TERBAYAR — kirim link MediaFire ke ${order.customer_email} (invoice ${orderId})...`);
+    console.log(`📦 IPAN Module SettinX 1.1 TERBAYAR — kirim link Google Drive ke ${order.customer_email} (invoice ${orderId})...`);
     const moduleResult = await sendModuleSettinxEmail({
       to: order.customer_email,
       customerName: order.customer_name,
