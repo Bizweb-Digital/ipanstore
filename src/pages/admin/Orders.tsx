@@ -838,20 +838,24 @@ export default function AdminOrders() {
                     <div className="mt-4 border-t border-white/10 pt-3 space-y-2">
                       <div className="text-xs text-muted-foreground">
                         {isModuleSettinxProduct ? (
-                          <>Klik tombol untuk mengirim ulang link download <strong>Ipan Module SettinX 1.1</strong> (Google Drive) ke email pembeli beserta ringkasan invoice.</>
+                          <>Klik tombol untuk membuat <strong>akun baru</strong> (ID, Password) + <strong>license key baru</strong> di
+                            Supabase Module SettinX, lalu mengirim email kredensial &amp; link download ke pembeli. Akun lama
+                            tidak diubah, jadi pembeli boleh punya beberapa akun aktif.</>
                         ) : (
                           <>Kredensial akan dikirim ulang ke email pembeli beserta link download. Untuk
                             produk Ipan Module SettinX 1.1, tombol ini membuat/memakai kembali akun Firebase
                             kemudian mengirim email berisi Username, Password &amp; License Key.</>
                         )}
                       </div>
-                      {!isModuleSettinxProduct && selectedOrder.settinx_license_uid && (
+                      {selectedOrder.settinx_license_uid && (
                         <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">License Key (UID)</span>
+                          <span className="text-muted-foreground">
+                            {isModuleSettinxProduct ? 'UID Akun (Supabase)' : 'License Key (UID)'}
+                          </span>
                           <span className="font-mono text-[11px] break-all">{selectedOrder.settinx_license_uid}</span>
                         </div>
                       )}
-                      {!isModuleSettinxProduct && selectedOrder.settinx_license_error && (
+                      {selectedOrder.settinx_license_error && (
                         <div className="text-[11px] text-red-400 break-all">
                           Error sebelumnya: {selectedOrder.settinx_license_error}
                         </div>
@@ -870,7 +874,7 @@ export default function AdminOrders() {
                         ) : (
                           <>
                             <KeyRound className="w-4 h-4" />
-                            {isModuleSettinxProduct ? 'Kirim Ulang Link Download' : 'Generate & Kirim Ulang Kredensial'}
+                            {isModuleSettinxProduct ? 'Generate Akun & Kirim Kredensial' : 'Generate & Kirim Ulang Kredensial'}
                           </>
                         )}
                       </Button>

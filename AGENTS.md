@@ -111,6 +111,50 @@
     - Sertakan **tutorial lengkap, jelas, detail, dan mudah dipahami**: buka Supabase Dashboard → pastikan project sesuai `VITE_SUPABASE_URL`/`SUPABASE_URL` di `.env` → SQL Editor → New query → `Ctrl+A` → `Delete` (hapus query lama) → `Ctrl+V` (paste) → Run → cara verifikasi sukses (`SELECT` cek / lihat `Results`), serta langkah bila error (screenshot error + copy pesan).
     - Sebutkan **file sumber** query di repo (`sql_patches/...` atau `supabase_migration*.sql:line`) agar user bisa buka manual di VS Code (`Ctrl+A` → `Ctrl+C`) bila clipboard gagal.
 
+11. **⚠️ MCP SUPABASE — READ-ONLY (PENTING)**:
+    - MCP `supabase` di `opencode.json` HANYA untuk **read/inspeksi**: list tabel,
+      baca skema, cek RLS policies, query SELECT untuk debugging, generate draft SQL patch.
+    - **SEMUA perubahan DB (INSERT/UPDATE/DELETE/ALTER/migrasi) TETAP manual** oleh user
+      di Supabase Dashboard SQL Editor, mengikuti rule 10 (beri query siap copy-paste).
+    - Jangan pernah mengeksekusi query tulis lewat MCP/tool apa pun tanpa konfirmasi
+      eksplisit user, bahkan jika token mengizinkan.
+
+12. **⚠️ MCP GITHUB — READ-ONLY (PENTING)**:
+    - MCP `github` di `opencode.json` HANYA untuk **read**: cek `git log` remote, diff
+      commit, status push, list issue/PR — berguna sebelum deploy ("sudah ke-push belum?").
+    - **Commit/push/merge TETAP via bash + konfirmasi user** sesuai rule 2.
+      Jangan pernah membuat commit/push/PR lewat MCP GitHub.
+
+13. **⚠️ FIX UI/ANIMASI WAJIB VERIFIKASI VISUAL (PENTING)**:
+    - Setiap fix UI/animasi/efek scroll (GSAP, ScrollStackCards, dialog mobile, dsb.)
+      **WAJIB diverifikasi visual via agent-browser (Brave) + screenshot before/after**
+      SEBELUM diserahkan ke user — **tidak boleh "serahkan buta"** ("silakan cek sendiri").
+    - Checklist kasus tepi minimal: 1 kartu vs banyak kartu, mobile (<1024px) vs desktop
+      (≥1024px), tab switch cepat (cleanup state unmount), scroll cepat naik-turun.
+    - Build sukses (`tsc` + `npm run build`) **BUKAN** bukti fix visual berhasil.
+    - Jika agent-browser gagal total (2-3x percobaan), minta user verifikasi manual dengan
+      instruksi persis apa yang dicek — jangan tandai "selesai".
+    - Latar: bug ScrollStackCards pernah 5x fix gagal karena fix diserahkan tanpa
+      verifikasi visual. Gunakan command `/visual-check` untuk workflow lengkap.
+
+14. **⚠️ GUNAKAN COMMAND PROJECT (PENTING)**:
+    - Untuk **deploy** ke VPS: ikuti command `/deploy` (build lokal → SCP dist →
+      `docker compose up --build -d` → `pm2 restart` → verifikasi hash asset).
+      JANGAN PERNAH anggap `git push` = deploy (dist gitignored; backend = PM2 bukan Docker).
+    - Untuk **verifikasi UI**: ikuti command `/visual-check`.
+    - Kedua command ada di `.opencode/command/` dan wajib diikuti urutannya.
+
+15. **⚠️ FILE TERLARANG COMMIT/DEPLOY (PENTING)**:
+    - 2 file ini **DILARANG ikut ter-commit, ter-push, atau ter-deploy** dalam kondisi
+      apa pun (kecuali user secara eksplisit memerintahkan sebaliknya untuk file tersebut):
+      - `video/PanggilanJihad.tsx`
+      - `video/IpanStorePromo.tsx`
+    - Sebelum setiap `git add` / `git commit`, **WAJIB cek** kedua file tidak ikut
+      ter-stage (`git status --short` tidak boleh memuat keduanya; bila ikut, unstage
+      via `git restore --staged <file>`). Jangan pakai `git add -A` / `git add .` buta.
+    - Saat deploy (SCP dist / `/deploy`), pastikan perubahan dari kedua file tidak
+      terbawa ke server live.
+
 ## Perintah Penting
 
 | Perintah | Arti |
@@ -142,3 +186,5 @@
 - SEO per-halaman di `src/components/SEOHead.tsx`; JSON-LD builder di `src/lib/seo.ts`;
   sitemap di `public/sitemap.xml`.
 - Jangan commit: `.env`, log, `dist`, `opencode.json` (sudah di `.gitignore`).
+  **JANGAN PERNAH commit/push/deploy** `video/PanggilanJihad.tsx` dan
+  `video/IpanStorePromo.tsx` (lihat rule 15).

@@ -1,6 +1,209 @@
 # LASTACTIVITY — IPAN STORE
 
-## STATUS: ✅ DEPLOYED — link Module SettinX 1.1 → Google Drive (commit a6c0345, backend + frontend live)
+## STATUS: ⏳ SIAP — Automasi order "Ipan Module SettinX 1.1" (auto-generate akun + license key Supabase saat LUNAS). BELUM commit/push/deploy (menunggu konfirmasi user).
+
+## PERUBAHAN SESI INI (automasi order Module SettinX — auto akun + license + email)
+
+**Tujuan:** saat pembeli order "Ipan Module SettinX 1.1" dan pembayaran LUNAS, website
+otomatis membuat akun (ID+password) + license key di Supabase Module SettinX, lalu
+mengirim email berisi kredensial + link download ke Gmail pembeli (mirip IPAN APP SettinX V1).
+
+**Arsitektur (beda backend dari V1):**
+- IPAN APP SettinX V1 → Firebase Auth + Firestore (`settinx_licenses`).
+- IPAN Module SettinX 1.1 → **Supabase project `ydoubotecwoamuyacqhw`** (project Android, BEDA dari Supabase website `zpjkroatmegwnxzvwlw`).
+  - Akun dibuat via Supabase **Admin API** (`auth.admin.createUser`, email `<id>@settinx.app`, email_confirm).
+  - License key format `XXXX-XXXX-...-XXXX` (8 blok, 128-bit hex) di tabel `public.licenses`, status `unused`.
+  - Pembeli redeem key di app → terikat 1 key = 1 device (alur app TIDAK diubah).
+
+**File BARU:**
+- 🆕 `server/lib/moduleSettinxLicense.js` — `initModuleSettinxSupabase()`, `assignModuleSettinxLicense()`,
+  `generateModulePassword()`, `generateLicenseKey()`, `baseIdFromEmail()`.
+  - Password 14 char (huruf+angka, tanpa ambigu), **selalu** lolos aturan `admin_create_user`
+    (min 12 char + kombinasi huruf/angka + bukan blocklist + tidak memuat ID).
+  - **Repeat purchase (keputusan user):** email sama beli lagi → buat **AKUN BARU** (ID suffix `-2`, `-3`, …)
+    + **license BARU**. Akun lama **TIDAK diubah** (password lama tetap hidup) → pembeli boleh punya beberapa akun aktif.
+
+**File DIUBAH:**
+- ✏️ `server/index.js`:
+  - import `assignModuleSettinxLicense`.
+  - Konstanta `MODULE_SUPPORT_WA_URL` (`https://wa.me/6288976496870`) + `MODULE_COMMUNITY_GROUP_URL`
+    (`https://chat.whatsapp.com/DoKUsn9NlFOFJBX1VQcB8U`).
+  - **Redesign email** agar jelas & proporsional di Gmail (desktop+mobile): kartu kredensial & ringkasan
+    invoice kini layout **BERTUMPUK** (label kecil di atas, nilai monospace besar di bawah) — nilai panjang
+    (invoice/license key) tidak lagi terjepit/terpotong. Tombol full-width.
+  - Helper baru: `summaryRowHtml()`, `buildModuleSettinxEmailHtml()` (single source of truth),
+    `moduleCredentialsCardHtml()` (ID/Password/License Key + Cara Pakai), `moduleSupportButtonsHtml()`
+    (tombol WA admin + grup), `credentialsCardHtml()` (V1) ikut di-restyle.
+  - `sendModuleSettinxEmail()` — terima `credentials`, pakai builder baru.
+  - `processPaymentConfirmation()` branch `module_1_1` — panggil `assignModuleSettinxLicense()`,
+    simpan `settinx_license_uid`/`settinx_license_error`, kirim email ber-kredensial.
+  - Webhook DOKU (`/api/doku-webhook`) — ganti cek `/settinx/i` → `classifySettinxProduct()`
+    (agar Module juga auto-generate; sebelumnya hanya App V1).
+  - Endpoint `/api/settinx/resend` branch `module_1_1` — buat akun+license BARU (bukan rotate).
+- ✏️ `server/.env` + `server/.env.example` — tambah `MODULE_SETTINX_SUPABASE_URL` +
+  `MODULE_SETTINX_SUPABASE_SERVICE_ROLE_KEY`; ganti link Drive Module ke baru.
+- ✏️ `src/pages/admin/Orders.tsx` — teks tombol/deskripsi Module → "Generate Akun & Kirim Kredensial",
+  tampilkan UID akun Supabase + error (sebelumnya disembunyikan untuk Module).
+- 🔗 **Link Drive baru**: `https://drive.google.com/file/d/1U3uz7-hDXCtCXutME-zCBHXLvhr8h-Zf/view`
+  (lama `1I1Hz1XfQiEFGIajiukjzhIbd-EPVxW7B` diganti di `.env`, `index.js`, `.env.example`).
+
+**Verifikasi (lokal, LULUS):**
+- `node --check server/index.js` + `server/lib/moduleSettinxLicense.js` ✅.
+- `npx tsc --noEmit` ✅ exit 0; `npm run build` ✅.
+- **Test end-to-end (data user: ipanganteng / ipanasik123@gmail.com / 0889 7649 6870):**
+  - Order QRIS dibuat via API lokal → order PENDING tersimpan.
+  - Trigger `/api/settinx/resend` (jalur fulfillment sama dgn webhook) → akun `ipanasik123@settinx.app`
+    dibuat di Supabase Module, license `DF2C-6321-8301-7B23-F8F1-A01E-500C-0E52` (unused),
+    **email nyata terkirim** ke `ipanasik123@gmail.com` ✅.
+  - Login akun baru via GoTrue **berhasil** ✅.
+  - **Repeat purchase diuji:** akun `ipanasik123-2` & `ipanasik123-3` dibuat; **login akun-1 (password lama)
+    & akun-2 (password baru) sama-sama BERHASIL** → terbukti akun lama tidak dimatikan ✅.
+  - Order di DB website: `email_sent=true`, `settinx_type=module_1_1`, `settinx_license_uid` terisi ✅.
+- **⚠️ Data test sengaja DIBIARKAN** di Supabase Module (akun `ipanasik123`, `-2`, `-3` + 3 license) karena
+  ini hasil test sesuai permintaan user (user ingin lihat email). Hapus manual bila perlu.
+
+**Catatan deploy (BELUM dilakukan):**
+- `server/.env` VPS TIDAK ikut git → **wajib** tambah `MODULE_SETTINX_SUPABASE_URL` +
+  `MODULE_SETTINX_SUPABASE_SERVICE_ROLE_KEY` di VPS + `pm2 restart ipanstore-backend`.
+- Frontend berubah (`Orders.tsx`) → `npm run build` + SCP dist + `docker compose up --build -d`.
+- Backend `server/index.js` + `server/lib/moduleSettinxLicense.js` ikut git → deploy via `git pull` VPS.
+- Rule 15 dijaga: `video/*` tidak disentuh.
+
+## PERUBAHAN SESI INI (fix env per-mode + deploy frontend — ✅ SUDAH deploy)
+
+- **Akar masalah**: `.env.local` berisi `VITE_BACKEND_URL=http://localhost:5159` dan Vite
+  memuat `.env.local` di SEMUA mode (termasuk `npm run build`), MENIMPA `.env`
+  (`https://api.ipanstore.id`). Hasilnya bundle produksi ter-bake `localhost:5159` →
+  browser pengunjung live memanggil komputer MEREKA sendiri → "Failed to fetch".
+  Di localhost user sukses karena backend lokal memang hidup. Bukti byte: bundle live
+  `index-yfGVjoXj.js` identik dgn dist lokal, chunk `Order-Cce7uzeD.js` berisi
+  `X="http://localhost:5159"`, dan `api.ipanstore.id` NOL kemunculan di seluruh dist.
+- **Fix Opsi A (pisah env per-mode, anti-kejadian-lagi):**
+  - 🆕 `.env.development` → `VITE_BACKEND_URL=http://localhost:5159` (HANYA dimuat saat `npm run dev`)
+  - ✏️ `.env.local` → hapus override `VITE_BACKEND_URL` (kini tanpa override agar `.env` berlaku)
+  - Kedua file gitignored → TIDAK masuk commit.
+- **Hasil resolusi env (terbukti `vite loadEnv`):** development → `http://localhost:5159`; production → `https://api.ipanstore.id` ✅
+- **Verifikasi build baru:** `npm run build` ✅ (bundle `index-gv4hPJTP.js`);
+  `localhost:5159` di dist = **0 kemunculan**; `api.ipanstore.id` ada di 4 chunk
+  (`Order-BBXuoyDd`, `CekOrder-B3LrcNyX`, `Orders-_KRmTUAz`, `AdminRoutes-O0HdciyF`);
+  konteks Order `X="https://api.ipanstore.id"`; `tsc --noEmit` exit 0.
+- **Deploy (frontend saja, backend PM2 tidak berubah):**
+  - Pre-check SSH OK, container `ipanstore` Up.
+  - Backup dist lama VPS → `dist.bak-20260926`.
+  - SCP `dist/*` → VPS; hash `index.html` lokal==remote MATCH; VPS serve `index-gv4hPJTP.js`.
+  - `docker compose up --build -d` → container Recreated + Started (COPY dist tidak cached).
+  - Verifikasi live: `https://ipanstore.id/?v=20260926` serve `index-gv4hPJTP.js` ✅;
+    `https://ipanstore.id/order` → 200; chunk Order live berisi `api.ipanstore.id` + TANPA
+    `localhost:5159`; `https://api.ipanstore.id/api/health` → 200.
+- **Catatan:** Tidak ada kode ter-track yang diubah (hanya env gitignored) → TIDAK perlu
+  commit untuk fix ini. Rule 15 dijaga: `video/IpanStorePromo.tsx` modified TIDAK ikut
+  commit/deploy; `video/PanggilanJihad.tsx` bersih.
+- **Sisa pending (pekerjaan lain, BUKAN bagian fix):** `AGENTS.md` + `LASTACTIVITY.md`
+  (perubahan sesi tooling) + 2 command `.opencode/command/*` belum di-commit — menunggu konfirmasi user.
+
+## PERUBAHAN SESI INI (AGENTS.md — rule 15 file terlarang commit/deploy)
+
+- Rule 15 BARU di `AGENTS.md`: 2 file **DILARANG ikut ter-commit/push/deploy**
+  dalam kondisi apa pun (kecuali user memerintahkan sebaliknya secara eksplisit):
+  - `video/PanggilanJihad.tsx`
+  - `video/IpanStorePromo.tsx`
+- Isi rule: WAJIB cek `git status --short` sebelum `git add`/`git commit` (kedua file
+  tidak boleh ikut ter-stage; bila ikut → `git restore --staged <file>`); larangan
+  pakai `git add -A` / `git add .` buta; pastikan deploy (SCP dist / `/deploy`) tidak
+  membawa perubahan kedua file. Baris "Jangan commit" di Catatan Teknis juga diperbarui
+  merujuk ke rule 15.
+- Catatan: koreksi nama file user ("anggilanJihad.tsx" → aktual `video/PanggilanJihad.tsx`,
+  ditemukan via glob). Kedua file saat ini **ter-track di git** (`.gitignore` tidak mempan
+  untuk file tracked) → penegakan murni lewat disiplin rule ini, bukan gitignore.
+  Status saat edit: `video/IpanStorePromo.tsx` sedang modified (belum di-commit, menunggu
+  konfirmasi user sesuai rule 2); `video/PanggilanJihad.tsx` bersih.
+- **Belum di-commit/push/deploy** — menunggu konfirmasi user (rule 2).
+
+## PERUBAHAN SESI INI (opencode.json — tambah Grok 4.7 xhigh)
+
+- Ditambah `provider.9router.models["gcli/grok-4.7(xhigh)"]` — `name "Grok 4.7 xhigh via 9Router"`,
+  `tool_call:true`, modalities input text+image → output text. **Tanpa variants** karena ID
+  9Router ini sudah terkunci reasoning xhigh (beda dari `gcli/grok-4.7` yang variants-nya
+  bisa dipilih). Disisip tepat setelah `gcli/grok-4.7`.
+- Alasan sesi sebelumnya hanya base: effort xhigh dianggap bisa dipilih lewat variant.
+  User menunjukkan 9Router log request terpisah `grok-4.7` vs `grok-4.7(xhigh)` — ID kedua
+  memang model sendiri di `/v1/models`, jadi perlu entri sendiri.
+- Yang lain TIDAK disentuh. `opencode.json` gitignored → tanpa commit/push/deploy.
+- ⚠️ Perlu restart opencode agar model baru muncul di picker.
+
+## PERUBAHAN SESI INI (opencode.json — tambah Grok 4.7 via 9Router)
+
+- Ditambah ke `D:\ipanstore\opencode.json`: `provider.9router.models["gcli/grok-4.7"]` —
+  `name "Grok 4.7 via 9Router"`, `tool_call:true`, modalities input text+image → output text
+  (vision ✅), variants minimal/low/medium/high/xhigh (`reasoningEffort`).
+- Disisip setelah `klt/gpt-5.6-luna` (pola variants meniru entri Luna + `cbai/*`).
+- Model ID `gcli/grok-4.7` terkonfirmasi ada di 9Router lokal (`/v1/models`,
+  `capabilities: vision:true, tools:true, reasoning:true`, context 256k/maxOutput 64k).
+  Provider `gcli` hanya berisi 2 model grok (`grok-4.7`, `grok-4.7(xhigh)`) → diasumsikan
+  ini provider grok baru milik user; yang dipakai entri base `grok-4.7` (bukan yang
+  `(xhigh)` yang sudah terkunci xhigh) agar variants reasoning bisa dipilih.
+- Yang lain TIDAK disentuh. Verifikasi: JSON valid (`ConvertFrom-Json` OK + `JSON.parse` OK),
+  tanpa BOM, models 9router 282→283. `opencode.json` masuk `.gitignore:39` → tanpa commit/push/deploy.
+- ⚠️ Perlu restart opencode agar model baru muncul di picker.
+
+## PERUBAHAN SESI INI (riset & setup skills/MCP untuk kebutuhan project)
+
+**Latar:** user minta riset mendalam skills/MCP yang menunjang task project. Hasil riset:
+task tersering = fix UI/animasi GSAP (ScrollStackCards 5x fix), deploy manual (SCP+PM2+Docker),
+migrasi SQL Supabase, cek commit sebelum deploy. Skill Remotion **diabaikan** sesuai permintaan user.
+
+**1. MCP 4 → 6 server** di `opencode.json` (token dari user, hardcoded — file gitignored):
+- `supabase` (remote `https://mcp.supabase.com/mcp`, Bearer PAT `sbp_fc6a...`) — **READ-ONLY**:
+  inspeksi tabel/skema/RLS, generate draft SQL patch. Tulis TETAP manual via dashboard (rule 11).
+- `github` (local `@modelcontextprotocol/server-github`, PAT `ghp_RvAV...` scope repo) — **READ-ONLY**:
+  cek log/diff/status push sebelum deploy. Commit/push tetap via bash + konfirmasi (rule 12).
+- Yang lain tidak disentuh: `sequential-thinking`, `context7`, `filesystem`, `agent-browser` (Brave).
+- Skill **tidak ditambah** — 19 skill existing dinilai sudah mencakup semua kebutuhan.
+- MCP Supabase vs Postgres: dipilih Supabase (lebih praktis, terintegrasi API) — tidak dua-duanya.
+
+**2. Command BARU** di `.opencode/command/`:
+- `deploy.md` (`/deploy`) — flow deploy lengkap: pre-check → git pull VPS → SCP dist →
+  `docker compose up --build -d` → `pm2 restart ipanstore-backend --update-env` → verifikasi
+  hash asset live HTML vs dist lokal. Termasuk daftar jebakan (Docker cache COPY dist,
+  PM2 bukan Docker, .env VPS gitignored).
+- `visual-check.md` (`/visual-check`) — workflow WAJIB verifikasi visual fix UI/animasi:
+  screenshot before/after via agent-browser Brave, checklist kasus tepi (1 kartu vs banyak,
+  mobile <1024px vs desktop, tab switch cepat, scroll cepat), protokol jika browser gagal,
+  anti-pattern terlarang ("serahkan buta", anggap build sukses = fix berhasil).
+
+**3. AGENTS.md — 4 rule baru (11-14):**
+- Rule 11: MCP Supabase read-only; SEMUA tulis DB tetap manual user via SQL Editor (ikut rule 10).
+- Rule 12: MCP GitHub read-only; commit/push/merge tetap via bash + konfirmasi user (ikut rule 2).
+- Rule 13: Fix UI/animasi/efek scroll WAJIB verifikasi visual agent-browser + screenshot
+  before/after SEBELUM diserahkan — memutus siklus fix berulang ScrollStackCards (5x gagal).
+- Rule 14: Deploy WAJIB ikut `/deploy`; verifikasi UI WAJIB ikut `/visual-check`.
+
+**4. Verifikasi:**
+- `opencode.json` → `ConvertFrom-Json` ✅ VALID, tanpa BOM, MCP servers:
+  `sequential-thinking, context7, filesystem, agent-browser, supabase, github`.
+- `opencode.json` ada di `.gitignore:39` → token aman, tanpa commit/push/deploy.
+- ⚠️ **Butuh restart opencode** agar 2 MCP baru aktif. MCP github butuh `npx -y`
+  download paket pertama kali (butuh internet).
+- Catatan workflow ScrollStackCards (dari plan) **sengaja ditunda** sesuai permintaan user
+  ("ini nanti saja") — belum ada fix ScrollStackCards di sesi ini.
+
+**5. Daftar file berubah/dibuat sesi ini:**
+- ✏️ `opencode.json` (diubah — tambah block `mcp.supabase` + `mcp.github`; gitignored, tanpa commit)
+- 🆕 `.opencode/command/deploy.md` (baru — command `/deploy`)
+- 🆕 `.opencode/command/visual-check.md` (baru — command `/visual-check`)
+- ✏️ `AGENTS.md` (diubah — tambah rule 11-14 setelah rule 10, sebelum "## Perintah Penting")
+- ✏️ `LASTACTIVITY.md` (diubah — STATUS + entri ini + Riwayat Sesi)
+- **Tidak ada perubahan** ke `src/`, `server/`, `database/`, atau file aplikasi lain.
+- **Belum di-commit/push/deploy** — menunggu konfirmasi user (AGENTS.md, command, LASTACTIVITY
+  adalah file ter-track; opencode.json gitignored).
+
+## PERUBAHAN SESI INI (opencode.json — tambah 26 model CodeBuddy via 9Router dari config Android)
+
+- Sumber: `D:\PROJECT MODULE IPAN SETTINX ANDROID\opencode.json` → `provider.9router.models["cbai/*"]` (26 model).
+- Ditambah ke `D:\ipanstore\opencode.json`: `cbai/claude-opus-5`, `cbai/gpt-5.5`, `cbai/gpt-5.6-luna`, `cbai/gpt-5.6-sol`, `cbai/gpt-5.6-terra`, `cbai/gpt-6-astra`, `cbai/apt-5.3-codex`, `cbai/glm-4.7`, `cbai/glm-5.0`, `cbai/glm-5.0-turbo`, `cbai/glm-5.1`, `cbai/glm-5.2`, `cbai/glm-5.3`, `cbai/glm-5v-turbo`, `cbai/kimi-k2.5`, `cbai/kimi-k2.6`, `cbai/kimi-k2.7`, `cbai/kimi-k3`, `cbai/deepseek-v3-2-volc`, `cbai/deepseek-v4-flash`, `cbai/deepseek-v4.1-flash`, `cbai/deepseek-v4-pro`, `cbai/minimax-m2.7`, `cbai/minimax-m3`, `cbai/hy3-preview`, `cbai/hy4-preview` (isi persis sumber, termasuk variants minimal/low/medium/high/xhigh/max).
+- Yang lain TIDAK disentuh sesuai permintaan user ("yang tidak dibutuhkan tidak usah"): `cline1-4` tidak ditambah, MCP supabase/memory/github tidak ditambah, 4 `combo:*` kelontongai tetap, apiKey hardcoded tetap (tidak diganti `{env:...}`), filesystem root tetap `D:\ipanstore`.
+- Verifikasi: JSON valid (`ConvertFrom-Json` OK), tanpa BOM, models 9router 256→282. `opencode.json` masuk `.gitignore:39` → tanpa commit/push/deploy. Perlu restart opencode agar model baru muncul.
+- Backup sementara `opencode.json.bak-20260919-cbai` sudah dihapus setelah verifikasi.
 
 ## PERUBAHAN SESI INI (link Module → Google Drive — ✅ SUDAH commit/push/deploy)
 
@@ -19,12 +222,14 @@
 - Verifikasi lokal: `node --check server/index.js` ✅ SYNTAX OK; `npx tsc --noEmit` ✅;
   link lama `ckyz6vnn9kxga6b`/MediaFire sudah tidak ada di `server/` & `src/`
   (hanya tersisa di LASTACTIVITY.md sebagai catatan riwayat).
-- ⚠️ Deploy nanti: `server/.env` di VPS TIDAK ikut git → harus update manual
-  `SETTINX_MODULE_1_1_DOWNLOAD_URL` di VPS + `pm2 restart ipanstore-backend`.
-  Frontend (`Orders.tsx`) butuh rebuild dist + SCP + `docker compose up --build -d`.
+- ⚠️ Pelajaran deploy (sudah diterapkan sesi ini): `server/.env` di VPS TIDAK ikut git →
+  update manual `SETTINX_MODULE_1_1_DOWNLOAD_URL` di VPS + `pm2 restart ipanstore-backend`.
+  Frontend butuh rebuild dist lokal + SCP + `docker compose up --build -d`.
 - ### Deploy sesi ini (2026-09-16, ✅ live, user konfirmasi "gas commit push deploy")
   - Commit `a6c0345` (termasuk sisa rule 9 AGENTS.md dari sesi tooling yang belum ter-commit)
     + push `origin/main` (`f840eae..a6c0345`).
+  - Commit susulan `095455a` ("docs: catat deploy link Module -> Google Drive") + push
+    (`a6c0345..095455a`) — berisi catatan deploy ini di LASTACTIVITY.md.
   - VPS: `git pull --ff-only` FF `1404234..a6c0345` (sekaligus membawa fix ScrollStackCards +
     Paket yang belum ter-pull) → `server/.env:57` update via `sed` ke link Drive ✅
     → `pm2 restart ipanstore-backend --update-env` (pid 3483044, `/api/health` ok).
@@ -482,6 +687,15 @@
 
 | Waktu | Aktivitas |
 |---|---|
+| 2026-09-26 | ✅ Deploy FIX "Failed to fetch" order di live. Akar: `.env.local` bake `localhost:5159` ke build produksi (Vite memuat `.env.local` semua mode, timpa `.env`). Fix Opsi A: `.env.development` (dev→localhost:5159) + `.env.local` tanpa override (build→api.ipanstore.id). Build baru `index-gv4hPJTP.js` (0× localhost, api.ipanstore.id di 4 chunk). Deploy frontend: backup `dist.bak-20260926`, SCP dist, `docker compose up --build -d`; live serve bundle baru, /order 200, API health 200. Tanpa commit (env gitignored). Rule 15 dijaga (video tidak ikut). |
+| 2026-09-26 | ⏳ Automasi order "Ipan Module SettinX 1.1": saat LUNAS website auto-buat akun (ID+password) + license key di Supabase Module (`ydoubotecwoamuyacqhw`, via Admin API) + kirim email berisi kredensial + link download ke Gmail pembeli. File baru `server/lib/moduleSettinxLicense.js`; `server/index.js` (email redesign bertumpuk agar jelas di Gmail mobile + branch module_1_1 di webhook DOKU/resend); `.env`/`.env.example` (+2 var MODULE_SETTINX_SUPABASE_*); `admin/Orders.tsx`. Link Drive baru `1U3uz7-hDXCtCXutME-zCBHXLvhr8h-Zf`. Repeat purchase = akun baru (akun lama tetap hidup). Test end-to-end OK. BELUM commit/push/deploy. |
+| 2026-09-25 | ✅ Default model → `9router/cbai/deepseek-v4.1-flash` ("CodeBuddy DeepSeek V4.1 Flash Via 9Router", tool_call + vision + variants minimal→max; pilihan user via prompt). Sebelumnya `9router/klt/deepseek-v4-flash-0731`. Hanya field `model` yg diubah, `small_model` tetap. JSON valid. File gitignored → tanpa commit/push/deploy. ⚠️ Restart opencode (CLI + Desktop) agar default baru aktif. |
+| 2026-09-25 | ✅ 9Router FULL SYNC: `provider.9router.models` di `opencode.json` 284→887 (tambah 603 model live; 284 entri lama utuh, 0 berubah). `opencode models` baca 887 ✅. Script merge + `.bak` dihapus. Gitignored, tanpa commit/push/deploy. |
+| 2026-09-25 | 📝 AGENTS.md rule 15 BARU: `video/PanggilanJihad.tsx` + `video/IpanStorePromo.tsx` DILARANG ikut commit/push/deploy (cek `git status` sebelum stage, larangan `git add -A` buta). Catatan: keduanya ter-track di git (gitignore tidak mempan) → penegakan via disiplin rule. `IpanStorePromo.tsx` sedang modified, belum di-commit. |
+| 2026-09-23 | opencode.json: tambah `gcli/grok-4.7(xhigh)` ("Grok 4.7 xhigh via 9Router", tool_call + vision, tanpa variants karena effort terkunci). JSON valid, tanpa BOM. Gitignored, tanpa commit/deploy. ⚠️ Butuh restart opencode. |
+| 2026-09-23 | opencode.json: tambah `gcli/grok-4.7` ("Grok 4.7 via 9Router", tool_call + vision text+image→text, variants minimal/low/medium/high/xhigh) — hanya provider 9router, lainnya tidak disentuh. JSON valid, 9router 282→283 models. File gitignored (tanpa commit/deploy). ⚠️ Butuh restart opencode. |
+| 2026-09-19 | ✅ Tooling upgrade (riset skills/MCP): **(a)** `opencode.json` — MCP 4→6, tambah `supabase` (remote read-only, Bearer PAT) + `github` (local npx read-only, PAT scope repo); **(b)** `.opencode/command/deploy.md` BARU (`/deploy`: build→SCP dist→docker compose→PM2→verifikasi hash asset + daftar jebakan); **(c)** `.opencode/command/visual-check.md` BARU (`/visual-check`: screenshot before/after via agent-browser Brave + checklist kasus tepi); **(d)** `AGENTS.md` — rule 11-14 (Supabase RO, GitHub RO, fix UI wajib verifikasi visual, wajib ikut command); **(e)** skill tidak ditambah (19 existing cukup), skill Remotion diabaikan sesuai permintaan. JSON valid + tanpa BOM. opencode.json gitignored (tanpa commit/deploy). ⚠️ Butuh restart opencode; MCP github `npx -y` download pertama kali. Catatan workflow ScrollStackCards ditunda ("nanti saja"). |
+| 2026-09-19 | opencode.json: tambah 26 model CodeBuddy via 9Router (`cbai/*`) dari config Android — hanya provider 9router, lainnya tidak disentuh. JSON valid, 9router 256→282 models. File gitignored (tanpa commit/deploy). |
 | 2026-09-16 | ✅ Deploy link Module → Google Drive (commit a6c0345 push+deploy: git pull FF 1404234..a6c0345, env VPS update + pm2 restart, dist baru di-SCP + rebuild Docker; frontend, /order & API 200, live HTML serve bundle baru). |
 | 2026-09-16 | ⏳ Ganti link "Ipan Module SettinX 1.1" MediaFire → Google Drive (`drive.google.com/file/d/1I1Hz1XfQiEFGIajiukjzhIbd-EPVxW7B/view`) di `server/index.js`, `server/.env`, `server/.env.example`, `src/pages/admin/Orders.tsx`. Email auto (webhook) + resend admin terverifikasi pakai sumber yang sama. `node --check` + `tsc` OK. BELUM commit/push/deploy — menunggu konfirmasi user. |
 | 2026-09-15 | ✅ Cleanup tooling: 19 skill reinstall fresh dari upstream, MCP → 4 server (playwright & duplikat global dihapus), engine agent-browser → Brave (setx + env config), file state basi `~/.agent-browser` dibersihkan, AGENTS.md rule 9 diperbarui. ⚠️ Butuh restart opencode. |
