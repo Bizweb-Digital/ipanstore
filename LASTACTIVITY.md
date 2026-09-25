@@ -1,6 +1,23 @@
 # LASTACTIVITY — IPAN STORE
 
-## STATUS: ⏳ SIAP — Automasi order "Ipan Module SettinX 1.1" (auto-generate akun + license key Supabase saat LUNAS). BELUM commit/push/deploy (menunggu konfirmasi user).
+## STATUS: ✅ DEPLOYED & LIVE — Automasi order "Ipan Module SettinX 1.1" (auto-generate akun + license key Supabase + email kredensial). Commit `7e9573f`, asset `index-Ml-HGKjc.js`. Test produksi OK (akun `ipanasik123-4` + email terkirim).
+
+## DEPLOY SESI INI (automasi Module SettinX — ✅ live)
+
+- **Commit `7e9573f`** (9 file, +877/-95) → push `origin/main` (`095455a..7e9573f`).
+- **VPS**: `git pull --ff-only` FF `a6c0345..7e9573f`.
+- **`server/.env` VPS** (gitignored) di-update manual:
+  - `SETTINX_MODULE_1_1_DOWNLOAD_URL` → link Drive baru `1U3uz7-hDXCtCXutME-zCBHXLvhr8h-Zf`.
+  - **+2 env baru**: `MODULE_SETTINX_SUPABASE_URL` + `MODULE_SETTINX_SUPABASE_SERVICE_ROLE_KEY`.
+  - Backup: `server/.env.bak-20260926`.
+- **Backend**: `@supabase/supabase-js` sudah ada di VPS; `node --check` OK; `pm2 restart ipanstore-backend --update-env` (pid 508428, online).
+- **Frontend**: `npm run build` lokal (`index-Ml-HGKjc.js`); backup `dist.bak-20260926`; SCP dist; `docker compose up --build -d` (container `ipanstore` Recreated+Started).
+- **Verifikasi live**:
+  - `https://ipanstore.id` serve `index-Ml-HGKjc.js` ✅ (MATCH dist); `/order` 200; `api.ipanstore.id/api/health` 200.
+  - Container `ipanstore` Up ✅.
+  - **Test produksi end-to-end**: order QRIS `IPANMODULESETTINX111790373691537` → resend → akun `ipanasik123-4` + license `B1B6-E74F-6F68-EA89-5372-FA56-FFC4-B467` DIBUAT + **email nyata terkirim** ✅ (log PM2).
+- **Catatan**: `.env.development` ditambah ke `.gitignore` (berisi secret VITE_ADMIN_API_SECRET).
+- Rule 15 dijaga: `video/IpanStorePromo.tsx` (modified) TIDAK ikut commit/deploy.
 
 ## PERUBAHAN SESI INI (automasi order Module SettinX — auto akun + license + email)
 
@@ -688,7 +705,8 @@ migrasi SQL Supabase, cek commit sebelum deploy. Skill Remotion **diabaikan** se
 | Waktu | Aktivitas |
 |---|---|
 | 2026-09-26 | ✅ Deploy FIX "Failed to fetch" order di live. Akar: `.env.local` bake `localhost:5159` ke build produksi (Vite memuat `.env.local` semua mode, timpa `.env`). Fix Opsi A: `.env.development` (dev→localhost:5159) + `.env.local` tanpa override (build→api.ipanstore.id). Build baru `index-gv4hPJTP.js` (0× localhost, api.ipanstore.id di 4 chunk). Deploy frontend: backup `dist.bak-20260926`, SCP dist, `docker compose up --build -d`; live serve bundle baru, /order 200, API health 200. Tanpa commit (env gitignored). Rule 15 dijaga (video tidak ikut). |
-| 2026-09-26 | ⏳ Automasi order "Ipan Module SettinX 1.1": saat LUNAS website auto-buat akun (ID+password) + license key di Supabase Module (`ydoubotecwoamuyacqhw`, via Admin API) + kirim email berisi kredensial + link download ke Gmail pembeli. File baru `server/lib/moduleSettinxLicense.js`; `server/index.js` (email redesign bertumpuk agar jelas di Gmail mobile + branch module_1_1 di webhook DOKU/resend); `.env`/`.env.example` (+2 var MODULE_SETTINX_SUPABASE_*); `admin/Orders.tsx`. Link Drive baru `1U3uz7-hDXCtCXutME-zCBHXLvhr8h-Zf`. Repeat purchase = akun baru (akun lama tetap hidup). Test end-to-end OK. BELUM commit/push/deploy. |
+| 2026-09-26 | ✅ **DEPLOYED & LIVE** automasi order "Ipan Module SettinX 1.1" (commit `7e9573f` push `origin/main`; VPS `git pull` FF `a6c0345..7e9573f`; `server/.env` VPS di-update manual +2 env `MODULE_SETTINX_SUPABASE_*` + link Drive baru + `pm2 restart --update-env`; frontend build `index-Ml-HGKjc.js` → SCP dist → `docker compose up --build -d`; live serve bundle baru, /order & API 200; test produksi order `IPANMODULESETTINX111790373691537` → akun `ipanasik123-4` + license dibuat + email terkirim). |
+| 2026-09-26 | ⏳ (histori) Automasi order "Ipan Module SettinX 1.1": saat LUNAS website auto-buat akun (ID+password) + license key di Supabase Module (`ydoubotecwoamuyacqhw`, via Admin API) + kirim email berisi kredensial + link download ke Gmail pembeli. File baru `server/lib/moduleSettinxLicense.js`; `server/index.js` (email redesign bertumpuk agar jelas di Gmail mobile + branch module_1_1 di webhook DOKU/resend); `.env`/`.env.example` (+2 var MODULE_SETTINX_SUPABASE_*); `admin/Orders.tsx`. Link Drive baru `1U3uz7-hDXCtCXutME-zCBHXLvhr8h-Zf`. Repeat purchase = akun baru (akun lama tetap hidup). Test end-to-end OK. |
 | 2026-09-25 | ✅ Default model → `9router/cbai/deepseek-v4.1-flash` ("CodeBuddy DeepSeek V4.1 Flash Via 9Router", tool_call + vision + variants minimal→max; pilihan user via prompt). Sebelumnya `9router/klt/deepseek-v4-flash-0731`. Hanya field `model` yg diubah, `small_model` tetap. JSON valid. File gitignored → tanpa commit/push/deploy. ⚠️ Restart opencode (CLI + Desktop) agar default baru aktif. |
 | 2026-09-25 | ✅ 9Router FULL SYNC: `provider.9router.models` di `opencode.json` 284→887 (tambah 603 model live; 284 entri lama utuh, 0 berubah). `opencode models` baca 887 ✅. Script merge + `.bak` dihapus. Gitignored, tanpa commit/push/deploy. |
 | 2026-09-25 | 📝 AGENTS.md rule 15 BARU: `video/PanggilanJihad.tsx` + `video/IpanStorePromo.tsx` DILARANG ikut commit/push/deploy (cek `git status` sebelum stage, larangan `git add -A` buta). Catatan: keduanya ter-track di git (gitignore tidak mempan) → penegakan via disiplin rule. `IpanStorePromo.tsx` sedang modified, belum di-commit. |
