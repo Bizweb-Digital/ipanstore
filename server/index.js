@@ -30,6 +30,7 @@ import {
   initSettinxFirebase,
   rotateSettinxPassword,
 } from "./lib/settinxLicense.js";
+import { assignModuleSettinxLicense } from "./lib/moduleSettinxLicense.js";
 import { sendPaidEmail } from "./lib/notify.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -377,7 +378,12 @@ const SETTINX_DOWNLOAD_URL =
 // Link Google Drive produk "Ipan Module SettinX 1.1" (dari .env, tidak di-hardcode).
 const SETTINX_MODULE_DOWNLOAD_URL =
   process.env.SETTINX_MODULE_1_1_DOWNLOAD_URL ||
-  "https://drive.google.com/file/d/1I1Hz1XfQiEFGIajiukjzhIbd-EPVxW7B/view";
+  "https://drive.google.com/file/d/1U3uz7-hDXCtCXutME-zCBHXLvhr8h-Zf/view";
+
+// Kontak bantuan & grup komunitas untuk email "Ipan Module SettinX 1.1".
+// Nomor WA admin: +62 889-7649-6870 → format wa.me tanpa spasi/strip.
+const MODULE_SUPPORT_WA_URL = "https://wa.me/6288976496870";
+const MODULE_COMMUNITY_GROUP_URL = "https://chat.whatsapp.com/DoKUsn9NlFOFJBX1VQcB8U";
 
 const emailTransporter = SMTP_USER
   ? nodemailer.createTransport({
@@ -389,27 +395,75 @@ const emailTransporter = SMTP_USER
   : null;
 
 /**
- * Buat kartu kredensial login SettinX untuk email (ada isi → tampilkan; kosong → null).
+ * Kartu kredensial login SettinX V1 untuk email.
+ * Layout BERTUMPUK (label di atas, nilai monospace besar di bawah) agar terbaca
+ * jelas & proporsional di Gmail mobile — nilai panjang tidak terpotong.
  */
 function credentialsCardHtml(credentials) {
   if (!credentials?.username || !credentials?.password || !credentials?.licenseKey) return "";
-  const row = (label, value) =>
-    `<tr>
-      <td style="padding:6px 0;color:#a1a1aa;font-size:13px;white-space:nowrap;vertical-align:top">${label}</td>
-      <td style="padding:6px 0;text-align:right;font-family:monospace;font-size:13px;font-weight:600;word-break:break-all">${escapeHtml(value)}</td>
-    </tr>`;
+  const field = (label, value) =>
+    `<div style="margin:0 0 12px 0">
+      <div style="font-size:11px;letter-spacing:0.6px;text-transform:uppercase;color:#8b8b93;margin:0 0 4px 0">${label}</div>
+      <div style="font-family:'Courier New',Consolas,monospace;font-size:16px;font-weight:700;color:#ffffff;line-height:1.5;word-break:break-all;background:#1c1c1f;border:1px solid #33333a;border-radius:8px;padding:10px 12px">${escapeHtml(value)}</div>
+    </div>`;
   return `
-    <div style="background:#0c0c0d;border:1px solid #3f3f46;border-radius:10px;padding:18px 20px;margin:22px 0">
-      <div style="font-weight:700;margin-bottom:4px">🔐 Kredensial Login IPAN APP SettinX V1</div>
-      <div style="font-size:12px;color:#a1a1aa;margin-bottom:10px">Gunakan kredensial ini untuk login pada aplikasi setelah di-download:</div>
-      <table style="width:100%;border-collapse:collapse;font-size:13px">
-        ${row("Username (Email)", credentials.username)}
-        ${row("Password", credentials.password)}
-        ${row("License Key", credentials.licenseKey)}
-      </table>
-      <div style="font-size:11px;color:#71717a;margin-top:10px;border-top:1px solid #27272a;padding-top:8px">
-        ⚠️ Simpan kredensial ini baik-baik. Jangan pernah membagikannya kepada orang lain. Satu lisensi hanya untuk satu perangkat.
+    <div style="background:#131316;border:1px solid #3f3f46;border-radius:12px;padding:20px;margin:24px 0">
+      <div style="font-size:16px;font-weight:800;color:#ffffff;margin-bottom:4px">🔐 Kredensial Login</div>
+      <div style="font-size:13px;color:#a1a1aa;line-height:1.5;margin-bottom:16px">Gunakan data di bawah untuk login ke <strong style="color:#e4e4e7">IPAN APP SettinX V1</strong> setelah aplikasi terpasang.</div>
+      ${field("Username (Email)", credentials.username)}
+      ${field("Password", credentials.password)}
+      ${field("License Key", credentials.licenseKey)}
+      <div style="font-size:12px;color:#8b8b93;margin-top:6px;border-top:1px solid #2a2a30;padding-top:12px;line-height:1.5">
+        ⚠️ Simpan kredensial ini baik-baik. Jangan pernah membagikannya. Satu lisensi hanya untuk satu perangkat.
       </div>
+    </div>`;
+}
+
+/**
+ * Kartu kredensial login "Ipan Module SettinX 1.1" untuk email.
+ * Layout BERTUMPUK + font besar + langkah aktivasi, agar jelas & proporsional di Gmail mobile.
+ */
+function moduleCredentialsCardHtml(credentials) {
+  if (!credentials?.id || !credentials?.password || !credentials?.licenseKey) return "";
+  const field = (label, value) =>
+    `<div style="margin:0 0 12px 0">
+      <div style="font-size:11px;letter-spacing:0.6px;text-transform:uppercase;color:#8b8b93;margin:0 0 4px 0">${label}</div>
+      <div style="font-family:'Courier New',Consolas,monospace;font-size:16px;font-weight:700;color:#ffffff;line-height:1.5;word-break:break-all;background:#1c1c1f;border:1px solid #33333a;border-radius:8px;padding:10px 12px">${escapeHtml(value)}</div>
+    </div>`;
+  return `
+    <div style="background:#131316;border:1px solid #3f3f46;border-radius:12px;padding:20px;margin:24px 0">
+      <div style="font-size:16px;font-weight:800;color:#ffffff;margin-bottom:4px">🔐 Kredensial Login</div>
+      <div style="font-size:13px;color:#a1a1aa;line-height:1.5;margin-bottom:16px">Gunakan data di bawah untuk login ke <strong style="color:#e4e4e7">IPAN Module SettinX 1.1</strong> setelah aplikasi terpasang.</div>
+      ${field("ID Akun", credentials.id)}
+      ${field("Password", credentials.password)}
+      ${field("License Key", credentials.licenseKey)}
+      <div style="font-size:13px;color:#a1a1aa;line-height:1.7;margin-top:6px;border-top:1px solid #2a2a30;padding-top:14px">
+        <strong style="color:#e4e4e7;font-size:14px">📖 Cara Pakai</strong><br/>
+        1. Download &amp; install aplikasi dari tombol di bawah.<br/>
+        2. Buka aplikasi → login memakai <strong style="color:#e4e4e7">ID Akun</strong> &amp; <strong style="color:#e4e4e7">Password</strong> di atas.<br/>
+        3. Masukkan <strong style="color:#e4e4e7">License Key</strong> untuk aktivasi (1 key = 1 perangkat).<br/>
+        4. Selesai — modul siap digunakan.
+      </div>
+      <div style="font-size:12px;color:#8b8b93;margin-top:12px;border-top:1px solid #2a2a30;padding-top:12px;line-height:1.5">
+        ⚠️ Simpan kredensial ini baik-baik. Jangan pernah membagikannya kepada orang lain.
+      </div>
+    </div>`;
+}
+
+/**
+ * Blok bantuan & grup komunitas WhatsApp untuk email Module SettinX.
+ * Tombol full-width (bertumpuk) agar rapi & mudah ditekan di HP.
+ */
+function moduleSupportButtonsHtml() {
+  const btn = (href, label) =>
+    `<a href="${href}" style="display:block;background:#25D366;color:#0b1410;text-decoration:none;font-weight:700;padding:14px 18px;border-radius:8px;font-size:15px;text-align:center;margin:0 0 10px 0">${label}</a>`;
+  return `
+    <div style="background:#131316;border:1px solid #2a2a30;border-radius:12px;padding:20px;margin:24px 0">
+      <div style="font-size:16px;font-weight:800;color:#ffffff;margin-bottom:4px">💬 Butuh Bantuan?</div>
+      <div style="font-size:13px;color:#a1a1aa;line-height:1.5;margin-bottom:16px">Jika ada kekeliruan data, kendala aktivasi, atau ingin bertanya — hubungi kami:</div>
+      ${btn(MODULE_SUPPORT_WA_URL, "💬 Hubungi WhatsApp Admin")}
+      ${btn(MODULE_COMMUNITY_GROUP_URL, "📱 Gabung Grup Module Ipan")}
+      <div style="font-size:12px;color:#8b8b93;text-align:center;margin-top:6px">Admin: +62 889-7649-6870</div>
     </div>`;
 }
 
@@ -502,19 +556,23 @@ async function sendSettinXEmail({ to, customerName, invoiceNumber, amount, paidA
 }
 
 /**
- * Kirim email produk "Ipan Module SettinX 1.1" + invoice ke pembeli.
- * Modul ini TANPA lisensi/login — hanya berisi link download Google Drive.
- * Mengembalikan { ok, error? }.
+ * Baris ringkasan (label kecil di atas, nilai besar di bawah) — layout BERTUMPUK
+ * agar terbaca jelas & proporsional di Gmail mobile (nilai panjang tidak terpotong).
  */
-async function sendModuleSettinxEmail({ to, customerName, invoiceNumber, amount, paidAt }) {
-  if (!emailTransporter) return { ok: false, error: "SMTP belum dikonfigurasi (SMTP_USER kosong)." };
-  const safeTo = String(to ?? "").trim();
-  if (!isValidEmail(safeTo)) {
-    return { ok: false, error: "Format email pembeli tidak valid." };
-  }
-  const safeName = sanitizeForHeader(customerName, 100);
-  const safeInvoice = sanitizeForHeader(invoiceNumber, 64);
+function summaryRowHtml(label, value, { mono = false, accent = false, big = false } = {}) {
+  return `
+    <div style="padding:12px 0;border-bottom:1px solid #2a2a30">
+      <div style="font-size:11px;letter-spacing:0.6px;text-transform:uppercase;color:#8b8b93;margin:0 0 4px 0">${label}</div>
+      <div style="font-size:${big ? "20px" : "15px"};font-weight:700;line-height:1.4;word-break:break-all;color:${accent ? "#4ade80" : "#ffffff"};${mono ? "font-family:'Courier New',Consolas,monospace;" : ""}">${value}</div>
+    </div>`;
+}
 
+/**
+ * Bangun HTML lengkap email "Ipan Module SettinX 1.1".
+ * Layout bertumpuk (label di atas, nilai besar di bawah) agar jelas & proporsional
+ * dibaca di Gmail desktop maupun mobile.
+ */
+function buildModuleSettinxEmailHtml({ customerName, invoiceNumber, amount, paidAt, credentials }) {
   const formattedAmount = new Intl.NumberFormat("id-ID", {
     style: "currency",
     currency: "IDR",
@@ -526,63 +584,78 @@ async function sendModuleSettinxEmail({ to, customerName, invoiceNumber, amount,
     : new Date().toLocaleString("id-ID");
 
   const downloadUrl = SETTINX_MODULE_DOWNLOAD_URL;
+  const safeName = escapeHtml(String(customerName || "Pelanggan"));
+  const safeInvoice = escapeHtml(String(invoiceNumber || "-"));
 
-  const html = `
+  return `
   <div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#0f0f10;color:#e4e4e7;border-radius:12px;overflow:hidden;border:1px solid #27272a">
-    <div style="background:linear-gradient(135deg,#18181b,#3f3f46);padding:28px 32px">
+    <div style="background:linear-gradient(135deg,#18181b,#3f3f46);padding:28px 24px">
       <div style="font-size:22px;font-weight:800;letter-spacing:-0.5px">IPAN <span style="color:#a1a1aa">STORE</span></div>
       <div style="font-size:12px;color:#a1a1aa;margin-top:2px">Payment Confirmation</div>
     </div>
-    <div style="padding:28px 32px">
-      <p style="font-size:16px;font-weight:600;margin:0 0 4px">Halo, ${escapeHtml(safeName || "Pelanggan")} 👋</p>
-      <p style="color:#a1a1aa;font-size:14px;margin:0 0 20px">Terima kasih atas pembelian Anda. Pembayaran telah kami terima ✅</p>
+    <div style="padding:24px">
+      <p style="font-size:17px;font-weight:700;margin:0 0 4px;color:#ffffff">Halo, ${safeName} 👋</p>
+      <p style="color:#a1a1aa;font-size:14px;line-height:1.5;margin:0 0 20px">Terima kasih atas pembelian Anda. Pembayaran telah kami terima ✅</p>
 
-      <table style="width:100%;border-collapse:collapse;font-size:14px">
-        <tr>
-          <td style="padding:8px 0;color:#a1a1aa">No. Invoice</td>
-          <td style="padding:8px 0;text-align:right;font-family:monospace">${escapeHtml(safeInvoice || "-")}</td>
-        </tr>
-        <tr>
-          <td style="padding:8px 0;color:#a1a1aa">Produk</td>
-          <td style="padding:8px 0;text-align:right">IPAN Module SettinX 1.1</td>
-        </tr>
-        <tr>
-          <td style="padding:8px 0;color:#a1a1aa">Status</td>
-          <td style="padding:8px 0;text-align:right;color:#4ade80;font-weight:600">LUNAS</td>
-        </tr>
-        <tr>
-          <td style="padding:8px 0;color:#a1a1aa">Total Dibayar</td>
-          <td style="padding:8px 0;text-align:right;font-size:16px;font-weight:800;color:#f4f4f5">${formattedAmount}</td>
-        </tr>
-        <tr>
-          <td style="padding:8px 0;color:#a1a1aa">Waktu</td>
-          <td style="padding:8px 0;text-align:right">${escapeHtml(paidLabel)}</td>
-        </tr>
-      </table>
-
-      <div style="background:#18181b;border:1px solid #27272a;border-radius:10px;padding:18px 20px;margin:22px 0">
-        <div style="font-weight:700;margin-bottom:6px">📦 Download IPAN Module SettinX 1.1</div>
-        <div style="font-size:13px;color:#a1a1aa;margin-bottom:12px">Klik tombol di bawah untuk mengunduh aplikasi (.apk).</div>
-        <a href="${downloadUrl}" style="display:inline-block;background:#f4f4f5;color:#18181b;text-decoration:none;font-weight:700;padding:12px 24px;border-radius:8px;font-size:14px">⬇️ Download Ipan Module SettinX 1.1</a>
+      <div style="background:#131316;border:1px solid #2a2a30;border-radius:12px;padding:20px;margin:0 0 24px 0">
+        <div style="font-size:16px;font-weight:800;color:#ffffff;margin-bottom:6px">🧾 Ringkasan Pesanan</div>
+        ${summaryRowHtml("No. Invoice", safeInvoice, { mono: true })}
+        ${summaryRowHtml("Produk", "IPAN Module SettinX 1.1")}
+        ${summaryRowHtml("Status", "LUNAS", { accent: true })}
+        ${summaryRowHtml("Total Dibayar", formattedAmount, { big: true })}
+        <div style="padding:12px 0 0 0">
+          <div style="font-size:11px;letter-spacing:0.6px;text-transform:uppercase;color:#8b8b93;margin:0 0 4px 0">Waktu</div>
+          <div style="font-size:15px;font-weight:600;color:#ffffff">${escapeHtml(paidLabel)}</div>
+        </div>
       </div>
 
-      <p style="font-size:12px;color:#71717a;line-height:1.6">
-        Jika tombol tidak berfungsi, salin tautan berikut:<br/>
-        <a href="${downloadUrl}" style="color:#a1a1aa;word-break:break-all">${downloadUrl}</a>
-      </p>
+      ${moduleCredentialsCardHtml(credentials)}
 
-      <p style="font-size:12px;color:#71717a;margin-top:24px;border-top:1px solid #27272a;padding-top:16px">
+      <div style="background:#131316;border:1px solid #2a2a30;border-radius:12px;padding:20px;margin:24px 0">
+        <div style="font-size:16px;font-weight:800;color:#ffffff;margin-bottom:4px">📦 Download Aplikasi</div>
+        <div style="font-size:13px;color:#a1a1aa;line-height:1.5;margin-bottom:14px">Unduh aplikasi IPAN Module SettinX 1.1 (.apk) lewat tombol berikut:</div>
+        <a href="${downloadUrl}" style="display:block;background:#f4f4f5;color:#18181b;text-decoration:none;font-weight:800;padding:15px 18px;border-radius:8px;font-size:15px;text-align:center">⬇️ Download IPAN Module SettinX 1.1</a>
+        <div style="font-size:12px;color:#8b8b93;line-height:1.6;margin-top:12px">Jika tombol tidak berfungsi, salin tautan ini:<br/><a href="${downloadUrl}" style="color:#a1a1aa;word-break:break-all">${downloadUrl}</a></div>
+      </div>
+
+      ${moduleSupportButtonsHtml()}
+
+      <p style="font-size:12px;color:#71717a;line-height:1.6;margin-top:24px;border-top:1px solid #27272a;padding-top:16px;text-align:center">
         Untuk bantuan &amp; aktivasi lisensi, hubungi kami via WhatsApp di website IPAN STORE.<br/>
         © ${new Date().getFullYear()} IPAN STORE
       </p>
     </div>
   </div>`;
+}
+
+/**
+ * Kirim email produk "Ipan Module SettinX 1.1" + invoice ke pembeli.
+ * Berisi: ringkasan invoice, kredensial login (ID/Password/License Key) bila ada,
+ * link download Google Drive, serta tombol bantuan WA & grup komunitas.
+ * Mengembalikan { ok, error? }.
+ */
+async function sendModuleSettinxEmail({ to, customerName, invoiceNumber, amount, paidAt, credentials }) {
+  if (!emailTransporter) return { ok: false, error: "SMTP belum dikonfigurasi (SMTP_USER kosong)." };
+  const safeTo = String(to ?? "").trim();
+  if (!isValidEmail(safeTo)) {
+    return { ok: false, error: "Format email pembeli tidak valid." };
+  }
+  const safeName = sanitizeForHeader(customerName, 100);
+  const safeInvoice = sanitizeForHeader(invoiceNumber, 64);
+
+  const html = buildModuleSettinxEmailHtml({
+    customerName: safeName,
+    invoiceNumber: safeInvoice,
+    amount,
+    paidAt,
+    credentials,
+  });
 
   try {
     await emailTransporter.sendMail({
       from: MAIL_FROM,
       to: safeTo,
-      subject: `✅ Pembayaran Diterima — Download IPAN Module SettinX 1.1 (${safeInvoice || ""})`,
+      subject: `✅ Pembayaran Diterima — Kredensial & Download IPAN Module SettinX 1.1 (${safeInvoice || ""})`,
       html,
     });
     return { ok: true };
@@ -1043,16 +1116,33 @@ async function processPaymentConfirmation(orderId, payload = null) {
     return { processed: true, reason: 'no_customer_email', order };
   }
 
-  // ── Produk "Ipan Module SettinX 1.1": cukup link download Google Drive ───
-  // Tanpa lisensi Firebase. Format terkirim hanya jika pembayaran sudah LUNAS.
+  // ── Produk "Ipan Module SettinX 1.1": generate akun + license key Supabase ─
+  // Generate akun (ID/password) di Supabase Module SettinX + license key OTOMATIS,
+  // lalu sertakan kredensialnya dalam email. Jika Supabase Module belum
+  // dikonfigurasi / gagal, email tetap terkirim (tanpa kredensial) dan error dicatat.
   if (productType === "module_1_1") {
-    console.log(`📦 IPAN Module SettinX 1.1 TERBAYAR — kirim link Google Drive ke ${order.customer_email} (invoice ${orderId})...`);
+    console.log(`📦 IPAN Module SettinX 1.1 TERBAYAR — siapkan akun + license key untuk ${order.customer_email} (invoice ${orderId})...`);
+
+    let moduleCredentials = null;
+    let moduleLicenseErr = null;
+    try {
+      moduleCredentials = await assignModuleSettinxLicense({
+        customerEmail: order.customer_email,
+        customerName: order.customer_name,
+        invoiceNumber: orderId,
+      });
+    } catch (e) {
+      moduleLicenseErr = e.message;
+      console.error(`⚠️  Module SettinX license GAGAL untuk ${order.customer_email}:`, e.message);
+    }
+
     const moduleResult = await sendModuleSettinxEmail({
       to: order.customer_email,
       customerName: order.customer_name,
       invoiceNumber: orderId,
       amount: payload?.total_amount || order.amount,
       paidAt: new Date().toISOString(),
+      credentials: moduleCredentials,
     });
 
     if (moduleResult.ok) {
@@ -1060,12 +1150,14 @@ async function processPaymentConfirmation(orderId, payload = null) {
         email_sent: true,
         email_sent_at: new Date().toISOString(),
         settinx_type: "module_1_1",
+        settinx_license_uid: moduleCredentials?.uid || order.settinx_license_uid || null,
+        settinx_license_error: moduleLicenseErr || null,
       });
       console.log(`📧 Email Module SettinX TERKIRIM: ${order.customer_email} (invoice ${orderId})`);
     } else {
       console.error(`📧 Email Module SettinX GAGAL ke ${order.customer_email}: ${moduleResult.error}`);
     }
-    return { processed: true, result: moduleResult, order };
+    return { processed: true, result: moduleResult, credentials: moduleCredentials, licenseErr: moduleLicenseErr, order };
   }
 
   // ── Produk "IPAN APP SettinX V1": generate kredensial Firebase ───────────
@@ -1718,23 +1810,57 @@ app.post("/api/doku-webhook", async (req, res) => {
           doku_transaction_id: payload?.transaction?.token_id || order.doku_transaction_id,
         });
 
-        // Kirim email otomatis HANYA untuk paket IPAN APP SettinX V1
-        // Cek via invoice_number atau service slug yang ter-resolve
-        let isSettinX = /settinx/i.test(order.invoice_number || "");
-        
-        // Cek juga via service slug jika service_id ada
-        if (!isSettinX && order.service_id && supabase) {
+        // Kirim email otomatis untuk produk SettinX (App V1 / Module 1.1).
+        // Klasifikasi memakai classifySettinxProduct agar Module SettinX juga
+        // mendapat akun + license key Supabase (bukan kredensial Firebase).
+        let svcSlugName = { slug: "", name: "" };
+        if (order.service_id && supabase) {
           const { data: svc } = await supabase
             .from("services")
             .select("slug, name")
             .eq("id", order.service_id)
             .single();
-          if (svc && /settinx/i.test(svc.slug || svc.name || "")) {
-            isSettinX = true;
-          }
+          if (svc) svcSlugName = { slug: svc.slug || "", name: svc.name || "" };
         }
+        const productType = await classifySettinxProduct(order, svcSlugName);
 
-        if (isSettinX && order.customer_email) {
+        if (productType === "module_1_1" && order.customer_email) {
+          console.log(`📧 Mengirim email Module SettinX ke ${order.customer_email} (invoice ${order.invoice_number})...`);
+          let moduleCredentials = null;
+          let moduleLicenseErr = null;
+          try {
+            moduleCredentials = await assignModuleSettinxLicense({
+              customerEmail: order.customer_email,
+              customerName: order.customer_name,
+              invoiceNumber: order.invoice_number,
+            });
+          } catch (e) {
+            moduleLicenseErr = e.message;
+            console.error(`⚠️  Module SettinX license GAGAL untuk ${order.customer_email}:`, e.message);
+          }
+
+          const moduleResult = await sendModuleSettinxEmail({
+            to: order.customer_email,
+            customerName: order.customer_name,
+            invoiceNumber: order.invoice_number,
+            amount: order.amount || amount,
+            paidAt: order.paid_at,
+            credentials: moduleCredentials,
+          });
+
+          if (moduleResult.ok) {
+            await updateOrder(order.invoice_number || order.id, {
+              email_sent: true,
+              email_sent_at: new Date().toISOString(),
+              settinx_type: "module_1_1",
+              settinx_license_uid: moduleCredentials?.uid || order.settinx_license_uid || null,
+              settinx_license_error: moduleLicenseErr || null,
+            });
+            console.log(`📧 Email Module SettinX TERKIRIM: ${order.customer_email} (invoice ${order.invoice_number})`);
+          } else {
+            console.error(`📧 Email Module SettinX GAGAL ke ${order.customer_email}: ${moduleResult.error}`);
+          }
+        } else if (productType === "app_v1" && order.customer_email) {
           console.log(`📧 Mengirim email SettinX ke ${order.customer_email} (invoice ${order.invoice_number})...`);
           let credentials = null;
           let licenseUid = null;
@@ -1753,7 +1879,6 @@ app.post("/api/doku-webhook", async (req, res) => {
             console.error(`⚠️  SettinX license GAGAL untuk ${order.customer_email}:`, e.message);
           }
 
-          console.log(`📧 Mengirim email SettinX ke ${order.customer_email} (invoice ${order.invoice_number})...`);
           const result = await sendSettinXEmail({
             to: order.customer_email,
             customerName: order.customer_name,
@@ -1774,7 +1899,7 @@ app.post("/api/doku-webhook", async (req, res) => {
           } else {
             console.error(`📧 Email SettinX GAGAL ke ${order.customer_email}: ${result.error}`);
           }
-        } else if (isSettinX) {
+        } else if (productType) {
           console.warn(`⚠️  SettinX SUCCESS tapi email tidak dikirim: email=${order.customer_email || "KOSONG"}`);
         }
       }
@@ -1894,14 +2019,37 @@ app.post("/api/settinx/resend", requireAdminSecret, async (req, res) => {
       return res.status(400).json({ success: false, message: "Order tidak memiliki email pembeli yang valid." });
     }
 
-    // ── Produk "Ipan Module SettinX 1.1": kirim ulang link MediaFire ───────
+    // ── Produk "Ipan Module SettinX 1.1": generate akun + license baru ─────
+    // Setiap kirim ulang membuat AKUN BARU (ID berbeda) + license key BARU.
+    // Akun lama TIDAK diubah (password lama tetap hidup) — sesuai keputusan user.
     if (productType === "module_1_1") {
+      let moduleCredentials = null;
+      let moduleLicenseErr = null;
+      try {
+        moduleCredentials = await assignModuleSettinxLicense({
+          customerEmail: order.customer_email,
+          customerName: order.customer_name,
+          invoiceNumber: order.invoice_number,
+        });
+      } catch (e) {
+        moduleLicenseErr = e.message;
+        console.error(`🔁 Module SettinX generate GAGAL utk ${order.customer_email}:`, e.message);
+      }
+
+      if (!moduleCredentials) {
+        return res.status(502).json({
+          success: false,
+          message: `Gagal menyiapkan kredensial Module SettinX: ${moduleLicenseErr || "credential kosong"}`,
+        });
+      }
+
       const resendResult = await sendModuleSettinxEmail({
         to: order.customer_email,
         customerName: order.customer_name,
         invoiceNumber: order.invoice_number,
         amount: order.amount,
         paidAt: order.paid_at,
+        credentials: moduleCredentials,
       });
       if (!resendResult.ok) {
         return res.status(502).json({ success: false, message: `Gagal kirim email: ${resendResult.error}` });
@@ -1910,9 +2058,11 @@ app.post("/api/settinx/resend", requireAdminSecret, async (req, res) => {
         email_sent: true,
         email_sent_at: new Date().toISOString(),
         settinx_type: "module_1_1",
+        settinx_license_uid: moduleCredentials.uid || order.settinx_license_uid || null,
+        settinx_license_error: moduleLicenseErr || null,
       });
-      console.log(`🔁 Module SettinX RE-SENT: ${order.customer_email} (invoice ${order.invoice_number})`);
-      return res.json({ success: true, message: "Email download berhasil dikirim ulang." });
+      console.log(`🔁 Module SettinX akun+license baru TERKIRIM: ${order.customer_email} (invoice ${order.invoice_number}, ID ${moduleCredentials.id})`);
+      return res.json({ success: true, message: "Akun & kredensial Module SettinX baru berhasil dikirim." });
     }
 
     // ── Produk "IPAN APP SettinX V1": kredensial Firebase ─────────────────
