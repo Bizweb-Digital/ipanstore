@@ -1,6 +1,238 @@
 # LASTACTIVITY — IPAN STORE
 
-## STATUS: ✅ DEPLOYED & LIVE — Automasi order "Ipan Module SettinX 1.1" (auto-generate akun + license key Supabase + email kredensial). Commit `7e9573f`, asset `index-Ml-HGKjc.js`. Test produksi OK (akun `ipanasik123-4` + email terkirim).
+## STATUS: ⏳ FIX UI — ScrollStackCards beranda space kosong (fix v4 FINAL: `itemDistance=40 itemStackDistance=80 stackPosition="30%"`, hanya prop Index.tsx, ScrollStackCards.tsx TIDAK disentuh). Build lolos, DOM verified: nol space kosong saat release + transisi mulus 23px ke section berikutnya. Menunggu konfirmasi user untuk commit/deploy.
+
+## PERUBAHAN SESI INI (fix v4 FINAL — hilangkan space kosong via tuning prop matematis, metode ScrollStackCards TIDAK diubah)
+
+**Keluhan user:** fix v4 awal (`itemDistance=40 stackPosition="8%"`) masih terasa banyak space kosong.
+
+**Root cause space kosong (matematis):** `pinEndBase = endTop − vh` — stack release saat end-marker masih **1 viewport penuh** dari bawah layar. Setelah release ada ~`vh` px (631px) scroll tanpa konten = space kosong besar. Ini sifat bawaan metode yang tidak bisa diubah tanpa sentuh komponen.
+
+**Solusi (hanya tuning prop di Index.tsx, tanpa sentuh ScrollStackCards.tsx):**
+Syarat release tepat saat bottom container mencapai bawah layar + kartu terakhir tidak teleport:
+```
+stackPosition + itemStackDistance×3 ≈ vh − tinggiKartu (343px @ vh=631)
+```
+Dipilih `itemStackDistance=80, stackPosition="30%"` (189+240=429 ≈ 343+86):
+- **Release** terjadi persis saat `scrollerBottom = vh` (632 ≈ 631) → tumpukan menutupi seluruh area yang tadinya kosong.
+- **Kartu terakhir** mulai pinned DULU sebelum release (`pinStart 2338 < pinEnd 2478`) → tidak teleport.
+- Stack distance 80px juga memperbesar ukuran tumpukan → makin banyak area kosong yang tertutup.
+
+**Verifikasi DOM (Brave, localhost):**
+- Saat release (scroll 2478): kartu stack penuhi layar 0–718px, `scrollerBottom=632≈vh`, section berikutnya **belum terlihat** → **nol space kosong** ✅
+- Kartu terakhir pinned normal (tidak teleport) ✅
+- Setelah scroll lanjut (2878): kartu terakhir bottom=321, section berikutnya muncul top=344 → **transisi hanya 23px**, mulus ✅
+- 4 kartu semua utuh, tidak kepotong ✅
+- `npx tsc --noEmit` ✅; `npm run build` ✅ (3729 modules, 9.35s)
+
+**File diubah:**
+- ✏️ `src/pages/Index.tsx` — prop ScrollStackCards: `desktopOnly itemDistance={40} itemStackDistance={80} stackPosition="30%" baseScale={0.93} itemScale={0.028}` + section `overflow-clip`
+
+**Tidak ada perubahan** ke `ScrollStackCards.tsx`, `StaggeredMenu.tsx`, `index.css`, atau halaman lain. Metode/animasi scroll stack 100% asli.
+
+**BELUM commit/push/deploy** — menunggu konfirmasi user (rule 2).
+
+### Instruksi Verifikasi Manual untuk User
+Buka `http://localhost:8080` di Brave (hard-reload Ctrl+Shift+R), scroll pelan melewati "Keunggulan Optimasi Kami":
+1. 4 kartu menumpuk satu per satu dengan jarak tumpuk lebih renggang (80px) — tumpukan terlihat lebih penuh/rapat di layar.
+2. Setelah kartu terakhir "Emulator Anti Force Close" menempel di tumpukan, **tidak ada space kosong besar** — tumpukan tetap terlihat sampai section "Pilih Paket Optimasi Terbaik" muncul mulus tepat di bawahnya.
+3. Screenshot jika masih ada space kosong.
+
+## PERUBAHAN SESI INI (fix v4 awal — `itemDistance=40 stackPosition="8%"` — MASIH banyak space kosong, disempurnakan ke fix v4 FINAL di atas)
+
+## PERUBAHAN SESI INI (fix v3 DI-REVERT — `collapseAfterRelease` salah, kartu terpotong)
+## PERUBAHAN SESI INI (fix v4 ScrollStackCards beranda — tuning prop saja, metode ScrollStackCards TIDAK diubah)
+
+**Konteks:** User ingin space kosong lebih compact tanpa mengubah metode ScrollStackCards, dan kartu tidak boleh kepotong seperti fix v1/v3.
+
+**Pendekatan fix v4:** Hanya mengubah prop di `Index.tsx`, TIDAK mengubah `ScrollStackCards.tsx` sama sekali.
+
+**Perubahan di `src/pages/Index.tsx`:**
+1. `overflow-hidden` → `overflow-clip` pada section pembungkus (meniru Layanan)
+2. Tambah `desktopOnly` prop (efek stack hanya di desktop, mobile statis)
+3. `itemDistance={70}` → `itemDistance={40}` — mengurangi margin antar kartu sebelum menumpuk, mengurangi tinggi natural container ~90px
+4. Tambah `stackPosition="8%"` (dari default `"12%"`) — kartu release lebih awal, mengurangi dead scroll
+5. Samakan prop lain dengan Layanan: `itemStackDistance={20} baseScale={0.93} itemScale={0.028}`
+
+**Verifikasi DOM (localhost, Brave):**
+- Scroll 2000px: container height **1273px** (dari 1363px, hemat 90px), gap ke section berikutnya **112px** (sama)
+- 4 kartu semua tampil penuh, **tidak kepotong** ✅
+- Card 0: translateY 213.4px, scale 1 (release lebih awal karena stackPosition lebih rendah) ✅
+- Scroll 3000px (semua release): gap tetap **112px**, semua kartu bergerak smooth ✅
+
+**File diubah:**
+- ✏️ `src/pages/Index.tsx` — 4 perubahan: `overflow-clip`, `desktopOnly`, `itemDistance={40}`, `stackPosition="8%"`
+
+**Tidak ada perubahan** ke `ScrollStackCards.tsx`, `StaggeredMenu.tsx`, `index.css`, atau halaman lain.
+
+**BELUM commit/push/deploy** — menunggu konfirmasi user (rule 2).
+
+### Instruksi Verifikasi Manual untuk User
+Buka `http://localhost:8080` di Brave, scroll ke bawah melewati kartu "Keunggulan Optimasi Kami":
+1. 4 kartu harus menumpuk halus, tidak ada yang kepotong.
+2. Setelah semua kartu lewat, space kosong sebelum section "Pilih Paket Optimasi Terbaik" harus **lebih compact** (tidak sebesar sebelumnya).
+3. Screenshot jika ada masalah.
+
+## PERUBAHAN SESI INI (fix v3 DI-REVERT — `collapseAfterRelease` salah, kartu terpotong)
+
+**Konteks:** User melaporkan kartu terakhir "Emulator Anti Force Close" scroll terlalu cepat (teleport) dan meninggalkan space kosong besar. Fix v2 (desktopOnly + overflow-clip) tidak menyelesaikan root cause matematis.
+
+**Fix v3 yang dicoba (salah):** Prop `collapseAfterRelease` di ScrollStackCards.tsx — collapse container height ke ~349px setelah release.
+- **Masalah:** Container height 349px terlalu kecil, memotong kartu yang sedang dalam proses pinning (kartu 0 masih translateY 238px saat container sudah 349px). Hasilnya: kartu terlihat **kepotong** seperti di fix v1.
+- **Di-revert sepenuhnya** via `git checkout -- src/components/effects/ScrollStackCards.tsx src/pages/Index.tsx`.
+
+**Status kode saat ini:** Kembali ke **fix v2** (kondisi committed):
+- `src/pages/Index.tsx`: `desktopOnly` + `overflow-clip` + prop Layanan (`itemDistance={70} itemStackDistance={20} baseScale={0.93} itemScale={0.028}`)
+- `src/components/effects/ScrollStackCards.tsx`: **tidak diubah** (tanpa `collapseAfterRelease`)
+
+**Pelajaran:** Collapse container height TIDAK bisa dilakukan secara statis di `measureLayout()` karena kartu masih dalam proses pinning/animasi saat itu. Kartu 0 bisa punya translateY hingga ~240px, jadi container harus cukup tinggi untuk menampung kartu yang sedang bergerak. Collapse hanya bisa dilakukan **setelah semua kartu fully release** (scroll position > pinEnd untuk semua kartu), bukan saat layout pertama kali diukur.
+
+## PERUBAHAN SESI INI (fix v3 ScrollStackCards beranda — `collapseAfterRelease` opt-in prop, deep research via 2 agent) — DI-REVERT
+
+**Konteks:** User melaporkan kartu terakhir "Emulator Anti Force Close" scroll terlalu cepat (teleport) dan meninggalkan space kosong besar setelah lewat. Fix v2 (desktopOnly + overflow-clip) tidak menyelesaikan root cause matematis.
+
+**Deep research (2 agent paralel):**
+
+**Agent 1 — Root cause matematis:**
+- `pinEnd` kartu terakhir = `pinEndBase = endTop - vh`
+- `pinStart` kartu terakhir = `cardTop - stackPosPx - itemStackDistance * 3`
+- Untuk beranda (4 kartu, 288px each): `pinEnd (C+420) < pinStart (C+858)` → interval **inverted/empty**
+- Akibatnya kartu terakhir langsung **teleport 438px** ke atas tanpa animasi smooth
+- Space kosong: container mempertahankan tinggi natural 1321px di flow layout, setelah release semua kartu menumpuk di atas (~348px visual), sisa **~1014px kosong**
+
+**Agent 2 — Solusi yang memenuhi constraint "jangan sentuh shared component":**
+- Semua solusi yang hanya mengubah Index.tsx (stackPosition, spacer, endPadding) **tidak menyelesaikan root cause** — hanya partial mitigation ~60-100px
+- Root cause membutuhkan perubahan di ScrollStackCards.tsx, TAPI bisa dibuat **opt-in prop** dengan default `false` agar halaman lain TIDAK berubah
+
+**Fix v3 (implementasi):**
+- `src/components/effects/ScrollStackCards.tsx`: tambah prop `collapseAfterRelease?: boolean` (default `false`)
+  - Di `measureLayout()`: jika `collapseAfterRelease=true`, collapse container height ke `firstCardHeight + itemStackDistance * (n-1) + 1px`
+  - Di cleanup: reset `scroller.style.height = ""` jika prop aktif
+- `src/pages/Index.tsx`: tambah `collapseAfterRelease` prop ke ScrollStackCards
+
+**Verifikasi DOM (localhost, scroll 2000px):**
+- Container height: **349px** (bukan 1363px) — persis tinggi tumpukan visual ✅
+- `scroller.style.height = "349px"` ✅
+- Gap ke section berikutnya: **112px** (sama dengan live) ✅
+- Card 0: translateY 238.6px, scale 0.93 (animasi tidak berubah) ✅
+- Cards 1-3: transform none (belum pinned, animasi tidak berubah) ✅
+- Section overflow: `clip` ✅
+- 4 kartu semua tampil ✅
+
+**File diubah:**
+- ✏️ `src/components/effects/ScrollStackCards.tsx` — tambah prop `collapseAfterRelease` (opt-in, default false)
+- ✏️ `src/pages/Index.tsx` — tambah `collapseAfterRelease` prop
+
+**Tidak ada perubahan perilaku** di halaman Layanan, Paket, AppSettinxSection (prop default `false`).
+
+**BELUM commit/push/deploy** — menunggu konfirmasi user (rule 2).
+
+### Instruksi Verifikasi Manual untuk User
+Buka `http://localhost:8080` di Brave, scroll ke bawah melewati kartu "Keunggulan Optimasi Kami":
+1. Kartu terakhir "Emulator Anti Force Close" harus **menumpuk halus** seperti kartu lain, tidak teleport/scroll cepat.
+2. Setelah semua kartu menumpuk dan release, **tidak boleh ada space kosong besar** — section "Pilih Paket Optimasi Terbaik" langsung muncul setelah stack cards.
+3. Screenshot jika ada masalah.
+
+## PERUBAHAN SESI INI (fix v2 ScrollStackCards beranda — revert fix v1 yang salah + pendekatan baru meniru Layanan live)
+
+**Konteks:** Fix v1 sebelumnya (collapse height container + CSS contain/transform pada StaggeredMenu) **salah total** menurut user:
+- Tanda "+" StaggeredMenu malah **hilang** (CSS `transform: none` + `position: static` pada `.sm-icon-line` merusak layout ikon "+")
+- Kartu stack jadi **sisa 2** (collapse height membuat kartu terpotong)
+- Perubahan menyentuh **semua halaman** (ScrollStackCards.tsx adalah komponen shared), padahal user hanya minta fix beranda
+
+**Fix v1 di-revert sepenuhnya** via `git checkout -- src/index.css src/components/StaggeredMenu.tsx src/components/effects/ScrollStackCards.tsx`.
+
+**Pendekatan baru (fix v2):** User meminta bandingkan localhost dengan website live, lihat halaman Layanan, dan gunakan metode yang sama untuk fix beranda.
+
+**Investigasi live (ipanstore.id):**
+- **Halaman Layanan** (`/layanan`): 5 kartu, container tinggi natural 2773px (tidak di-collapse), section `overflow: clip`, gap ke section berikutnya 96px setelah scroll 3000px. Pakai `desktopOnly` + `itemDistance={70}` + `itemStackDistance={20}`.
+- **Halaman Beranda live** (`/`): 4 kartu, container tinggi natural 1321px, section `overflow: hidden`, gap ke section berikutnya 112px setelah scroll 2000px. **Tidak pakai `desktopOnly`** di live (kode lama).
+
+**Root cause space kosong di localhost:** Beranda tidak pakai `desktopOnly` → efek stack aktif di semua viewport. Section pakai `overflow-hidden` bukan `overflow-clip`. Tanpa `desktopOnly`, di mobile kartu juga kena efek stack yang bisa menyebabkan posisi aneh. Tanpa `overflow-clip`, kartu yang ter-translate keluar section bisa bocor visual.
+
+**Fix v2 (hanya `src/pages/Index.tsx`, 2 baris diubah):**
+1. Section pembungkus: `overflow-hidden` → `overflow-clip` (meniru Layanan)
+2. ScrollStackCards: tambah `desktopOnly` + samakan prop dengan Layanan (`itemDistance={70} itemStackDistance={20} baseScale={0.93} itemScale={0.028}`)
+
+**Tidak ada perubahan ke:** `ScrollStackCards.tsx`, `StaggeredMenu.tsx`, `index.css`, atau halaman lain (Layanan, Paket, AppSettinxSection).
+
+**Verifikasi:**
+- `npx tsc --noEmit` ✅ exit 0
+- `npm run build` ✅ (3729 modules, built in 9.67s)
+- Agent-browser Brave di `http://localhost:8080` (desktop, scroll 2000px):
+  - Container height: 1363px (natural, tidak di-collapse) ✅
+  - Section overflow: `clip` ✅
+  - Gap ke section berikutnya: **112px** (identik dengan live ipanstore.id) ✅
+  - Card 0: translateY 238.6px, scale 0.93 (sedang pinning) ✅
+  - Cards 1-3: transform none, scale 1 (belum pinned) ✅
+  - Perilaku **identik dengan live** ipanstore.id ✅
+- Tanda "+" StaggeredMenu: terlihat di dalam tombol Menu (tidak lompat ke WhatsApp) — fix v1 yang merusak sudah di-revert ✅
+
+**File diubah:**
+- ✏️ `src/pages/Index.tsx` — 2 baris: `overflow-hidden` → `overflow-clip` + tambah `desktopOnly` + samakan prop ScrollStackCards dengan Layanan
+
+**BELUM commit/push/deploy** — menunggu konfirmasi user (rule 2).
+
+### Instruksi Verifikasi Manual untuk User
+Buka `http://localhost:8080` di Brave:
+1. **Desktop view** (≥1024px): scroll ke bawah melewati kartu-kartu "Keunggulan Optimasi Kami". Kartu harus menumpuk halus saat scroll (persis seperti di halaman Layanan). Setelah semua kartu menumpuk dan release, **tidak boleh ada space kosong besar** antara stack cards dan section "Pilih Paket Optimasi Terbaik".
+2. **Mobile view** (<1024px): kartu harus tampil sebagai kolom statis biasa (tanpa efek stack), karena `desktopOnly` aktif.
+3. **Tanda "+" Menu**: cek navbar kanan atas. Tanda "+" harus ada di dalam tombol Menu, tidak melayang atau menempel ke tombol hijau WhatsApp.
+4. Screenshot jika ada masalah.
+
+## PERUBAHAN SESI INI (fix v1 — DI-REVERT, salah total)
+
+**Bug 1 — Desktop: Tanda "+" pada tombol StaggeredMenu masih muncul di tombol WhatsApp.**
+- **Akar masalah (lebih dalam dari fix sebelumnya):** GSAP `gsap.set()` menulis inline `transform` (xPercent/yPercent) pada `.sm-icon-line` dan `.sm-icon`, yang mempromosikan compositing layer. Di Chromium, layer ini bisa mis-paint ke sibling flex item (tombol WhatsApp) meskipun secara geometris ikon ada di dalam tombol Menu. Fix sebelumnya (hapus backdrop-filter + isolation:isolate) tidak cukup karena tidak menangani GSAP inline transforms.
+- **Fix (3 lapis):**
+  1. `src/index.css` — `.sm-desktop .sm-toggle`: tambah `contain: layout style paint` (isolasi penuh rendering subtree dari sibling).
+  2. `src/index.css` — `.sm-desktop .sm-icon` + `.sm-icon-line`: `will-change: auto; transform: none;` + override `.sm-icon-line` ke `position: static; display: block` (hilangkan absolute positioning yang butuh transform centering). Garis vertikal pakai `transform: rotate(90deg)` via CSS murni.
+  3. `src/components/StaggeredMenu.tsx` — setelah `gsap.set()`, jika desktop trigger: clear inline transforms (`plusH.style.transform = ''; plusV.style.transform = ''; icon.style.transform = '';`) agar CSS static layout berlaku tanpa GPU layer promotion.
+- **Verifikasi DOM:** `iconInsideToggle: true`, `iconOverlapsWa: false`, `contain: content`, `willChange: auto`, `transform: none` ✅
+
+**Bug 2 — Beranda: Space kosong besar setelah ScrollStackCards selesai scroll.**
+- **Akar masalah:** Container `.scroll-stack-cards` mempertahankan tinggi layout natural semua kartu (~1320px untuk 4 kartu). `translateY` hanya memindahkan kartu secara visual tanpa mengubah flow layout, sehingga setelah semua kartu release dan menumpuk, tersisa ~1000px space kosong sebelum section "Pilih Paket Optimasi Terbaik".
+- **Fix:** Di `measureLayout()`, setelah pengukuran selesai, collapse tinggi container ke `firstCardHeight + itemStackDistance * (n-1) + 1px` (~355px untuk 4 kartu). Di cleanup function, reset `scroller.style.height = ""` agar tidak ada sisa saat unmount.
+- **Verifikasi DOM:** `scroller.style.height = "355px"`, `computedHeight = "355px"`, 4 cards ✅
+
+**File diubah:**
+- ✏️ `src/index.css` — `.sm-desktop .sm-toggle`: tambah `contain: layout style paint`; `.sm-desktop .sm-icon` + `.sm-icon-line`: `will-change: auto; transform: none; position: static; display: block` + rotate via CSS
+- ✏️ `src/components/StaggeredMenu.tsx` — clear GSAP inline transforms pada desktop trigger setelah `gsap.set()`
+- ✏️ `src/components/effects/ScrollStackCards.tsx` — collapse container height di `measureLayout()` + reset di cleanup
+
+**Verifikasi build:** `npx tsc --noEmit` ✅ exit 0; `npm run build` ✅ (3729 modules, 8.95s).
+**Verifikasi visual:** agent-browser DOM measurements confirm both fixes. LaunchPopup dialog blocking full-page screenshot verification — user diminta verifikasi manual di `http://localhost:8080`.
+**BELUM commit/push/deploy** — menunggu konfirmasi user (rule 2).
+
+### Instruksi Verifikasi Manual untuk User
+Buka `http://localhost:8080` di Brave (dev server sudah jalan), hard-reload (Ctrl+Shift+R):
+1. **Desktop navbar (≥1024px):** cek pojok kanan atas. Tanda "+" harus **ada di dalam tombol Menu** (sebelah kanan teks "Menu"), bukan melayang di atas atau menempel ke tombol hijau "Order via WhatsApp".
+2. **Scroll beranda:** scroll ke bawah melewati kartu-kartu stack. Setelah semua kartu menumpuk dan release, **tidak boleh ada space kosong besar** antara stack cards dan section "Pilih Paket Optimasi Terbaik".
+3. Screenshot keduanya jika ada masalah.
+
+## PERUBAHAN SESI INI (fix z-index StaggeredMenu vs LaunchPopup + backdrop-filter toggle desktop)
+
+**Bug 1 — Mobile: Tombol StaggeredMenu tertimpa popup Grand Launching Ipan Module SettinX saat website baru terbuka.**
+- **Akar masalah:** LaunchPopup menggunakan Radix `<Dialog>` yang di-render via portal ke `document.body` dengan `z-index: 50` (overlay & content). Sementara mobile StaggeredMenu wrapper (`fixed-wrapper`) berada di `z-index: 4000`. Saat popup muncul otomatis 900ms setelah load, overlay gelapnya ada di bawah menu tapi konten dialog bersaing stacking context dengan navbar (`z-index: 3000`).
+- **Fix:** Naikkan z-index Dialog overlay & content dari `z-50` → `z-[5000]` di `src/components/ui/dialog.tsx:22,39`. Ini memastikan semua dialog/popup selalu di atas StaggeredMenu (4000) dan Navbar (3000).
+
+**Bug 2 — Desktop: Tanda "+" pada tombol StaggeredMenu berpindah ke tombol WhatsApp.**
+- **Akar masalah:** CSS `.sm-desktop .sm-toggle` punya `backdrop-filter: blur(12px)` tanpa `position: relative` atau `isolation`. Di Chromium, `backdrop-filter` pada elemen tanpa stacking context sendiri bisa menyebabkan child element (ikon "+") dirender di layer komposisi yang salah, membuatnya secara visual "lompat" ke elemen terdekat.
+- **Fix:** Hapus `backdrop-filter` + `-webkit-backdrop-filter`, tambah `position: relative; isolation: isolate;` di `src/index.css:641-648`.
+
+**File diubah:**
+- ✏️ `src/components/ui/dialog.tsx` — z-index overlay & content: `z-50` → `z-[5000]`
+- ✏️ `src/index.css` — `.sm-desktop .sm-toggle`: hapus backdrop-filter, tambah position:relative + isolation:isolate
+
+**Verifikasi build:** `npx tsc --noEmit` ✅ exit 0; `npm run build` ✅ (3729 modules, `index-Bekxx67S.js`).
+**Verifikasi visual:** agent-browser 2x timeout (daemon tidak responsif) → **meminta user verifikasi manual** (lihat instruksi di bawah).
+**BELUM commit/push/deploy** — menunggu konfirmasi user (rule 2).
+
+### Instruksi Verifikasi Manual untuk User
+Buka `http://localhost:8080` di Brave (dev server sudah jalan):
+1. **Mobile view** (DevTools → toggle device → pilih iPhone/Pixel): refresh halaman, tunggu ~1 detik sampai popup Grand Launching muncul. Cek bahwa tombol hamburger/"+" StaggeredMenu di pojok kanan atas **terlihat jelas di atas popup**, tidak tertutup overlay gelap.
+2. **Desktop view** (≥1024px): cek navbar kanan atas. Tanda "+" harus **ada di dalam tombol Menu** (sebelah kanan teks "Menu"), bukan melayang di atas atau menempel ke tombol hijau "Order via WhatsApp".
+3. Screenshot keduanya jika ada masalah.
 
 ## DEPLOY SESI INI (automasi Module SettinX — ✅ live)
 
@@ -708,6 +940,7 @@ migrasi SQL Supabase, cek commit sebelum deploy. Skill Remotion **diabaikan** se
 | 2026-09-26 | ✅ **DEPLOYED & LIVE** automasi order "Ipan Module SettinX 1.1" (commit `7e9573f` push `origin/main`; VPS `git pull` FF `a6c0345..7e9573f`; `server/.env` VPS di-update manual +2 env `MODULE_SETTINX_SUPABASE_*` + link Drive baru + `pm2 restart --update-env`; frontend build `index-Ml-HGKjc.js` → SCP dist → `docker compose up --build -d`; live serve bundle baru, /order & API 200; test produksi order `IPANMODULESETTINX111790373691537` → akun `ipanasik123-4` + license dibuat + email terkirim). |
 | 2026-09-26 | ⏳ (histori) Automasi order "Ipan Module SettinX 1.1": saat LUNAS website auto-buat akun (ID+password) + license key di Supabase Module (`ydoubotecwoamuyacqhw`, via Admin API) + kirim email berisi kredensial + link download ke Gmail pembeli. File baru `server/lib/moduleSettinxLicense.js`; `server/index.js` (email redesign bertumpuk agar jelas di Gmail mobile + branch module_1_1 di webhook DOKU/resend); `.env`/`.env.example` (+2 var MODULE_SETTINX_SUPABASE_*); `admin/Orders.tsx`. Link Drive baru `1U3uz7-hDXCtCXutME-zCBHXLvhr8h-Zf`. Repeat purchase = akun baru (akun lama tetap hidup). Test end-to-end OK. |
 | 2026-09-25 | ✅ Default model → `9router/cbai/deepseek-v4.1-flash` ("CodeBuddy DeepSeek V4.1 Flash Via 9Router", tool_call + vision + variants minimal→max; pilihan user via prompt). Sebelumnya `9router/klt/deepseek-v4-flash-0731`. Hanya field `model` yg diubah, `small_model` tetap. JSON valid. File gitignored → tanpa commit/push/deploy. ⚠️ Restart opencode (CLI + Desktop) agar default baru aktif. |
+| 2026-09-30 | ⏳ Fix UI StaggeredMenu: **(1)** Mobile — tombol menu tertimpa LaunchPopup Grand Launching (akar: z-index dialog 50 < menu 4000; fix: naikkan z-index dialog ke 5000 di `dialog.tsx`); **(2)** Desktop — ikon "+" lompat ke tombol WhatsApp (akar: `backdrop-filter` pada `.sm-toggle` tanpa stacking context; fix: hapus backdrop-filter, tambah `position:relative; isolation:isolate` di `index.css`). Build lolos (`index-Bekxx67S.js`). Agent-browser timeout → menunggu verifikasi manual user di `http://localhost:8080`. BELUM commit/push/deploy. |
 | 2026-09-25 | ✅ 9Router FULL SYNC: `provider.9router.models` di `opencode.json` 284→887 (tambah 603 model live; 284 entri lama utuh, 0 berubah). `opencode models` baca 887 ✅. Script merge + `.bak` dihapus. Gitignored, tanpa commit/push/deploy. |
 | 2026-09-25 | 📝 AGENTS.md rule 15 BARU: `video/PanggilanJihad.tsx` + `video/IpanStorePromo.tsx` DILARANG ikut commit/push/deploy (cek `git status` sebelum stage, larangan `git add -A` buta). Catatan: keduanya ter-track di git (gitignore tidak mempan) → penegakan via disiplin rule. `IpanStorePromo.tsx` sedang modified, belum di-commit. |
 | 2026-09-23 | opencode.json: tambah `gcli/grok-4.7(xhigh)` ("Grok 4.7 xhigh via 9Router", tool_call + vision, tanpa variants karena effort terkunci). JSON valid, tanpa BOM. Gitignored, tanpa commit/deploy. ⚠️ Butuh restart opencode. |

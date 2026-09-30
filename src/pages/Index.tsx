@@ -55,7 +55,7 @@ const Index = () => {
 
       {/* Showcase: kartu MENUMPUK halus saat scroll (persis preview reactbits),
           sudah dioptimalkan agar TIDAK ada getaran/jitter. */}
-      <section className="relative overflow-hidden py-20 md:py-28">
+      <section className="relative overflow-clip py-20 md:py-28">
         <PageBackground opacity={0.15} />
         <div className="container mx-auto px-4 relative z-10">
           <Reveal className="text-center max-w-2xl mx-auto mb-12">
@@ -71,7 +71,7 @@ const Index = () => {
           </Reveal>
 
           <div className="max-w-3xl mx-auto">
-            <ScrollStackCards itemDistance={56} itemStackDistance={22} baseScale={0.92} itemScale={0.03}>
+            <ScrollStackCards desktopOnly itemDistance={40} itemStackDistance={80} stackPosition="30%" baseScale={0.93} itemScale={0.028}>
               {showcaseCards.map((c) => (
                 <div key={c.title} className="showcase-card relative w-full h-64 sm:h-72 p-8 sm:p-10 rounded-[24px] sm:rounded-[32px]">
                   <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
