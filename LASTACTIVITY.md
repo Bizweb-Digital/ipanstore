@@ -1,6 +1,38 @@
 # LASTACTIVITY — IPAN STORE
 
-## STATUS: ⏳ FIX UI — ScrollStackCards beranda space kosong (fix v4 FINAL: `itemDistance=40 itemStackDistance=80 stackPosition="30%"`, hanya prop Index.tsx, ScrollStackCards.tsx TIDAK disentuh). Build lolos, DOM verified: nol space kosong saat release + transisi mulus 23px ke section berikutnya. Menunggu konfirmasi user untuk commit/deploy.
+## STATUS: ✅ DEPLOYED — Migrasi Firebase SettinX V1 ke project BARU `ipan-app-settinx-v1` (commit `716ada2`). Backend VPS kini membuat akun pembeli app_v1 di project baru; akun lama (ipanasik123 + akun uji admin) sudah dimigrasikan + kredensial baru terkirim. EXE app baru sudah rebuild & ter-upload (folder Drive sama). Detail di Riwayat Sesi (2026-10-03, migrasi Firebase).
+
+## MIGRASI FIREBASE SETTINX V1 (2026-10-03) — project lama mati → project baru `ipan-app-settinx-v1`
+
+**Latar:** Project Firebase lama `ipan-app-settinx` mati total (tidak bisa tambah owner/pulihkan). Diputuskan buat project baru + reset kredensial semua user (UID baru = license key baru). SMTP email (`muhammadrizvandysukma@gmail.com`) TIDAK terdampak.
+
+**Yang dikerjakan:**
+- **Project baru** `ipan-app-settinx-v1` (number 521500949937, web app `1:521500949937:web:8e0b5a422bc8a3b9f89190`, API key `AIzaSyAW-NWAR4j6vgWf7guel_M9-FNb5JT3jdg`).
+- **Firestore rules** (device binding 1 akun=1 device, dari repo app `D:\Ipan-AppSettinX-V1`) ter-deploy ke project baru.
+- **Service-account v2** digenerate via IAM API (token OAuth firebase CLI) → `server/secrets/settinx-service-account-v2.json` (lokal) + `/root/ipanstore-secrets/settinx-service-account-v2.json` (VPS).
+- **`.env` lokal + VPS**: `SETTINX_FIREBASE_PROJECT_ID=ipan-app-settinx-v1` + `SETTINX_FIREBASE_SERVICE_ACCOUNT_FILE=<path v2>`. Backup env VPS: `.env.bak-20261003`.
+- **Script migrasi** `server/scripts/migrate-settinx-firebase-v2.mjs` (commit `716ada2`): idempotent, `--dry-run`, per email → `assignSettinxLicense` (buat akun + license baru) → email kredensial baru (template migrasi) → update `orders.settinx_type/ settinx_license_uid`.
+  - `ipanasik123@gmail.com` → uid `2J5KenFBXHQr1XnrYhI94SISgn82` (3 orders diupdate)
+  - `muhammadrizvandysukma@gmail.com` (akun uji) → uid `mWA6KoVYVfhXe8XqAujf8DxZzpU2`
+  - User lama lain (tidak tercatat di orders) → dibuatkan manual saat menghubungi admin / order ulang.
+- **App client** (repo `D:\Ipan-AppSettinX-V1`, commit `53012c5`): `auth.py` API key + project id baru; EXE rebuilt (PyInstaller 6.21.0, verify_exe OK); user sudah tes login ✅ + upload EXE baru ke folder Drive yang SAMA (`1oB2BIILhM-xrgseTw7yYSYwxurLayTvq`) → `SETTINX_DOWNLOAD_URL` tidak berubah.
+- **Deploy VPS**: `pm2 restart ipanstore-backend --update-env` → online; verifikasi fungsional dari VPS `assignSettinxLicense` → reuse uid baru ✅.
+- Rule 15 dijaga: `video/PanggilanJihad.tsx` & `video/IpanStorePromo.tsx` TIDAK ikut commit/push/deploy.
+
+**Catatan:** (1) Password akun uji admin ter-rotate saat verifikasi deploy — kirim ulang kredensial bila perlu login. (2) Pertimbangkan rotasi app password SMTP (sempat tampil di chat sesi ini). (3) Warning Node.js 20 deprecated di log VPS = pre-existing (Supabase), tidak terkait.
+
+## STATUS: ✅ OMP (Oh My Pi) — `klt/kimi-k3` kini punya effort `xhigh` di omp (`~/.omp/agent/models.yml`), terverifikasi. Runtime aktif = **omp v18.5.0 via Orca**, bukan opencode. Detail di Riwayat Sesi (2026-10-03).
+
+## STATUS: ✅ DEPLOYED — fix ScrollStackCards beranda space kosong (commit `382b8c5`, live serve `index-CY-z-StB.js`). Fix v4 FINAL: `itemDistance=40 itemStackDistance=80 stackPosition="30%"` + `desktopOnly` + `overflow-clip`, hanya prop Index.tsx, ScrollStackCards.tsx TIDAK disentuh.
+
+## DEPLOY SESI INI (fix ScrollStackCards beranda — ✅ live)
+
+- **Commit `382b8c5`** (3 file: `src/pages/Index.tsx`, `src/components/ui/dialog.tsx`, `LASTACTIVITY.md`) → push `origin/main` (`fd927c2..382b8c5`).
+- **VPS**: `git pull --ff-only` FF `fd927c2..382b8c5`.
+- **Frontend**: `npm run build` lokal (bundle `index-CY-z-StB.js`) → SCP `dist/*` → `docker compose up --build -d` (COPY dist tidak cached, 12MB).
+- **Cloudflare Tunnel**: restart setelah container restart untuk reconnect (502 sementara, lalu 200).
+- **Verifikasi live**: `https://ipanstore.id` → **200**, serve `index-CY-z-StB.js` ✅ (bundle baru).
+- Rule 15 dijaga: `video/IpanStorePromo.tsx` (modified) TIDAK ikut commit/deploy.
 
 ## PERUBAHAN SESI INI (fix v4 FINAL — hilangkan space kosong via tuning prop matematis, metode ScrollStackCards TIDAK diubah)
 
@@ -936,6 +968,7 @@ migrasi SQL Supabase, cek commit sebelum deploy. Skill Remotion **diabaikan** se
 
 | Waktu | Aktivitas |
 |---|---|
+| 2026-10-03 | ✅ **OMP (Oh My Pi v18.5.0) di Orca** — runtime aktif sesi ini adalah `omp`, BUKAN opencode (TERM_PROGRAM=Orca, OMPCODE=1; opencode 1.18.34 terpasang tapi tidak jalan). omp TIDAK memakai `opencode.json` untuk provider/model (source `src/discovery/opencode.ts`: hanya AGENTS.md, MCP, skills, plugins, commands, settings). Model omp dari `~/.omp/agent/models.yml` (dibuat oleh 9router via API `omp-settings`), role dari `~/.omp/agent/config.yml`. Tambahan: `klt/kimi-k3` di `models.yml` diberi blok `thinking: {mode: effort, efforts: [low,high,xhigh,max], defaultLevel: max, requiresEffort: true}` + `compat.reasoningEffortMap.xhigh: xhigh` (tanpa ini omp memetakan xhigh→max). Backup `models.yml.bak-20261003-154830`. Verifikasi: `omp models` → `klt/kimi-k3` = `low,high,xhigh,max` ✅; uji `omp -p ... --model 9router/klt/kimi-k3:xhigh` → "OK-XHIGH" ✅; curl gateway `reasoning_effort:xhigh` → 200 ✅. Juga di `opencode.json` (tak terpakai omp): varian `ultra` (`reasoningEffort: max`) di `klt/kimi-k3` & `klt/kimi-k3-ultra`, `xhigh` dipertahankan di `klt/kimi-k3`, model aktif → `9router/klt/kimi-k3-ultra`. ⚠️ 9router bisa menimpa `models.yml` (blok `9router:`) saat Apply di UI-nya → edit bisa hilang, ulangi bila perlu. |
 | 2026-09-26 | ✅ Deploy FIX "Failed to fetch" order di live. Akar: `.env.local` bake `localhost:5159` ke build produksi (Vite memuat `.env.local` semua mode, timpa `.env`). Fix Opsi A: `.env.development` (dev→localhost:5159) + `.env.local` tanpa override (build→api.ipanstore.id). Build baru `index-gv4hPJTP.js` (0× localhost, api.ipanstore.id di 4 chunk). Deploy frontend: backup `dist.bak-20260926`, SCP dist, `docker compose up --build -d`; live serve bundle baru, /order 200, API health 200. Tanpa commit (env gitignored). Rule 15 dijaga (video tidak ikut). |
 | 2026-09-26 | ✅ **DEPLOYED & LIVE** automasi order "Ipan Module SettinX 1.1" (commit `7e9573f` push `origin/main`; VPS `git pull` FF `a6c0345..7e9573f`; `server/.env` VPS di-update manual +2 env `MODULE_SETTINX_SUPABASE_*` + link Drive baru + `pm2 restart --update-env`; frontend build `index-Ml-HGKjc.js` → SCP dist → `docker compose up --build -d`; live serve bundle baru, /order & API 200; test produksi order `IPANMODULESETTINX111790373691537` → akun `ipanasik123-4` + license dibuat + email terkirim). |
 | 2026-09-26 | ⏳ (histori) Automasi order "Ipan Module SettinX 1.1": saat LUNAS website auto-buat akun (ID+password) + license key di Supabase Module (`ydoubotecwoamuyacqhw`, via Admin API) + kirim email berisi kredensial + link download ke Gmail pembeli. File baru `server/lib/moduleSettinxLicense.js`; `server/index.js` (email redesign bertumpuk agar jelas di Gmail mobile + branch module_1_1 di webhook DOKU/resend); `.env`/`.env.example` (+2 var MODULE_SETTINX_SUPABASE_*); `admin/Orders.tsx`. Link Drive baru `1U3uz7-hDXCtCXutME-zCBHXLvhr8h-Zf`. Repeat purchase = akun baru (akun lama tetap hidup). Test end-to-end OK. |
