@@ -155,6 +155,34 @@
     - Saat deploy (SCP dist / `/deploy`), pastikan perubahan dari kedua file tidak
       terbawa ke server live.
 
+16. **🚨 STRICT — DILARANG MENULIS NILAI RAHASIA KE FILE REPO, PAKAI NAMA ENV KEY (PENTING)**:
+    - Repo `Bizweb-Digital/ipanstore` bersifat **PUBLIK**. Setiap nilai rahasia yang
+      ter-commit = langsung bocor ke seluruh internet (pernah kejadian: commit `0297b6f`
+      menulis Google API key + `ADMIN_API_SECRET` mentah ke `LASTACTIVITY.md` → email
+      peringatan GitGuardian).
+    - **DILARANG KERAS** menulis **NILAI** rahasia apa pun ke file yang bisa ter-commit,
+      termasuk tapi tidak terbatas pada: `LASTACTIVITY.md`, `AGENTS.md`, `README`, `docs/`,
+      komentar kode, file SQL, workflow `.github/`, contoh `.env.example`.
+    - Yang termasuk rahasia: API key (Google/Firebase, KlikQris, DOKU, Cashi), secret
+      (`ADMIN_API_SECRET`, JWT secret, webhook secret), token/bearer, password, connection
+      string, service-account JSON, private key, anon/service-role key, dsb.
+    - **CARA BENAR (WAJIB)**: rujuk selalu lewat **NAMA environment variable** atau
+      **placeholder**, JANGAN nilainya. Contoh:
+      - ✅ `ADMIN_API_SECRET` (sebut nama saja) — ❌ `ADMIN_API_SECRET=5f6e3d42...`
+      - ✅ `${SETTINX_FIREBASE_API_KEY}` — ❌ `AIzaSyAW-NWAR...`
+      - ✅ "lihat `/project/.../server/.env` di VPS" — ❌ menyalin isi `.env`
+      - ✅ `sk_live_xxxxxxxx` (placeholder jelas) — ❌ `sk_live_` + nilai asli
+    - Rahasia **HANYA** boleh hidup di: `.env` (gitignored), env var VPS/PM2, atau secret
+      manager. **TIDAK PERNAH** di file yang di-track git.
+    - **SEBELUM setiap `git add`/`git commit`**: jalankan `git diff --cached` dan pastikan
+      tidak ada nilai rahasia ikut ter-stage. Kalau ada → bersihkan dulu.
+    - **Kalau rahasia terlanjur ter-commit/ter-push**: WAJIB (a) lapor user saat itu juga,
+      (b) sarankan **rotasi** rahasia tersebut (aksi server butuh konfirmasi — rule 2),
+      (c) redaksi nilainya dari file (ganti jadi `${NAMA_ENV}` / `***`). Scrub history
+      (`git filter-repo`/BFG + force-push) hanya dengan izin eksplisit user.
+    - Aturan ini berlaku juga untuk mencatat di `LASTACTIVITY.md` (rule 1): catat **nama**
+      env/key dan lokasinya, BUKAN nilainya.
+
 ## Perintah Penting
 
 | Perintah | Arti |
