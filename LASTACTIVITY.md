@@ -1,5 +1,61 @@
 # LASTACTIVITY — IPAN STORE
 
+## STATUS: 🚨 TEMUAN KEAMANAN (2026-10-06) — Rahasia asli bocor di repo PUBLIK `Bizweb-Digital/ipanstore`
+
+**Pemicu:** Email GitGuardian "Google API Key exposed on GitHub" (pushed 2026-10-03 10:37 UTC).
+
+**Akar masalah:** commit **`0297b6f`** ("docs: catat migrasi Firebase SettinX V1 ... di LASTACTIVITY.md") menulis **nilai rahasia apa adanya** ke `LASTACTIVITY.md`. Commit ini **sudah ter-push ke `origin/main`**, dan repo **PUBLIK** (`"private": false` via GitHub API) → rahasia benar-benar terbuka.
+
+**Yang bocor (JANGAN ditulis ulang nilainya di file ini):**
+1. **Google/Firebase API key** project `ipan-app-settinx-v1` — rule GitGuardian, baris ~40 `LASTACTIVITY.md`.
+2. **`ADMIN_API_SECRET`** — masih AKTIF di `/project/.../server/.env` VPS; melindungi endpoint admin (`/api/settinx/resend`, `/api/admin/create`).
+3. Metadata minor: Firebase project number + web app ID.
+
+**Yang TIDAK bocor (sudah dicek, aman):** `.env`, `.env.local`, `.env.development` **tidak pernah** ter-commit (terlindung `.gitignore`); service-account JSON tidak ada di history; tidak ada `BEGIN PRIVATE KEY` / `service_role` JWT / `sk_live` asli (hanya placeholder `sk_live_xxxx` di docs).
+
+**Catatan penting:** `VITE_ADMIN_API_SECRET` memang di-bake ke `dist` frontend (client-side) sehingga **secara desain sudah terlihat publik** lewat inspect JS — jadi bukan kebocoran baru, tapi tetap tidak boleh ditulis mentah di dokumentasi repo.
+
+**Verifikasi tambahan (2026-10-06):** file lokal yang memuat rahasia asli — `.env`, `.env.development`, `server/.env`, `dist/**` (bundle ter-bake), `server/secrets/*.json` (private key Firebase) — semuanya **TIDAK ter-track git & TIDAK pernah masuk history** (`git ls-files` + `git log --all`), terlindung `.gitignore` (baris 11/16/19/44). Jadi paparan publik satu-satunya = `LASTACTIVITY.md` (sudah dibersihkan). **Tidak ada yang perlu diubah di file-file tersebut.**
+
+**Rencana remediasi (MENUNGGU KONFIRMASI user — rule 2):**
+1. ✅ **SELESAI (2026-10-06)** — nilai rahasia sudah di-redaksi dari `LASTACTIVITY.md`: Google API key → `${SETTINX_FIREBASE_API_KEY}`, `ADMIN_API_SECRET` (4 kemunculan) → `${ADMIN_API_SECRET}`, **2 license key SettinX** → `<license-key-1>`/`<license-key-2>`, **2 Firebase UID** → `<uid-ipanasik123>`/`<uid-akun-uji>`. Verifikasi `git grep` pola rahasia di file ter-track = **BERSIH** (sisa hanya contoh/placeholder di komentar kode).
+2. ⏳ **Rotasi/restrict** Google API key di Google Cloud Console (Application restrictions + API restrictions) atau buat key baru. **BELUM** dikerjakan.
+3. ⏳ **Rotasi `ADMIN_API_SECRET`**: ganti di `server/.env` VPS + rebuild frontend dengan `VITE_ADMIN_API_SECRET` baru → `pm2 restart`. **BELUM** dikerjakan (menyentuh server live).
+4. ⏳ **Opsional**: scrub history (`git filter-repo`/BFG) + force-push, dan/atau jadikan repo **private**. **BELUM** dikerjakan.
+
+**Aturan baru:** rule **16 STRICT** ditambahkan ke `AGENTS.md` — dilarang menulis NILAI rahasia ke file repo; wajib pakai nama env key / placeholder. Berlaku juga untuk `LASTACTIVITY.md`.
+**Catatan:** nilai rahasia lama MASIH ADA di git history (commit `0297b6f`) sampai langkah 4 dikerjakan. Rotasi (langkah 2–3) tetap perlu karena history publik sudah terlanjur bocor.
+
+## STATUS: ✅ INSIDEN SELESAI (2026-10-06) — Website 502 diperbaiki dengan restart `cloudflared`
+
+**Fix:** `systemctl restart cloudflared` di VPS (disetujui user). Setelah restart: precheck environment healthy (QUIC region1/region2 PASS, API reachable), `readyConnections=4`, connector baru `8a9c5797-...`.
+**Verifikasi live:** `https://ipanstore.id` → **200** (serve `index-CY-z-StB.js`), `https://api.ipanstore.id/api/health` → **200** `{"ok":true,...}`, `bizwebdigital.id` → **200**, `ipanstore.my.id` → **301**. API root `/` 404 = wajar (Express, bukan error).
+**Pelajaran:** service `cloudflared` bisa `active` + `readyConnections=4` tapi tetap 502 di edge (request tidak sampai ke connector). Cek `cloudflared_tunnel_total_requests` (tidak naik) + journal tanpa request masuk sebagai indikator → restart service.
+
+## 🚨 DETAIL INSIDEN (2026-10-06) — Website 502: Cloudflare Tunnel tidak menyampaikan request ke origin
+
+**Gejala:** `https://ipanstore.id`, `https://api.ipanstore.id`, dan SEMUA hostname pada tunnel yang sama
+(`bizwebdigital.id`, `grhyainteraksi.com`, `mycarsell.id`, `oxadentalcare.com`, `muhammadrizvandysukma.id`, dll)
+balas **HTTP 502** dari Cloudflare edge (body `error code: 502`). `ipanstore.my.id` masih **301** → `ipanstore.id` (redirect rule edge OK).
+
+**Hasil diagnosa — SERVER TIDAK MATI:**
+- VPS `sever-h81m-s2ph` (100.89.140.16) **hidup**: ping OK, uptime 7 hari, disk 37%, RAM normal.
+- Backend PM2 `ipanstore-backend` **online** (2 hari), listen `*:5159`, respons lokal OK (404 di `/` = wajar).
+- Frontend container `ipanstore` **Up 5 hari**, `0.0.0.0:5007->80`, `curl localhost:5007` → **200**, serve `index-CY-z-StB.js` (bundle deploy terakhir).
+- Origin dari host: `172.17.0.1:5007` → **200**, `172.17.0.1:5159` → **404** (ingress ke origin sehat).
+- **Cloudflare Tunnel** (systemd `cloudflared` v2026.8.2, tunnel `e47eae41-9e8c-48cc-b705-bd22671a575f`, connector `a74f55c8-...`) status `active` & `readyConnections=4`, **TETAPI**:
+  - `cloudflared_tunnel_total_requests` **tidak bertambah** saat request masuk → request tidak pernah sampai ke connector.
+  - Journal cloudflared tidak mencatat request masuk sama sekali.
+  - Hiccup: `2026-10-05T18:39:04Z ERR failed to accept incoming stream requests ... timeout: no recent network activity` → hanya `connIndex=0` yang re-register.
+  - `cloudflared_rpc_client_failures{method="unregister_connection"} = 5`.
+- Token systemd == token container docker `cloudflared` lama (container graceful exit 2026-10-03 07:56 UTC; systemd aktif sejak 08:10 UTC).
+
+**Kesimpulan:** Server, backend, frontend SEHAT. Akar masalah = **koneksi Cloudflare Tunnel ke edge**; edge menganggap tunnel tidak tersedia → 502.
+
+**Rekomendasi fix (MENUNGGU KONFIRMASI user — rule 2):**
+1. `systemctl restart cloudflared` di VPS → re-register 4 koneksi QUIC, lalu verifikasi `curl https://ipanstore.id`.
+2. Bila masih 502 → cek Cloudflare Dashboard → Zero Trust → Networks → Tunnels (status tunnel/connector) + pastikan DNS `ipanstore.id`/`api.ipanstore.id` menunjuk tunnel UUID `e47eae41-9e8c-48cc-b705-bd22671a575f`.
+
 ## STATUS: ✅ DEPLOYED — Migrasi Firebase SettinX V1 ke project BARU `ipan-app-settinx-v1` (commit `716ada2`). Backend VPS kini membuat akun pembeli app_v1 di project baru; akun lama (ipanasik123 + akun uji admin) sudah dimigrasikan + kredensial baru terkirim. EXE app baru sudah rebuild & ter-upload (folder Drive sama). Detail di Riwayat Sesi (2026-10-03, migrasi Firebase).
 
 ## MIGRASI FIREBASE SETTINX V1 (2026-10-03) — project lama mati → project baru `ipan-app-settinx-v1`
@@ -7,13 +63,13 @@
 **Latar:** Project Firebase lama `ipan-app-settinx` mati total (tidak bisa tambah owner/pulihkan). Diputuskan buat project baru + reset kredensial semua user (UID baru = license key baru). SMTP email (`muhammadrizvandysukma@gmail.com`) TIDAK terdampak.
 
 **Yang dikerjakan:**
-- **Project baru** `ipan-app-settinx-v1` (number 521500949937, web app `1:521500949937:web:8e0b5a422bc8a3b9f89190`, API key `AIzaSyAW-NWAR4j6vgWf7guel_M9-FNb5JT3jdg`).
+- **Project baru** `ipan-app-settinx-v1` (number 521500949937, web app `1:521500949937:web:8e0b5a422bc8a3b9f89190`, API key `${SETTINX_FIREBASE_API_KEY}`).
 - **Firestore rules** (device binding 1 akun=1 device, dari repo app `D:\Ipan-AppSettinX-V1`) ter-deploy ke project baru.
 - **Service-account v2** digenerate via IAM API (token OAuth firebase CLI) → `server/secrets/settinx-service-account-v2.json` (lokal) + `/root/ipanstore-secrets/settinx-service-account-v2.json` (VPS).
 - **`.env` lokal + VPS**: `SETTINX_FIREBASE_PROJECT_ID=ipan-app-settinx-v1` + `SETTINX_FIREBASE_SERVICE_ACCOUNT_FILE=<path v2>`. Backup env VPS: `.env.bak-20261003`.
 - **Script migrasi** `server/scripts/migrate-settinx-firebase-v2.mjs` (commit `716ada2`): idempotent, `--dry-run`, per email → `assignSettinxLicense` (buat akun + license baru) → email kredensial baru (template migrasi) → update `orders.settinx_type/ settinx_license_uid`.
-  - `ipanasik123@gmail.com` → uid `2J5KenFBXHQr1XnrYhI94SISgn82` (3 orders diupdate)
-  - `muhammadrizvandysukma@gmail.com` (akun uji) → uid `mWA6KoVYVfhXe8XqAujf8DxZzpU2`
+  - `ipanasik123@gmail.com` → uid `<uid-ipanasik123>` (3 orders diupdate)
+  - `muhammadrizvandysukma@gmail.com` (akun uji) → uid `<uid-akun-uji>`
   - User lama lain (tidak tercatat di orders) → dibuatkan manual saat menghubungi admin / order ulang.
 - **App client** (repo `D:\Ipan-AppSettinX-V1`, commit `53012c5`): `auth.py` API key + project id baru; EXE rebuilt (PyInstaller 6.21.0, verify_exe OK); user sudah tes login ✅ + upload EXE baru ke folder Drive yang SAMA (`1oB2BIILhM-xrgseTw7yYSYwxurLayTvq`) → `SETTINX_DOWNLOAD_URL` tidak berubah.
 - **Deploy VPS**: `pm2 restart ipanstore-backend --update-env` → online; verifikasi fungsional dari VPS `assignSettinxLicense` → reuse uid baru ✅.
@@ -279,7 +335,7 @@ Buka `http://localhost:8080` di Brave (dev server sudah jalan):
 - **Verifikasi live**:
   - `https://ipanstore.id` serve `index-Ml-HGKjc.js` ✅ (MATCH dist); `/order` 200; `api.ipanstore.id/api/health` 200.
   - Container `ipanstore` Up ✅.
-  - **Test produksi end-to-end**: order QRIS `IPANMODULESETTINX111790373691537` → resend → akun `ipanasik123-4` + license `B1B6-E74F-6F68-EA89-5372-FA56-FFC4-B467` DIBUAT + **email nyata terkirim** ✅ (log PM2).
+  - **Test produksi end-to-end**: order QRIS `IPANMODULESETTINX111790373691537` → resend → akun `ipanasik123-4` + license `<license-key-1>` DIBUAT + **email nyata terkirim** ✅ (log PM2).
 - **Catatan**: `.env.development` ditambah ke `.gitignore` (berisi secret VITE_ADMIN_API_SECRET).
 - Rule 15 dijaga: `video/IpanStorePromo.tsx` (modified) TIDAK ikut commit/deploy.
 
@@ -334,7 +390,7 @@ mengirim email berisi kredensial + link download ke Gmail pembeli (mirip IPAN AP
 - **Test end-to-end (data user: ipanganteng / ipanasik123@gmail.com / 0889 7649 6870):**
   - Order QRIS dibuat via API lokal → order PENDING tersimpan.
   - Trigger `/api/settinx/resend` (jalur fulfillment sama dgn webhook) → akun `ipanasik123@settinx.app`
-    dibuat di Supabase Module, license `DF2C-6321-8301-7B23-F8F1-A01E-500C-0E52` (unused),
+    dibuat di Supabase Module, license `<license-key-2>` (unused),
     **email nyata terkirim** ke `ipanasik123@gmail.com` ✅.
   - Login akun baru via GoTrue **berhasil** ✅.
   - **Repeat purchase diuji:** akun `ipanasik123-2` & `ipanasik123-3` dibuat; **login akun-1 (password lama)
@@ -826,8 +882,8 @@ migrasi SQL Supabase, cek commit sebelum deploy. Skill Remotion **diabaikan** se
   port 5159) — BUKAN di Docker. Docker di VPS hanya serve frontend static (nginx, port 5007).
   Jadi `docker compose restart` TIDAK memuat ulang secret backend; yang benar adalah `pm2 restart`.
 - `.env` server VPS tidak punya `ADMIN_API_SECRET` → semua endpoint admin produksi
-  (resend, create-admin) menolak 401, padahal frontend build sudah membawa `5f6e3d427b890c1a`.
-- **Fix**: tambah `ADMIN_API_SECRET=5f6e3d427b890c1a` di `/project/website/padel/IpanStore/ipanstore/server/.env`
+  (resend, create-admin) menolak 401, padahal frontend build sudah membawa `${ADMIN_API_SECRET}`.
+- **Fix**: tambah `ADMIN_API_SECRET=${ADMIN_API_SECRET}` di `/project/website/padel/IpanStore/ipanstore/server/.env`
   (langsung di VPS, file ini gitignored — tidak perlu commit), lalu `pm2 restart ipanstore-backend`.
 - **Verifikasi**: `POST https://api.ipanstore.id/api/settinx/resend` dengan header
   `x-admin-secret` kini `success:true` (sebelumnya 401). `pm2 restart` baru pid 551195, port 5159 up.
@@ -843,8 +899,8 @@ migrasi SQL Supabase, cek commit sebelum deploy. Skill Remotion **diabaikan** se
 - Verifikasi DB: `email_sent:true`, `email_sent_at:2026-09-09T23:33:42Z`, `settinx_type:module_1_1`.
 - ⚠️ **Temuan bug**: server VPS `.env` TIDAK punya `ADMIN_API_SECRET` →
   semua endpoint admin di produksi (termasuk tombol "Kirim Ulang" di dashboard admin)
-  menolak 401. Frontend produksi SUDAH berisi secret `5f6e3d427b890c1a` (ter-bake di dist).
-  FIX: tambahkan `ADMIN_API_SECRET=5f6e3d427b890c1a` ke `/project/.../server/.env` di VPS
+  menolak 401. Frontend produksi SUDAH berisi secret `${ADMIN_API_SECRET}` (ter-bake di dist).
+  FIX: tambahkan `ADMIN_API_SECRET=${ADMIN_API_SECRET}` ke `/project/.../server/.env` di VPS
   lalu restart container. Sampai itu dilakukan, tes resend lewat API produksi gagal 401.
   → ✅ SUDAH DIKERJAKAN sesi ini (lihat bagian 0): secret ditambahkan + `pm2 restart`. **Fix tuntas.**
 
