@@ -24,7 +24,16 @@
 4. ⏳ **Opsional**: scrub history (`git filter-repo`/BFG) + force-push, dan/atau jadikan repo **private**. **BELUM** dikerjakan.
 
 **Aturan baru:** rule **16 STRICT** ditambahkan ke `AGENTS.md` — dilarang menulis NILAI rahasia ke file repo; wajib pakai nama env key / placeholder. Berlaku juga untuk `LASTACTIVITY.md`.
-**Catatan:** nilai rahasia lama MASIH ADA di git history (commit `0297b6f`) sampai langkah 4 dikerjakan. Rotasi (langkah 2–3) tetap perlu karena history publik sudah terlanjur bocor.
+
+**✅ DEPLOY SELESAI (2026-10-06):**
+- Commit **`434b880`** (`AGENTS.md` + `LASTACTIVITY.md`, 2 files, +93/-9) → push `origin/main` (`0297b6f..434b880`).
+- Rule 15 dijaga: `video/IpanStorePromo.tsx` (modified) **TIDAK** ikut commit/push.
+- Rule 16 dipatuhi: cek staged diff — tidak ada nilai rahasia di baris yang ditambah (7 kecocokan semuanya baris **dihapus**).
+- **VPS** `git pull --ff-only` FF `382b8c5..434b880` (termasuk `server/scripts/migrate-settinx-firebase-v2.mjs` dari commit `716ada2`).
+- **Frontend**: TIDAK perlu SCP/rebuild — perubahan docs-only, hash asset lokal = live = container = `index-CY-z-StB.js`. `server/index.js` tidak berubah → tidak perlu `pm2 restart`.
+- **Verifikasi live**: `ipanstore.id` → **200**, `/order` → **200**, `api.ipanstore.id/api/health` → **200**; container `ipanstore` Up 5 hari; PM2 `ipanstore-backend` online; VPS HEAD `434b880`.
+- **Catatan:** user memutuskan **TIDAK rotasi** — cukup hide nilai yang ter-expose (selesai). Nilai lama masih ada di history commit `0297b6f`; repo tetap publik.
+**Catatan:** nilai rahasia lama **MASIH ADA di git history** (commit `0297b6f`) dan repo tetap publik. Atas keputusan user (2026-10-06), **rotasi TIDAK dilakukan** — cukup nilai yang ter-expose di-hide dari file yang di-serve. Bila ingin tuntas: scrub history (langkah 4) dan/atau jadikan repo private.
 
 ## STATUS: ✅ INSIDEN SELESAI (2026-10-06) — Website 502 diperbaiki dengan restart `cloudflared`
 
