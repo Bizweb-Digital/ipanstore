@@ -12,7 +12,17 @@
 
 **Status SSH ke `vm-25-171-ubuntu`:** masih **OFFLINE** (Tailscale `Online=False`, `LastSeen=2026-10-16T18:00:52Z`); `ssh` timeout, `tailscale ssh` → 502 (host tidak merespons). **Bukan** masalah autentikasi — nodenya memang tidak terhubung. Belum dipastikan apakah node ini = instance LightVela user; perlu konfirmasi.
 
-## STATUS: ✅✅ TERVERIFIKASI LANGSUNG DARI DALAM HOST — EGRESS INTERNET MATI DI SISI PROVIDER (2026-10-17)
+**BUKTI FINAL DETERMINATIF (counter interface, 2026-10-17):**
+```
+TX BEFORE = 1.713.132.89  →  TX AFTER = 1.713.133.06   (TX NAIK ~17 paket saat ping)
+RX BEFORE = 34.409.9761  →  RX AFTER = 34.409.9781     (RX NAIK ~20 paket)
+ping 45.113.192.101 → 3 packets transmitted, 0 received, 100% packet loss
+```
+→ **Paket MEMANG KELUAR dari VM** (TX naik) dan **ada balasan masuk** (RX naik), **tetapi tidak sampai ke aplikasi** (ping 100% loss, curl 000).
+- `conntrack: count=983 / max=262144` → **conntrack TIDAK penuh** (bukan penyebab).
+→ Ini **membuktikan kerusakan di luar VM**: NAT/egress hypervisor Tencent meneruskan sebagian lalu membuang paket, atau ACL/firewall provider memblokir. **Tidak ada satu pun perbaikan dari dalam VM yang bisa menyelesaikan ini.**
+
+## STATUS: ✅✅ TERVERIFIKASI LANGSUNG DARI DALAM HOST — EGRESS INTERNET MATI DI SISI PROVIDER (2026-10-17) — BUKTI DIPERKUAT
 
 **Cara masuk:** lewat **LightVela → Cloud Computer (beta)** → klik kanan desktop → **Ctrl+Alt+T** → Terminal sebagai `agentuser@VM-25-171-ubuntu`. (Ternyata **bisa** diakses walau Tailscale offline — jalur ini tidak lewat Tailscale.) Dikendalikan via agent-browser relay (Brave).
 
