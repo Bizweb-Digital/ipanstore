@@ -1,6 +1,37 @@
 # LASTACTIVITY — IPAN STORE
 
-## STATUS: 🚨 BOT TELEGRAM MATI — VPS tele `vm-25-171-ubuntu` OFFLINE (2026-10-17)
+**KOREKSI (2026-10-17, setelah verifikasi lanjutan):**
+- ❌ **Tailscale Funnel BUKAN opsi** — hostname `desktop-rh3uu1o.tail23dc7f.ts.net` **NXDOMAIN di DNS publik** (`1.1.1.1`: *Non-existent domain*), hanya resolve di dalam tailnet (MagicDNS). LightVela berada di luar tailnet → tidak bisa memakainya. Rekomendasi Funnel sebelumnya **DIBATALKAN**.
+- ✅ Satu-satunya rute publik yang **terbukti hidup** = Cloudflare Quick Tunnel: `https://bon-worthy-headphones-sponsor.trycloudflare.com/v1` → **401** (hidup, butuh auth; dgn Bearer = 230 model).
+- **Solusi permanen yang benar:** buat **Named Cloudflare Tunnel** dengan hostname tetap (mis. `9router.domain-sendiri`) — tidak berganti URL saat restart, berbeda dari Quick Tunnel.
+
+**Klarifikasi LightVela (dari dokumentasi resmi `lightvela.ai/docs`):** LightVela = produk **cloud AI agent dari tim Tencent Lighthouse**; tiap asisten berjalan di **Hermes Agent** yang di-host cloud. Docs menyatakan eksplisit: *"you never write config files or SSH into a server"* — konfigurasi 100% via **web console** (Model card, Channels, Diagnostics). Jadi **tidak ada SSH ke LightVela**.
+- **Cara diagnosa yang benar (via console LightVela):** Agents → pilih Agent → **Diagnostics** → pilih rentang log 1/3/6/12/24 jam → **Refresh** → baca error (mis. 401/404/`Model response timeout`). Bisa **export log**. Ada juga **Reset model configuration** dan **Reinstall Agent (keep data)**.
+- **Cara set model:** console → **Model** card → dropdown: *Model API* / *Model Coding Plan* / **Custom Model** (perlu **Base URL** + **Model Name** + **API Key**) → **Add as default**. ⚠️ Hanya **satu model aktif** per Agent.
+- **Diagnosa "tidak respon" (FAQ resmi):** penyebab umum = saldo provider habis / Key nonaktif / Base URL custom tidak kompatibel / rate limit. Cek **Current model** tidak kosong & Key tanpa spasi.
+
+**Status SSH ke `vm-25-171-ubuntu`:** masih **OFFLINE** (Tailscale `Online=False`, `LastSeen=2026-10-16T18:00:52Z`); `ssh` timeout, `tailscale ssh` → 502 (host tidak merespons). **Bukan** masalah autentikasi — nodenya memang tidak terhubung. Belum dipastikan apakah node ini = instance LightVela user; perlu konfirmasi.
+
+## STATUS: 🎯 BOT TELE MATI — AKAR MASALAH: URL TUNNEL 9router BERGANTI (2026-10-17) — SUPERSEDED
+
+**Klarifikasi penting:** "VPS tele / light vela" = **LightVela** (`lightvela.ai`) — platform **cloud AI agent**, BUKAN VPS yang dikelola user. Jadi `vm-25-171-ubuntu` (offline) bukan penyebabnya. Di panel LightVela, kanal **Telegram = "Connected"** → koneksi Telegram OK, masalahnya di **backend model**.
+
+**AKAR MASALAH (ditemukan):** 9router berjalan di **PC** (port `20128`) dan LightVela mengaksesnya lewat **Cloudflare Quick Tunnel (trycloudflare)**. URL Quick Tunnel **berganti setiap cloudflared restart**, sedangkan konfigurasi di LightVela masih menunjuk URL **lama**.
+
+**Bukti:**
+- URL sekarang: `https://bon-worthy-headphones-sponsor.trycloudflare.com` → `/v1/models` = **401** (hidup, butuh auth) ✅; dengan Bearer key → **230 model** ✅.
+- URL lama yang tersimpan di PC — `quiet-marble-otter`, `nuclear-rim-sleeve-southampton`, `ant-effect-gel-necessarily`, `stem-salon-premises-elvis`, `media-financing-athletes-prior` → **semua 000 / mati** ❌ (URL sekali pakai, hilang saat cloudflared restart).
+- 9router PC sehat: cloudflared PID 4832 hidup, `usageHistory` 1.670 request terakhir (3 hari) **semua status `ok`**, terakhir `2026-10-16T20:33:30Z` = **03:33 WIB**.
+- ⚠️ Semua request itu memakai key 9router yang **sama** dengan Hermes lokal → aktivitas = dari PC/Hermes lokal, **bukan** dari LightVela.
+
+**SOLUSI (rekomendasi):**
+${NINEROUTER_API_KEY}
+2. **Pakai URL STABIL — Tailscale Funnel (sudah aktif!):** `https://desktop-rh3uu1o.tail23dc7f.ts.net/v1` → `/v1/models` = **401** (hidup, tunnel permanen, tidak berganti). **Ini solusi permanen** — pakai ini di LightVela.
+   - Catatan: Funnel ada di tailnet `bizwebdigital@`; perlu dipastikan LightVela (server publik) bisa menjangkau Funnel tsb.
+
+**Catatan Tailscale:** profil aktif dikembalikan ke `e5ff` (personal). Profil `1685` = `bizwebdigital@gmail.com` untuk VPS ipanstore + Funnel 9router.
+
+## STATUS: 🚨 BOT TELEGRAM MATI — VPS tele `vm-25-171-ubuntu` OFFLINE (2026-10-17) — SUPERSEDED
 
 **Pertanyaan user:** (a) apakah config sudah sama persis dengan config Hermes di VPS tele? (b) kenapa bot Telegram tidak respon?
 
