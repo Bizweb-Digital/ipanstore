@@ -12,7 +12,28 @@
 
 **Status SSH ke `vm-25-171-ubuntu`:** masih **OFFLINE** (Tailscale `Online=False`, `LastSeen=2026-10-16T18:00:52Z`); `ssh` timeout, `tailscale ssh` → 502 (host tidak merespons). **Bukan** masalah autentikasi — nodenya memang tidak terhubung. Belum dipastikan apakah node ini = instance LightVela user; perlu konfirmasi.
 
-## STATUS: 🎯 BOT TELE MATI — AKAR MASALAH: URL TUNNEL 9router BERGANTI (2026-10-17) — SUPERSEDED
+## STATUS: 🎯 AKAR MASALAH SEBENARNYA — Telegram API TIDAK TERJANGKAU DARI HOST AGENT (2026-10-17)
+
+**Bukti:** user memberikan `~/.hermes/logs/agent.log` (log ini **bukan** dari PC — PC tidak punya `~/.hermes/logs/`; log PC berhenti 2026-10-13). Dari log:
+
+1. **Bot mati karena Telegram adapter GAGAL KONEK ke Telegram API** — bukan masalah model/9router:
+   - `[Telegram] IPv4 Telegram API IP 149.154.166.110 failed: ConnectTimeout('')`
+   - `[Telegram] IPv4 Telegram API IP 149.154.167.220 failed: ConnectTimeout('')` (149.154.167.220 = api.telegram.org)
+   - `Connect attempt 1..5/8 timed out after 30s` → `Reconnect telegram error: telegram connect timed out after 180s, next retry in 60s`
+   - `Discovering Telegram API fallback IPs via DNS-over-HTTPS…` → juga timeout.
+2. **Egress internet host agent bermasalah secara umum:** `model catalog fetch failed (raw.githubusercontent.com): urlopen error timed out`; MCP `context7` & `supabase` discovery timeout.
+3. **Model config host agent (BUKAN tunnel!):** `provider=custom base_url=http://100.80.87.50:20128/v1 model=cbai/gpt-6-sol` → agent memakai 9router di **PC via Tailscale** (`100.80.87.50`), **bukan** Cloudflare tunnel. → **Teori "URL tunnel berganti" sebelumnya DIBATALKAN.**
+4. **Tes pembanding dari PC:** `api.telegram.org` → **302** ✅, `raw.githubusercontent.com` → **301** ✅, 9router PC (`100.80.87.50:20128`) → **200** ✅. Jadi jaringan PC sehat; yang rusak = egress host agent.
+
+**Kesimpulan:** "Connected" di panel LightVela = status **konfigurasi** channel (token tersimpan), **bukan** status koneksi runtime. Runtime-nya sedang gagal total menghubungi Telegram. Model/9router tidak terlibat.
+
+**Solusi:**
+1. **Reboot host agent** (node `vm-25-171-ubuntu`) — node ini juga berstatus Tailscale **offline**, konsisten dengan masalah jaringan; reboot biasanya memulihkan egress.
+2. Setelah hidup, verifikasi dari dalam host: `curl -sv https://api.telegram.org` → harus 302/200.
+3. Jika tetap gagal → provider/region memblokir Telegram API → perlu **proxy** atau pindah region.
+4. Bila LightVela managed (docs: *"you never … SSH into a server"*), laporkan ke support + sertakan **export log** dari **Diagnostics** (docs menyarankan ini).
+
+## STATUS: 🎯 BOT TELE MATI — dugaan URL TUNNEL 9router BERGANTI (2026-10-17) — ❌ DIBATALKAN (tidak terbukti)
 
 **Klarifikasi penting:** "VPS tele / light vela" = **LightVela** (`lightvela.ai`) — platform **cloud AI agent**, BUKAN VPS yang dikelola user. Jadi `vm-25-171-ubuntu` (offline) bukan penyebabnya. Di panel LightVela, kanal **Telegram = "Connected"** → koneksi Telegram OK, masalahnya di **backend model**.
 
