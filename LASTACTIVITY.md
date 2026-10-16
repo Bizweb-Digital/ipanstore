@@ -16,6 +16,8 @@
 - Provider `9router` tidak ada di `models.db` (`model_cache`) → `models.yml` otoritatif untuk provider ini, tidak perlu refresh cache.
 - **Perlu restart omp/Orca** agar default baru termuat.
 
+**⚠️ PENDING — sinkronisasi VPS GAGAL (2026-10-17):** dokumentasi perubahan ini sudah di-push ke `origin/main` (`8a41315`), TAPI `git pull` di VPS **belum** dijalankan karena **Tailscale lokal berpindah akun**: mesin ini kini login sebagai **`muhammadrizvandysukma@gmail.com`** (tailnet `tail1fac97`), sedangkan VPS `sever-h81m-s2ph` (100.89.140.16) ada di tailnet **`bizwebdigital@` (`tail23dc7f`)** → `ssh`/`ping` ke VPS timeout ("no matching peer"). **Website TIDAK terpengaruh** (`ipanstore.id` 200, `api /api/health` 200). VPS akan menyusul saat `git pull` dijalankan oleh mesin dengan akses Tailscale `bizwebdigital@`. Perubahan model omp sendiri **tidak perlu deploy** (config global, bukan repo).
+
 ## STATUS: 🚨 TEMUAN KEAMANAN (2026-10-06) — Rahasia asli bocor di repo PUBLIK `Bizweb-Digital/ipanstore`
 
 **Pemicu:** Email GitGuardian "Google API Key exposed on GitHub" (pushed 2026-10-03 10:37 UTC).
