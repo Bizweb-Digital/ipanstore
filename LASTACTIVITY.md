@@ -25,7 +25,7 @@
 - ⚠️ Semua request itu memakai key 9router yang **sama** dengan Hermes lokal → aktivitas = dari PC/Hermes lokal, **bukan** dari LightVela.
 
 **SOLUSI (rekomendasi):**
-${NINEROUTER_API_KEY}
+1. **Ganti base URL di LightVela** ke `https://bon-worthy-headphones-sponsor.trycloudflare.com/v1` + API key `${NINEROUTER_API_KEY}` → langsung jalan (tapi rapuh: URL berganti tiap restart).
 2. **Pakai URL STABIL — Tailscale Funnel (sudah aktif!):** `https://desktop-rh3uu1o.tail23dc7f.ts.net/v1` → `/v1/models` = **401** (hidup, tunnel permanen, tidak berganti). **Ini solusi permanen** — pakai ini di LightVela.
    - Catatan: Funnel ada di tailnet `bizwebdigital@`; perlu dipastikan LightVela (server publik) bisa menjangkau Funnel tsb.
 
