@@ -1,5 +1,21 @@
 # LASTACTIVITY — IPAN STORE
 
+## STATUS: ✅ OMP DEFAULT MODEL → `9router/cbai/gpt-6-luna` (2026-10-17)
+
+**Permintaan user:** set model default ke **gpt-6-luna (cbai)**.
+
+**Perubahan (config global omp, BUKAN repo — tidak di-commit):**
+- `~/.omp/agent/config.yml` → `modelRoles.default`: `9router/cbai/deepseek-v4.1-flash:high` → **`9router/cbai/gpt-6-luna`**.
+- `~/.omp/agent/models.yml` → daftarkan model baru `cbai/gpt-6-luna` (belum ada di katalog; `cbai/gpt-6-astra` sudah ada). Entry mengikuti pola `cbai/gpt-6-astra`: `api: openai-completions`, `reasoning: true`, `input: [text, image]`, `contextWindow: 1000000`, `maxTokens: 128000`.
+- Backup: `models.yml.bak-gpt6luna-*` + `config.yml.bak-gpt6luna-*`.
+- YAML divalidasi (`yaml.safe_load`) → valid; total model 91; `cbai/gpt-6-luna` terdaftar.
+- Router 9router dites langsung: `POST /v1/chat/completions` model `cbai/gpt-6-luna` → balas `OK` ✅ (model benar-benar dilayani).
+
+**Catatan teknis:**
+- omp **mengabaikan** `model` di `D:\ipanstore\opencode.json` (log: *"ignoring project setting that would shadow a settings group"*) → sumber otoritatif = `~/.omp/agent/config.yml`. Jadi default cukup diubah di situ.
+- Provider `9router` tidak ada di `models.db` (`model_cache`) → `models.yml` otoritatif untuk provider ini, tidak perlu refresh cache.
+- **Perlu restart omp/Orca** agar default baru termuat.
+
 ## STATUS: 🚨 TEMUAN KEAMANAN (2026-10-06) — Rahasia asli bocor di repo PUBLIK `Bizweb-Digital/ipanstore`
 
 **Pemicu:** Email GitGuardian "Google API Key exposed on GitHub" (pushed 2026-10-03 10:37 UTC).
