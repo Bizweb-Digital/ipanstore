@@ -22,6 +22,13 @@ ping 45.113.192.101 → 3 packets transmitted, 0 received, 100% packet loss
 - `conntrack: count=983 / max=262144` → **conntrack TIDAK penuh** (bukan penyebab).
 → Ini **membuktikan kerusakan di luar VM**: NAT/egress hypervisor Tencent meneruskan sebagian lalu membuang paket, atau ACL/firewall provider memblokir. **Tidak ada satu pun perbaikan dari dalam VM yang bisa menyelesaikan ini.**
 
+**📮 KONTAK SUPPORT LIGHTVELA (resmi, terverifikasi 2026-10-17):**
+- **Email: `lightvela@tencent.com`** — (dari `lightvela.ai/docs/plans`, dipakai untuk urusan akun/billing/refund; wajib sertakan sign-in email + LightVela user ID + nama plan).
+- **Discord (resmi):** https://discord.gg/Myh58xEMe2
+- **WhatsApp Community:** https://chat.whatsapp.com/KLF9OvdAj4sDdojG20JA9b
+- **WeCom Community:** ada di halaman `lightvela.ai/docs/contact-us` (QR/undangan).
+- Catatan: halaman Contact Us resmi mengarahkan ke komunitas (bukan form tiket). Untuk masalah infra, **email + Discord** adalah jalur terbaik.
+
 ## STATUS: ✅✅ TERVERIFIKASI LANGSUNG DARI DALAM HOST — EGRESS INTERNET MATI DI SISI PROVIDER (2026-10-17) — BUKTI DIPERKUAT
 
 **Cara masuk:** lewat **LightVela → Cloud Computer (beta)** → klik kanan desktop → **Ctrl+Alt+T** → Terminal sebagai `agentuser@VM-25-171-ubuntu`. (Ternyata **bisa** diakses walau Tailscale offline — jalur ini tidak lewat Tailscale.) Dikendalikan via agent-browser relay (Brave).
