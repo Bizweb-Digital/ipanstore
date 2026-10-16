@@ -12,7 +12,51 @@
 
 **Status SSH ke `vm-25-171-ubuntu`:** masih **OFFLINE** (Tailscale `Online=False`, `LastSeen=2026-10-16T18:00:52Z`); `ssh` timeout, `tailscale ssh` → 502 (host tidak merespons). **Bukan** masalah autentikasi — nodenya memang tidak terhubung. Belum dipastikan apakah node ini = instance LightVela user; perlu konfirmasi.
 
-## STATUS: 🎯✅ AKAR MASALAH FINAL — HOST LIGHTVELA TIDAK PUNYA INTERNET EGRESS (Telegram diblokir GFW) (2026-10-17)
+## STATUS: ✅✅ TERVERIFIKASI LANGSUNG DARI DALAM HOST — EGRESS INTERNET MATI DI SISI PROVIDER (2026-10-17)
+
+**Cara masuk:** lewat **LightVela → Cloud Computer (beta)** → klik kanan desktop → **Ctrl+Alt+T** → Terminal sebagai `agentuser@VM-25-171-ubuntu`. (Ternyata **bisa** diakses walau Tailscale offline — jalur ini tidak lewat Tailscale.) Dikendalikan via agent-browser relay (Brave).
+
+**HASIL DIAGNOSA LANGSUNG (bukan dugaan lagi):**
+
+| Cek | Hasil | Arti |
+|---|---|---|
+| `ping 10.81.0.1` (gateway LAN) | **100% packet loss** | tidak bisa keluar dari subnet |
+| `ping 223.5.5.5` | **100% packet loss** | tanpa ICMP keluar |
+| `curl https://api.telegram.org` | `000` timeout 20s | **Telegram tidak terjangkau** |
+| `curl https://www.baidu.com` | `000` | **situs China pun tidak terjangkau** |
+| `curl cloud.tencent.com` | `000` | **Tencent sendiri tidak terjangkau** |
+| `curl google.com` | `000` | — |
+| `getent hosts www.baidu.com` | **BERHASIL** (`45.113.192.101`) | DNS **jalan** ✅ |
+| `ip route get 45.113.192.101` | `via 10.81.0.1 dev eth0 src 10.81.25.171` | rute benar |
+| `ip neigh` | `10.81.0.1 lladdr fe:e6:5b:aa:49:ab **REACHABLE**` | ARP/L2 ke gateway **OK** ✅ |
+| `iptables -L` | `INPUT policy ACCEPT`, `DOCKER-USER ACCEPT` | **tidak ada firewall** yang blokir |
+| `tailscale status --json` | `ExitNode: false`, `ExitNodeOption: false` | **bukan** Tailscale exit-node |
+| `ip -s link show eth0` | RX **34 juta paket**, TX, **0 error/drop** | interface sehat |
+| `uptime` | **up 9 days** | — |
+
+**KESIMPULAN FINAL:** VM **hidup, jaringan L2/L3 lokal & DNS normal**, tetapi **paket tidak bisa keluar ke internet** (timeout ke gateway LAN & semua host, termasuk Tencent). → **Egress/NAT di sisi cloud provider (Tencent Lighthouse) rusak.** Ini **100% masalah infrastruktur**, bukan konfigurasi user, bukan 9router, bukan model.
+
+**Konsekuensi:** adapter Telegram gagal konek → bot diam. Log gateway mengonfirmasi retry terus: `Connect attempt 4/8/5/8 timed out`, `Reconnect telegram error: telegram connect timed out after 180s`.
+
+**Yang SEHAT di host:** `hermes-gateway` **running**, model `cbai/deepseek-v4.1-flash`, `9router-dual` listening `:20129`, `9router` di `:80` (Tailscale), `hermes` di `:9119`. Ada sistem self-heal `~/9router-patch` (`selfheal_vps.log`) — semua patch A/B/C terpasang, **hanya menyentuh 9router, tidak menyentuh jaringan** → tidak bisa memperbaiki egress.
+
+**→ `Reset model configuration` JANGAN diklik** (model sehat). Perbaikan harus dari **support LightVela** (restart networking/VM di hypervisor atau perbaiki NAT).
+
+**Percobaan perbaikan lokal (GAGAL):** `sudo systemctl restart systemd-networkd` → eth0 tetap UP (`10.81.25.171/16`), tetapi hasil tes tetap `baidu=000`, `api.telegram.org=000`, `ping 10.81.0.1` **100% packet loss**. → **Membuktikan masalah di luar VM** (hypervisor/NAT provider). Tidak ada lagi yang bisa diperbaiki dari dalam host.
+
+**Yang sudah saya coba & hasilnya:**
+- ✅ Diagnosa jaringan lengkap dari dalam host (via Cloud Computer terminal)
+- ✅ Cek firewall (`iptables` = ACCEPT, bukan penyebab)
+- ✅ Cek Tailscale exit-node (= false, bukan penyebab)
+- ✅ Cek interface (`eth0` UP, RX 34jt paket, 0 error)
+- ✅ Cek DNS (jalan — `getent` berhasil)
+- ✅ Cek self-heal 9router (`~/9router-patch`, semua patch terpasang, tidak menyentuh jaringan)
+- ❌ Restart `systemd-networkd` → tidak menolong
+- ❌ SSH dari PC (Tailscale offline) → tidak bisa; satu-satunya jalur masuk = **Cloud Computer**
+
+**LANGKAH BERIKUTNYA (wajib lewat support LightVela):** laporkan bahwa VM hidup & jaringan lokal/DNS normal, tetapi **egress internet mati** (timeout ke gateway LAN & semua host termasuk Tencent). Minta mereka restart networking/VM di hypervisor atau perbaiki NAT.
+
+## STATUS: 🎯✅ AKAR MASALAH FINAL — HOST LIGHTVELA TIDAK PUNYA INTERNET EGRESS (Telegram diblokir GFW) (2026-10-17) — DIKOREKSI
 
 **Bukti definitif dari log installer/doctor host** (`hermes doctor` + fase install):
 
