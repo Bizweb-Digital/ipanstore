@@ -12,7 +12,40 @@
 
 **Status SSH ke `vm-25-171-ubuntu`:** masih **OFFLINE** (Tailscale `Online=False`, `LastSeen=2026-10-16T18:00:52Z`); `ssh` timeout, `tailscale ssh` → 502 (host tidak merespons). **Bukan** masalah autentikasi — nodenya memang tidak terhubung. Belum dipastikan apakah node ini = instance LightVela user; perlu konfirmasi.
 
-## STATUS: 🎯 AKAR MASALAH SEBENARNYA — Telegram API TIDAK TERJANGKAU DARI HOST AGENT (2026-10-17)
+## STATUS: 🎯✅ AKAR MASALAH FINAL — HOST LIGHTVELA TIDAK PUNYA INTERNET EGRESS (Telegram diblokir GFW) (2026-10-17)
+
+**Bukti definitif dari log installer/doctor host** (`hermes doctor` + fase install):
+
+| Bukti di log | Arti |
+|---|---|
+| `下载 LightClawBot 安装脚本失败 (cloudcache.tencent-cloud.com): curl: (28) Connection timeout / SSL connection timeout` | **CDN Tencent sendiri pun timeout** → egress internet benar-benar mati |
+| `⚠️ 微信支付插件安装失败或超时` | WeChat Pay plugin install timeout |
+| `[Telegram] IPv4 Telegram API IP 149.154.166.110 / 149.154.167.220 failed: ConnectTimeout` | **api.telegram.org tidak terjangkau** |
+| `model catalog fetch failed (raw.githubusercontent.com): urlopen error timed out` | GitHub juga tidak terjangkau |
+| `MCP discovery timed out: context7, supabase` | MCP juga tidak terjangkau |
+| `✓ IPv6 route (no IPv6 route — IPv4 only)` | tidak ada IPv6 |
+| `npm mirror: https://mirrors.tencentyun.com/npm/` ; mirror `npmmirror.com` | **host = Tencent Cloud, region CHINA** |
+
+**KESIMPULAN:** Host LightVela berjalan di **Tencent Cloud region China** dan **egress internet-nya tidak berfungsi** (bahkan CDN Tencent sendiri timeout). **Telegram diblokir GFW** → adapter Telegram gagal konek → **bot diam**. Ini **BUKAN** masalah 9router, model, tunnel, maupun konfigurasi user.
+
+**Yang SEHAT di host (dari doctor) — penting agar tidak salah reset:**
+- `profile-4a551a20ca8d4c458e24145097f73a7d: gateway running, cbai/deepseek-v4.1-flash` → **gateway JALAN & model terkonfigurasi** ✅
+- `✓ API key or custom endpoint configured` ✅ · `✓ Config version up to date (v50)` ✅
+- `✓ ~/.hermes/.env exists` ✅ · `✓ SSL CA bundle valid` ✅ · Python 3.11.16, Hermes v0.21.5 ✅
+- `⚠ python-telegram-bot (optional, not installed)` — **bukan** masalah (Hermes pakai adapter sendiri)
+
+**→ `Reset model configuration` TIDAK BOLEH diklik** (model sehat, akan merusak konfigurasi).
+**→ `Session repair` GAGAL** (muncul error *"Sorry, I encountered an unexpected error. Try again or use /reset to start a fresh chat."*) — wajar, karena akarnya masalah jaringan, bukan sesi.
+
+**RENCANA PERBAIKAN:**
+1. **Lapor support LightVela** (wajib — ini masalah infrastruktur mereka): sertakan **Export log** dari Diagnostics + ringkas: *"Host has no outbound internet: Telegram API all IPs ConnectTimeout, raw.githubusercontent.com timeout, MCP timeout, and even Tencent's own CDN (cloudcache.tencent-cloud.com) times out. Telegram is GFW-blocked from this China-region host."*
+2. Tanya support: apakah **proxy/relay egress** untuk Telegram seharusnya aktif (docs LightVela mendukung Telegram, jadi mestinya ada mekanisme proxy) atau apakah **bisa pindah region** ke luar China.
+3. Cek fitur **"Cloud Computer" (Beta)** di sidebar console — kemungkinan memberi akses shell ke host (belum ada docs); jika ada, bisa untuk diagnosa/konfigurasi proxy langsung.
+4. Alternatif sementara: pakai channel yang tidak diblokir (mis. **WeChat / WeCom / QQ** yang native China) sampai egress Telegram pulih.
+
+**Status akses:** host `vm-25-171-ubuntu` tetap **offline** di Tailscale; SSH gagal (timeout / 502); LightVela SaaS tanpa akses shell dari user (docs: *"you never … SSH into a server"*). **Eksekusi perbaikan = di sisi LightVela/support, bukan dari PC.**
+
+## STATUS: 🎯 AKAR MASALAH SEBENARNYA — Telegram API TIDAK TERJANGKAU DARI HOST AGENT (2026-10-17) — DIPERKUAT
 
 **Bukti:** user memberikan `~/.hermes/logs/agent.log` (log ini **bukan** dari PC — PC tidak punya `~/.hermes/logs/`; log PC berhenti 2026-10-13). Dari log:
 
