@@ -1,5 +1,24 @@
 # LASTACTIVITY — IPAN STORE
 
+## STATUS: 🚨 BOT TELEGRAM MATI — VPS tele `vm-25-171-ubuntu` OFFLINE (2026-10-17)
+
+**Pertanyaan user:** (a) apakah config sudah sama persis dengan config Hermes di VPS tele? (b) kenapa bot Telegram tidak respon?
+
+**Jawaban (b) — PENYEBAB DITEMUKAN:** VPS tele **`vm-25-171-ubuntu`** (Tailscale `100.94.206.73`, tailnet **personal** `muhammadrizvandysukma@` / `tail1fac97`) **OFFLINE sejak 2026-10-16T18:00:52Z ≈ 2026-10-17 01:00 WIB** (~2 jam). Karena Hermes + bot Telegram jalan **di dalam** VPS itu, bot otomatis tidak respon. Bukti: `tailscale status` → `offline, last seen 2h ago`; `ping` timeout; port 22 tertutup; `known_hosts` memuat `100.94.206.73` (pernah di-SSH dari PC ini). **Tindakan: nyalakan/reboot VPS tele.**
+
+**Jawaban (a) — BELUM BISA DIBANDINGKAN:** VPS tele tidak terjangkau → config Hermes di sana tidak bisa dibaca. Yang terverifikasi di **lokal** (`~/.hermes/config.yaml`):
+- `model.default: ag/gemini-3.8-flash-high`; provider `custom` → `http://127.0.0.1:20128/v1` (9router **PC**), `api_mode: chat_completions`.
+- Daftar model **TIDAK memuat `cbai/gpt-6-luna`** (0 hit) — hanya `klt/gpt-6-luna` (3 hit). Alias `gpt:` masih → `custom/klt/gpt-6-astra`.
+- Platform Telegram: `enabled: true`, `home_channel.chat_id: '8170946470'` (nama: ipan). Toolset `hermes-telegram` aktif.
+- `fallback_providers`: `custom` → `http://127.0.0.1:20129/v1`.
+
+**Konteks 9router ("koh patch") — terverifikasi di PC:**
+- 9router lokal aktif di port **20128** (`%APPDATA%\9router`), menyajikan **86 model kelontong** (`klt/*` + `cbai/*`) via provider connection **KelontongAI** → `https://api.kelontongai.my.id/v1` (prefix `klt`, defaultModel `claude-opus-4.8`). **Patch "koh" SUDAH ada di 9router PC.**
+- ⚠️ Masalah: VPS tele tidak bisa memakai 9router PC (Hermes di VPS menunjuk `127.0.0.1:20128` = dirinya sendiri). Ada `9router/tunnel/state.json` (shortId `xaxzhq`, trycloudflare) → kemungkinan dipakai sebagai jembatan; perlu dicek setelah VPS hidup.
+- Koneksi provider bermasalah di DB 9router: 6× NVIDIA (`errorCode 404`, `testStatus: unavailable`) + beberapa codebuddy-intl.
+
+**Catatan Tailscale:** PC punya 2 profil — `1685` = `bizwebdigital@gmail.com` (VPS ipanstore `100.89.140.16`), `e5ff` = `muhammadrizvandysukma@gmail.com` (VPS tele `100.94.206.73`). **Profil aktif dikembalikan ke `e5ff` (personal)** setelah selesai cek. Akses ke `sever-h81m-s2ph` kini perlu `tailscale switch 1685` + approval SSH (link auth cepat expired).
+
 ## STATUS: ✅ OMP DEFAULT MODEL → `9router/cbai/gpt-6-luna` (2026-10-17)
 
 **Permintaan user:** set model default ke **gpt-6-luna (cbai)**.
