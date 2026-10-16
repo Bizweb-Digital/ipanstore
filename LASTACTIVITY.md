@@ -22,7 +22,17 @@ ping 45.113.192.101 → 3 packets transmitted, 0 received, 100% packet loss
 - `conntrack: count=983 / max=262144` → **conntrack TIDAK penuh** (bukan penyebab).
 → Ini **membuktikan kerusakan di luar VM**: NAT/egress hypervisor Tencent meneruskan sebagian lalu membuang paket, atau ACL/firewall provider memblokir. **Tidak ada satu pun perbaikan dari dalam VM yang bisa menyelesaikan ini.**
 
+**✅ TIKET SUPPORT SUDAH DIKIRIM (2026-10-17) via form resmi `https://lightvela.ai/support`** (bukan email — form Product feedback):
+- Account ID (auto): `usr_665532b0b77117ed6c16e04`
+- Kategori: **Bug / Malfunction**
+- Frequency: **Always reproducible**
+- Email: `muhammadrizvandysukma@gmail.com`
+- Isi: laporan lengkap egress mati + semua bukti (ping gateway 100% loss, curl 000 ke baidu/tencent/telegram, DNS OK, ARP REACHABLE, iptables ACCEPT, ExitNode false, conntrack normal, restart networkd gagal, **bukti TX/RX naik tapi paket hilang**) + permintaan **reboot VM di hypervisor** & cek NAT/security-group.
+- Status: **"Submitted successfully"** ✅ (dikirim via agent-browser relay, tab user)
+- Jalur cadangan bila tiket lama direspons: email `lightvela@tencent.com`, Discord https://discord.gg/Myh58xEMe2, WhatsApp https://chat.whatsapp.com/KLF9OvdAj4sDdojG20JA9b
+
 **📮 KONTAK SUPPORT LIGHTVELA (resmi, terverifikasi 2026-10-17):**
+- **Form support: `https://lightvela.ai/support`** ← **paling tepat untuk bug/infra** (auto-attach Account ID)
 - **Email: `lightvela@tencent.com`** — (dari `lightvela.ai/docs/plans`, dipakai untuk urusan akun/billing/refund; wajib sertakan sign-in email + LightVela user ID + nama plan).
 - **Discord (resmi):** https://discord.gg/Myh58xEMe2
 - **WhatsApp Community:** https://chat.whatsapp.com/KLF9OvdAj4sDdojG20JA9b
