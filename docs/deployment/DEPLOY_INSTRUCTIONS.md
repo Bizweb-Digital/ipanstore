@@ -133,8 +133,8 @@ SMTP_PASS=<app_password_16_char_tanpa_spasi>
 MAIL_FROM="IPAN STORE <muhammadrizvandysukma@gmail.com>"
 
 # KlikQris API (Payment Gateway QRIS)
-KLIKQRIS_API_KEY=***REDACTED***
-KLIKQRIS_ID_MERCHANT=***REDACTED***
+KLIKQRIS_API_KEY=<your_klikqris_api_key>
+KLIKQRIS_ID_MERCHANT=<your_merchant_id>
 KLIKQRIS_BASE_URL=https://klikqris.com/api
 KLIKQRIS_CALLBACK_URL=https://api.ipanstore.id/api/klikqris-webhook
 

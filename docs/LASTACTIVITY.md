@@ -162,7 +162,7 @@
 
 **Pending (butuh user / deploy):**
 1. Eksekusi `sql_patches/supabase_patch_klikqris_support.sql` di Supabase SQL Editor.
-2. Isi `.env` server: `KLIKQRIS_API_KEY`, `KLIKQRIS_ID_MERCHANT` (***REDACTED***), `KLIKQRIS_CALLBACK_URL=https://api.ipanstore.id/api/klikqris-webhook`.
+2. Isi `.env` server: `KLIKQRIS_API_KEY`, `KLIKQRIS_ID_MERCHANT` (<id_merchant>), `KLIKQRIS_CALLBACK_URL=https://api.ipanstore.id/api/klikqris-webhook`.
 3. Commit + push + deploy frontend/backend (MENUNGGU KONFIRMASI USER sesuai AGENTS.md #2).
 4. Set webhook URL di dashboard KlikQris (atau biarkan backend kirim `callback_url` per-transaksi).
 5. Test end-to-end: order paket → QR muncul → bayar → status PAID → email SettinX terkirim.
@@ -172,7 +172,7 @@
 - **Trigger**: user "kamu aja yang lakukan deploy ke server lewat ssh tailscale", kemudian "Success. No rows returned lanjut" (SQL patch dijalankan), "apakah semua perubahan sudah di commit,push github, dan pull + deploy ke server", selesai dengan "catat ke last activity".
 - **Backend deployment** (commit `7bf9430` feat(deploy): Add KlikQris QRIS payment + polling fallback email):
   - Git: `git push origin main` → `e9c09d6..main fast-forward`; server `git pull` OK.
-  - Server config: `.env` update `SMTP_PASS=***REDACTED***` (app password baru), tambahkan `KLIKQRIS_API_KEY`, `KLIKQRIS_ID_MERCHANT=***REDACTED***`, `KLIKQRIS_CALLBACK_URL=https://api.ipanstore.id/api/klikqris-webhook`.
+  - Server config: `.env` update `SMTP_PASS=<app_password_baru>` (app password baru), tambahkan `KLIKQRIS_API_KEY`, `KLIKQRIS_ID_MERCHANT=<id_merchant>`, `KLIKQRIS_CALLBACK_URL=https://api.ipanstore.id/api/klikqris-webhook`.
   - Service: `pm2 restart ipanstore-backend --update-env` → pid 525065, online.
   - Verification test:
     - QRIS create-order: `https://api.ipanstore.id/api/klikqris-create-order` POST `{order_id:"FINAL-VERIFY",amount:20000,...}` → HTTP 200, qris_url generated, signature valid.

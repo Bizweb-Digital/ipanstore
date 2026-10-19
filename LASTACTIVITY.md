@@ -1,5 +1,77 @@
 # LASTACTIVITY — IPAN STORE
 
+## 2026-10-19 — Fix double-order QRIS (kasus Reyken) + deploy live
+
+**Akar masalah (diagnosa):** Customer "Reyken" 18 Okt membuat 10 order / 4 menit karena QR tidak terlihat di HP (di bawah fold, dikira "layar putih") → klik Bayar berulang → kena `orderLimiter` 429 "Batas pembuatan order tercapai". Semua order EXPIRED (tidak dibayar). Backend & API KlikQRIS terverifikasi sehat (test langsung 201).
+
+**Fix (`src/pages/Order.tsx`, commit `662e3d2`):**
+- Klik "Bayar Sekarang" saat QR aktif → scroll ke QR (label tombol jadi "Lihat QRIS Kamu"), tidak bikin order baru.
+- Auto-scroll ke panel QR begitu QR dibuat (fix "layar putih" di HP).
+- QR terkunci ke paket+promo (`qrContextRef`); ganti pilihan → QR lama dibatalkan otomatis.
+- Peringatan "⚠️ Bayar TEPAT sampai 3 digit terakhir (kode unik)" di panel QR.
+- Loading state: "Memproses... (jangan tutup halaman)".
+
+**E2E (Brave 390px, backend lokal + API KlikQRIS asli):** create order OK (`IPANSETPC1792391130124`, Rp 50.455+kode unik), auto-scroll OK, klik 3x → orderId tetap (tidak ada order baru), ganti paket → QR hilang. `tsc --noEmit` 0, build OK.
+
+**Deploy:** dist dibuild dari tree bersih (perubahan admin panel lokal di-stash dulu, TIDAK ikut). VPS `git reset --hard origin/main` (commit docs lokal `ff900b8` disimpan di stash server). SCP dist → `docker compose up --build -d`. Verifikasi live: asset `index-TXmZ4HI9.js` cocok, chunk `Order-PQuwkutx.js` memuat fix, `/order` 200, API health OK. Stash lokal di-pop kembali (32 file admin panel utuh).
+
+**Catatan:** `server/.env` lokal sempat ditambah `localhost:8081` di ALLOWED_ORIGINS untuk E2E (file gitignored, tidak ikut deploy).
+
+---
+
+## STATUS: ✅ LANJUT SETUP BOT TELE LIGHTVELA SETELAH MATI LAMPU (2026-10-17 15:30 WIB)
+
+**Masalah:** PC restart (mati lampu) → cloudflared Quick Tunnel dapat URL baru, sementara host LightVela masih menunjuk URL lama (mati) → bot diam.
+
+**Perbaikan:**
+- URL tunnel aktif sekarang: `https://builds-vancouver-rendered-approval.trycloudflare.com` (shortId `xaxzhq`, cloudflared PID 18948, retries 99).
+- Host `ins-6d365de69f9445a0abd2f92d6bb3ee29` (`my babu gweh` / bot `@MyJawirBot`): `~/.hermes/config.yaml` → `providers.lightvela-custom-9router-ef7n3s.base_url` diganti ke URL baru (backup `config.yaml.bak-tunnel-*`). Model aktif `cbai/deepseek-v4.1-flash`.
+- `systemctl --user restart hermes-gateway` → `✓ telegram connected` (polling), model context warmed OK.
+- Verifikasi dari dalam host: tunnel 401 (hidup), `POST /v1/chat/completions` → balas `OK`, `api.telegram.org` 302, bot `getMe` OK (id 8889950218), webhook kosong, pending 0.
+
+**Update 15:40 — model disamakan dengan omp (permintaan user):**
+- `cbai/gpt-6-sol` (dan seluruh GPT family `cbai/*`) ditolak upstream: `11158 model not allowed for user type personal_free_user` — 6/6 percobaan gagal, bukan masalah konfigurasi.
+- Yang masih hidup: `cbai/deepseek-v4.1-flash`, `cbai/glm-5.3`, `cbai/kimi-k3`, `cbai/minimax-m3`, dan `klt/gpt-6-sol` (via KelontongAI).
+- Host `my babu gweh`: `model.default` → **`cbai/kimi-k3`** (sama dengan `~/.omp/agent/config.yml` `modelRoles.default`), `providers...model` → `cbai/kimi-k3`, `agent.reasoning_effort` → `''` (setara `:off` di omp). Backup `config.yaml.bak-model-*`. Gateway restart → `Model context warmed: cbai/kimi-k3`, `✓ telegram connected`.
+- Jawir Bot (VM lama `100.94.206.73`, akses `tailscale ssh`): masih `model.default: cbai/gpt-6-sol` dengan `base_url: http://100.80.87.50:20128/v1` (PC via tailnet, bukan tunnel). Jawir terakhir sukses 10:26 WIB; sekarang model itu sudah ditolak upstream juga, jadi Jawir akan error kalau dipakai.
+
+**Audit GPT family (16:00 WIB) — PR #4944 sudah terpasang, bukan penyebabnya:**
+- Patch PR #4944 **sudah ada** di build yang berjalan (`@raruu/9router`, chunk `5330.js`): `X-Conversation-ID`, `-Request-ID`, `-Message-ID`, `X-Request-ID`, plus pesan parseError `11128 "conversation id missing"`. `restore_9router.py --check` → 4/4 TERPASANG di kedua paket.
+- **A/B langsung ke upstream** (`www.codebuddy.ai/v2/chat/completions`, Key 8): `gpt-5.3-codex` → 200 **dengan maupun tanpa** header; `gpt-6-sol` → **11158 dengan header** → header bukan faktor.
+- **Scan 49 key codebuddy `active`**: `gpt-6-sol` = 48×11158 + 1×401; `gpt-6-luna`, `gpt-5.4`, `gpt-5.5`, `gpt-5.6-*`, `gpt-6-astra`, `gpt-6.1-sol` = **11158 semua**; `deepseek-v4.1-flash` / `glm-5.3` / `kimi-k3` = 200 semua.
+- **Bukti waktu:** GPT via codebuddy sukses terakhir `2026-10-17T02:26Z` (09:26 WIB, Key 76). Request `gpt-6-luna` 06:51Z (13:51 WIB) ternyata lewat **KelontongAI** (`klt/*`), bukan cbai. Jadi jendela "3 jam lalu masih bisa" itu jalur klt.
+- **Satu-satunya GPT cbai yang masih hidup: `cbai/gpt-5.3-codex`** (200, jawaban normal). Akun codebuddy paketnya `Free Plan Subscription` → gpt-6/gpt-5.4+ diblok tier `personal_free_user`.
+
+**Catatan penting:** Quick Tunnel berganti URL setiap cloudflared/PC restart → bot akan mati lagi setiap mati lampu. Solusi permanen: aktifkan **Tailscale Funnel** (`https://login.tailscale.com/f/funnel?node=nMU5smMKA421CNTRL`) lalu pakai `https://xaxzhq.tail23dc7f.ts.net/v1` yang tidak berubah.
+
+## STATUS: ✅ LIGHTVELA BARU — MODEL + TELEGRAM CONNECTED (2026-10-17)
+
+**Konteks:** akun LightVela lama (`usr_665532b0b77117ed6c16e04`, gmail lama) bermasalah egress; user bikin akun/agent baru. Bot Telegram baru dibuat via BotFather.
+
+- **Agent baru:** bot `ins-6d365de69f9445a0abd2f92d6bb3ee29` (nama tampilan `my babu gweh`), plan **Launch AI**, console `lightvela.ai/agents/...?bot=ins-6d365de69f9445a0abd2f92d6bb3ee29`.
+- **Model (Custom model):** provider `9Router`, Base URL `https://conversations-read-chances-hansen.trycloudflare.com/v1`, key 9router PC (`Default Key` di `%APPDATA%\9router\db\data.sqlite`). Primary model = **`cbai/gpt-6-luna`**. "Fetch available models" → 234 model.
+- **Tes model live:** Daily → Chat kirim "Halo, tes koneksi model…" → balas **"OK"** (egress LightVela baru normal).
+- **Telegram:** `+ Connect` → Bot Token → **Connected**. Log Diagnostics: `[Telegram] Connected to Telegram (polling mode)` + `✓ telegram connected`, `Gateway running with 1 platform(s)`, `set_my_commands OK` (60 cmds). **Tidak ada error ConnectTimeout** (beda dari host lama).
+- **Akses browser:** Brave user di-restart dengan `--remote-debugging-port=9333` (profil sama, login LightVela tetap) via `Start-Process`; omp eval `browser.open({app:{cdp_url:"http://127.0.0.1:9333"}})` dipakai untuk mengendalikan tab.
+- **SOUL.md — DIHAPUS TOTAL (permintaan user "hapus semua ... tanpa jejak"):**
+  - Host LightVela (`/home/agentuser`): `.hermes/SOUL.md`, `.hermes/hermes-agent/SOUL.md`, `.hermes/hermes-agent/docker/SOUL.md`, `.soul-backups/` (seluruh folder), dan `/etc/acli/hermes/backup_20261012_021521/SOUL.md` (root, via `sudo -n`) — **semua dihapus**.
+  - Lokal PC: `~/.hermes/SOUL.md`, `AppData\Local\hermes\SOUL.md`, `Documents\SOUL.MD.md`, `Downloads\Telegram Desktop\SOUL.md.md`, `%TEMP%\SOUL-ipan.md`, `%TEMP%\SOUL-ipan-cold.md`, `%TEMP%\omp-uploads-13048-*/SOUL.md` — dihapus.
+  - Salinan SOUL lama (14.9 KB) di `Downloads\Telegram Desktop\`: `AGENTS.md`, `AGENTS (2).md`, `AGENTS (3).md`, `AGENTS (8).md`, `Deepseek4.1.md` — dihapus (hash duplikat: a07a5e…, 8101af…, 86d9c5…).
+  - Verifikasi: `find / -iname 'soul*.md'` di host → **kosong**; `find ~ -iname 'SOUL*.md'` di PC → **kosong**; UI LightVela → tidak ada "Applied:"; gateway tetap `running`, Telegram `connected`.
+  - Catatan: jejak yang **tidak bisa** dihapus = log/session transcript lokal (`~/.omp/agent/sessions/...jsonl` memuat isi SOUL yang pernah dibaca) dan riwayat chat LightVela di server mereka.
+- **Cara eksekusi shell di host (penting):** endpoint `POST https://api.lightvela.ai/v1/instances/<ins>/debug/exec` butuh body `{command, run_as_user:"agentuser", execution_backend:"tat"}`. Tanpa `execution_backend:"tat"` → 500 `envd process stream error: 502`. Dipanggil dari console via `fetch` di tab LightVela (session cookie).
+- **⚠️ Catatan keamanan:** repo `D:\hermess brutal\hermes-brutal-mod-main` (`SOUL.md`/`PERSONA.md`/`IDENTITY.md`/`instructions.md` berisi instruksi nol batasan: senjata, narkoba, malware, codeword BOOMBA!/CHEMIST) **tidak dipasang** dan tidak pernah dijalankan.
+- **Backup akun lama:** salinan lokal SOUL.md lama **sudah dihapus** sesuai permintaan. Sisa salinan konten yang sama ada di `C:\Users\WINDOWS KERJA\Downloads\Telegram Desktop\AGENTS (2|3|8).md` (bukan buatan sesi ini) — hapus manual bila ingin bersih total. USER.md/MEMORY.md/Cloud Storage/Skills hanya bisa diambil dari console gmail lama bila masih bisa login; LightVela tidak punya fitur export akun.
+
+## STATUS: ✅ Aturan baca skill dipasang global untuk semua project OMP/Orca (2026-10-17)
+
+- `~/.omp/agent/RULES.md` berisi kewajiban membaca skill Obsidian, Superpowers, dan Supermemory sebelum setiap tugas; sesudahnya catat pembelajaran reusable pada memori skill yang cocok.
+- Source OMP terpasang diverifikasi: user-level `RULES.md` dimuat sebagai aturan always-apply pada setiap request; `.omp/RULES.md` project turut dimuat terpisah, sehingga aturan global ini tidak bergantung pada repo dan tidak digantikan aturan project.
+- Berlaku pada folder/project yang ada maupun baru saat menggunakan OMP/Orca di akun ini. `AGENTS.md` IPAN STORE tetap berisi aturan khusus repo.
+- Perubahan hanya konfigurasi/instruksi global dan catatan; build/test tidak diperlukan.
+
+
+
 **KOREKSI (2026-10-17, setelah verifikasi lanjutan):**
 - ❌ **Tailscale Funnel BUKAN opsi** — hostname `desktop-rh3uu1o.tail23dc7f.ts.net` **NXDOMAIN di DNS publik** (`1.1.1.1`: *Non-existent domain*), hanya resolve di dalam tailnet (MagicDNS). LightVela berada di luar tailnet → tidak bisa memakainya. Rekomendasi Funnel sebelumnya **DIBATALKAN**.
 - ✅ Satu-satunya rute publik yang **terbukti hidup** = Cloudflare Quick Tunnel: `https://bon-worthy-headphones-sponsor.trycloudflare.com/v1` → **401** (hidup, butuh auth; dgn Bearer = 230 model).
@@ -38,6 +110,45 @@ ping 45.113.192.101 → 3 packets transmitted, 0 received, 100% packet loss
 - **WhatsApp Community:** https://chat.whatsapp.com/KLF9OvdAj4sDdojG20JA9b
 - **WeCom Community:** ada di halaman `lightvela.ai/docs/contact-us` (QR/undangan).
 - Catatan: halaman Contact Us resmi mengarahkan ke komunitas (bukan form tiket). Untuk masalah infra, **email + Discord** adalah jalur terbaik.
+
+## STATUS: ✅ PATCH 9router "koh" — TERVERIFIKASI & DISINKRONKAN KE DUA PAKET LOKAL (2026-10-17)
+
+**Laporan user (screenshot Telegram 03:10):** *"kok patch 9router yang `Raruu/9router@cd256dbd` hilang di 9router PC saya"* + screenshot dashboard 9router (Usage & Analytics: 1 request, $0.00; Providers: CodeBuddy Global).
+
+**Hasil verifikasi: patch TIDAK hilang — ada dan berfungsi.** Tidak ada yang perlu diperbaiki.
+
+**1) Commit yang dimaksud (`cd256dbd`, 2026-10-15T21:43Z = 16 Okt 04:43 WIB)** — upstream fix `X-Conversation-*` header family di executor `codebuddy-intl` (gerbang "channel verification" menolak request tanpa header itu → HTTP 400 code 11128). 2 file: `open-sse/executors/codebuddy-intl.js` + unit test.
+
+**2) Kenapa "kelihatan hilang" — memang tidak ada di sumber upstream:** file sumber `open-sse/executors/codebuddy-intl.js` **tidak ada di PC** (tidak ada source repo 9router; PC hanya punya paket npm yang sudah ter-*bundle* Next.js). Jadi fix upstream memang **tidak bisa** muncul sebagai file. Bukti tambahan: **tarball resmi `9router@0.5.104` (unscoped) sama sekali tidak punya kode header ini** (dicek via `npm pack`) → itu sebabnya user sendiri pernah membuat patch lokal.
+
+**3) Patch lokal user = ADA & TERPASANG** (script `C:\Users\WINDOWS KERJA\9router-rtk-guard\apply_cbai_conv_patch.py`):
+- Target build yang **sedang jalan**: `…\npm\node_modules\9router\app\.next-cli-build\server\chunks\5330.js` (mtime **16 Okt 13:20:59**; proses server PID 12808 `app\custom-server.js`, start 17 Okt 02:51:59 → **build ter-patch dimuat**).
+- Isi patch: `buildHeaders` menyuntik **ketiga** header (`X-Conversation-ID` stabil dari SHA-1 `codebuddy-intl:`+key, `X-Conversation-Request-ID`, `X-Conversation-Message-ID` + fallback `randomUUID` di `catch`). Versi user memakai `metadata.user_id || session_id` lalu pesan user pertama (lebih kaya dari versi upstream).
+- `restore_9router.py --check` → **4/4 TERPASANG**: `cbai-prompt`, `footer`, `cbai-pick`, `cbai-conv`.
+- Self-heal `9router-patches-selfheal` (tiap 30 mnt) last run **17 Okt 04:32** result **0 (OK)**.
+
+**4) Bukti runtime (bukan cuma file):**
+- Live `POST /v1/chat/completions` ke `127.0.0.1:20128` → **sukses tanpa error 11128**: `cbai/gpt-6-luna`, `gpt-6-sol`, `gpt-5.6-luna`, `kimi-k3`, `kimi-k2.7`, `glm-5.3`, `glm-5.3-flash`, `minimax-m3`, `hy4-preview`, `deepseek-v4.1-flash` → semua balas **OK**.
+- Patch prompt (persona "asisten AI, asisten coding berbasis AI") juga **terbukti aktif** saat dites lewat router.
+- DB 9router: hari ini **234 request, semuanya status `ok`**; provider `codebuddy-intl` **102 koneksi `active`**, hanya 2 `unavailable` (Key 11 & Key 12 → upstream **403**); **43 model `cbai/*`** disajikan dari 230 model total.
+- Tabel `requestDetails` **kosong** (0 baris) → ini penjelasan **angka aneh di screenshot** (Usage hari ini = 1 request / $0.00 / grafik kosong): dashboard membaca `requestDetails`, sedangkan data asli ada di `usageHistory` + `usageDaily`. **Bukan** tanda patch hilang.
+
+**5) Permintaan lanjutan user — patch juga ke `@raruu/9router`, persona tetap sama:**
+| Paket | Versi | Isi dan status |
+|---|---|---|
+| `9router` (unscoped) | 0.5.104 | Masih jadi proses aktif di port 20128; patch prompt/pick/footer/conv tersedia. |
+| `@raruu/9router` | 0.5.104-1 | Patch persona prompt yang persis sama + footer terpasang; fix `X-Conversation-*` natif tidak disentuh; patch picker dilewati karena struktur chunk berbeda dan tidak memengaruhi prompt. |
+
+- Script `restore_9router.py` dan keempat patcher kini mendukung target `NINEROUTER_ROOT`, dan self-heal memeriksa kedua paket. `--check` melaporkan prompt/footer/conv siap; picker di `@raruu` ditandai `SKIP` (struktur provider berbeda), bukan dianggap gagal.
+- Persona yang disuntikkan ke dua build sama persis: instruksi memperkenalkan diri sebagai **asisten AI coding**, membantu tugas pemrograman, selalu menjawab Bahasa Indonesia, dan tidak menyebut merek/nama model. Ini menjamin perilaku prompt yang sama; redaksi jawaban generatif dapat bervariasi.
+- Verifikasi live pada router aktif `127.0.0.1:20128`, model `cbai/gpt-6-luna`, pertanyaan “Siapa kamu?” → **“Saya asisten AI coding yang siap membantu Anda.”** Header konversi dan model tes sebelumnya tetap sukses.
+- **Konfirmasi ulang dari screenshot Usage (2026-10-17 05:06 WIB):** dashboard v0.5.104 menunjukkan 331 request; pada pemeriksaan berikutnya `usageDaily` menunjukkan 335+ request CodeBuddy. Kedua chunk `5330.js` (unscoped yang berjalan dan `@raruu`) mengandung ketiga header `X-Conversation-*` serta prompt persona yang sama. Tes API langsung setelah itu: HTTP 200, `cbai/gpt-6-luna` membalas `OK`.
+- Makna tepat: patch upstream **sudah diterapkan secara fungsional**, bukan cherry-pick source persis ke repository. Paket unscoped memakai patch lokal kompatibel di bundle; paket `@raruu` punya implementasi commit tersebut secara native. Tes live membuktikan request berhasil dan build aktif memuat header, tetapi tidak menangkap paket jaringan untuk inspeksi header outgoing secara terpisah.
+- Paket yang aktif belum diganti: startup VBS/proses berjalan tetap menunjuk unscoped `9router`; `@raruu` sudah dipatch di disk. Jangan ganti runtime tanpa permintaan/tes terpisah karena shim/startup dan beberapa patch UI berbeda.
+- **Restart atas permintaan user:** 17 Okt 05:08 WIB, restart melalui Startup VBS (`9router.vbs`), tetap memakai paket unscoped seperti sebelumnya. Proses baru PID 9164; port 20128 LISTENING; `/api/health` → `{"ok":true}`; smoke test `cbai/gpt-6-luna` → HTTP 200, balasan `OK`.
+- Uji boot sementara scoped dihentikan setelah terdeteksi menjalankan Next.js pada port default 3000, bukan port isolasi yang diharapkan; port 3000 kembali kosong, dan router utama `/api/health` tetap `{"ok":true}`. Boot membuat backup migrasi DB `schema-2-to-7-0.5.104-1`; DB terbaca normal setelahnya.
+
+**Kesimpulan:** commit upstream `cd256dbd` berisi fix header; paket scoped telah memiliki fix itu native. Patch persona lokal yang user inginkan kini dipasang identik di kedua build dan self-heal mencakup keduanya. Runtime aktif tetap unscoped sampai ada keputusan untuk berpindah.
 
 ## STATUS: ✅✅ TERVERIFIKASI LANGSUNG DARI DALAM HOST — EGRESS INTERNET MATI DI SISI PROVIDER (2026-10-17) — BUKTI DIPERKUAT
 
@@ -210,23 +321,16 @@ ping 45.113.192.101 → 3 packets transmitted, 0 received, 100% packet loss
 
 **Verifikasi tambahan (2026-10-06):** file lokal yang memuat rahasia asli — `.env`, `.env.development`, `server/.env`, `dist/**` (bundle ter-bake), `server/secrets/*.json` (private key Firebase) — semuanya **TIDAK ter-track git & TIDAK pernah masuk history** (`git ls-files` + `git log --all`), terlindung `.gitignore` (baris 11/16/19/44). Jadi paparan publik satu-satunya = `LASTACTIVITY.md` (sudah dibersihkan). **Tidak ada yang perlu diubah di file-file tersebut.**
 
-**Rencana remediasi (MENUNGGU KONFIRMASI user — rule 2):**
-1. ✅ **SELESAI (2026-10-06)** — nilai rahasia sudah di-redaksi dari `LASTACTIVITY.md`: Google API key → `${SETTINX_FIREBASE_API_KEY}`, `ADMIN_API_SECRET` (4 kemunculan) → `${ADMIN_API_SECRET}`, **2 license key SettinX** → `<license-key-1>`/`<license-key-2>`, **2 Firebase UID** → `<uid-ipanasik123>`/`<uid-akun-uji>`. Verifikasi `git grep` pola rahasia di file ter-track = **BERSIH** (sisa hanya contoh/placeholder di komentar kode).
-2. ⏳ **Rotasi/restrict** Google API key di Google Cloud Console (Application restrictions + API restrictions) atau buat key baru. **BELUM** dikerjakan.
-3. ⏳ **Rotasi `ADMIN_API_SECRET`**: ganti di `server/.env` VPS + rebuild frontend dengan `VITE_ADMIN_API_SECRET` baru → `pm2 restart`. **BELUM** dikerjakan (menyentuh server live).
-4. ⏳ **Opsional**: scrub history (`git filter-repo`/BFG) + force-push, dan/atau jadikan repo **private**. **BELUM** dikerjakan.
+**Remediasi dan status saat ini (2026-10-17):**
+1. ✅ **File terkini sudah diredaksi sebelumnya**: nilai rahasia diganti referensi env/placeholder (`${SETTINX_FIREBASE_API_KEY}`, `${ADMIN_API_SECRET}`), license key dan UID memakai placeholder.
+2. ✅ **Riwayat GitHub dibersihkan atas persetujuan user (opsi B)**: rewrite seluruh 114 commit branch `main`, mengganti baris historis yang memuat Google/Firebase API key, `ADMIN_API_SECRET`, license/UID, dan 9Router API key dengan referensi environment/placeholder. `git push --force-with-lease` berhasil; `origin/main` kini `e2c62a91bbe8316fe1c4c515095f3b8f6706c2d5` (menggantikan tip lama `8e726a42...`). Latest tree identik sebelum/sesudah rewrite; scan seluruh riwayat `LASTACTIVITY.md` yang dapat dijangkau tidak menemukan pola Google API key atau 9Router key. Tidak ada secret yang dicetak saat proses.
+3. ⚠️ **Rotasi/restriksi Google API key** di Google Cloud Console — BELUM dilakukan.
+4. ⚠️ **Rotasi `ADMIN_API_SECRET`** — BELUM dilakukan; perlu koordinasi nilai baru di backend dan perubahan frontend. Catatan: nilai `VITE_*` yang masuk bundle frontend bersifat publik, sehingga verifikasi admin yang rahasia sebaiknya hanya di server.
+5. ⚠️ Repo tetap **publik**. Rewrite mengubah hash commit dan menghapus konten dari branch `main`, tetapi tidak dapat menghapus salinan lama pada clone/fork/cache/cermin GitHub.
 
-**Aturan baru:** rule **16 STRICT** ditambahkan ke `AGENTS.md` — dilarang menulis NILAI rahasia ke file repo; wajib pakai nama env key / placeholder. Berlaku juga untuk `LASTACTIVITY.md`.
+**Dampak force-push:** semua clone lokal yang masih memakai history lama perlu sinkronisasi ulang dengan hati-hati; jangan merge/re-push branch lama karena dapat memasukkan kembali objek/riwayat lama. Clone kerja PC sudah diarahkan ke tip baru `e2c62a9`; perubahan lokal yang belum di-commit tetap tersimpan dan tidak ikut push.
 
-**✅ DEPLOY SELESAI (2026-10-06):**
-- Commit **`434b880`** (`AGENTS.md` + `LASTACTIVITY.md`, 2 files, +93/-9) → push `origin/main` (`0297b6f..434b880`).
-- Rule 15 dijaga: `video/IpanStorePromo.tsx` (modified) **TIDAK** ikut commit/push.
-- Rule 16 dipatuhi: cek staged diff — tidak ada nilai rahasia di baris yang ditambah (7 kecocokan semuanya baris **dihapus**).
-- **VPS** `git pull --ff-only` FF `382b8c5..434b880` (termasuk `server/scripts/migrate-settinx-firebase-v2.mjs` dari commit `716ada2`).
-- **Frontend**: TIDAK perlu SCP/rebuild — perubahan docs-only, hash asset lokal = live = container = `index-CY-z-StB.js`. `server/index.js` tidak berubah → tidak perlu `pm2 restart`.
-- **Verifikasi live**: `ipanstore.id` → **200**, `/order` → **200**, `api.ipanstore.id/api/health` → **200**; container `ipanstore` Up 5 hari; PM2 `ipanstore-backend` online; VPS HEAD `434b880`.
-- **Catatan:** user memutuskan **TIDAK rotasi** — cukup hide nilai yang ter-expose (selesai). Nilai lama masih ada di history commit `0297b6f`; repo tetap publik.
-**Catatan:** nilai rahasia lama **MASIH ADA di git history** (commit `0297b6f`) dan repo tetap publik. Atas keputusan user (2026-10-06), **rotasi TIDAK dilakukan** — cukup nilai yang ter-expose di-hide dari file yang di-serve. Bila ingin tuntas: scrub history (langkah 4) dan/atau jadikan repo private.
+**Catatan:** riwayat branch utama sekarang dibersihkan, tetapi karena kredensial sempat publik, anggap nilainya tetap berpotensi diketahui pihak lain sampai kredensial terkait dirotasi atau dibatasi.
 
 ## STATUS: ✅ INSIDEN SELESAI (2026-10-06) — Website 502 diperbaiki dengan restart `cloudflared`
 
@@ -1226,6 +1330,9 @@ migrasi SQL Supabase, cek commit sebelum deploy. Skill Remotion **diabaikan** se
 
 | Waktu | Aktivitas |
 |---|---|
+| 2026-10-17 | 🌐 Instruksi user-global OMP/Orca dipasang di `~/.omp/agent/RULES.md` (sticky, always-apply setiap request) untuk membaca tiga skill sebelum tugas serta mencatat memori reusable setelahnya. Project-specific `.omp/RULES.md` tetap dapat berlaku bersama aturan global. Source OMP diverifikasi; catatan global Supermemory diperbarui. Tanpa build/test. |
+| 2026-10-17 | ✅ OMP global `~/.omp/agent/models.yml`: sinkronisasi provider `9router` CBAI dengan `/v1/models` live; ditambahkan 16 model yang sebelumnya belum terdaftar (claude-opus-4.6/4.7-1m, Gemini 2.5/3.1/3.5/3.8, GPT-5.3-Codex/5.4/GPT-6-Sol/GPT-Image-2, Grok-4.6/4.7, Hy3, Kimi-K2.8-preview, Seedance-2.5). Metadata context/output/vision/reasoning mengikuti API live. YAML valid; 43 model CBAI tepat sama dengan 43 model di 9router, tanpa duplikat/stale/missing. Bersifat global untuk semua project OMP; perlu restart OMP/Orca agar katalog dimuat ulang. Tidak perlu build/deploy. |
+| 2026-10-17 | 📝 `AGENTS.md` rule 3a: baca skill Obsidian/Superpowers/Supermemory di awal tugas dan catat ringkasan reusable ke memori skill yang paling cocok; rule 7–8 diselaraskan. Catatan sesi di `~/.agents/skills/supermemory-cli/memory.md`. Docs-only, tanpa build/test. |
 | 2026-10-03 | ✅ **OMP (Oh My Pi v18.5.0) di Orca** — runtime aktif sesi ini adalah `omp`, BUKAN opencode (TERM_PROGRAM=Orca, OMPCODE=1; opencode 1.18.34 terpasang tapi tidak jalan). omp TIDAK memakai `opencode.json` untuk provider/model (source `src/discovery/opencode.ts`: hanya AGENTS.md, MCP, skills, plugins, commands, settings). Model omp dari `~/.omp/agent/models.yml` (dibuat oleh 9router via API `omp-settings`), role dari `~/.omp/agent/config.yml`. Tambahan: `klt/kimi-k3` di `models.yml` diberi blok `thinking: {mode: effort, efforts: [low,high,xhigh,max], defaultLevel: max, requiresEffort: true}` + `compat.reasoningEffortMap.xhigh: xhigh` (tanpa ini omp memetakan xhigh→max). Backup `models.yml.bak-20261003-154830`. Verifikasi: `omp models` → `klt/kimi-k3` = `low,high,xhigh,max` ✅; uji `omp -p ... --model 9router/klt/kimi-k3:xhigh` → "OK-XHIGH" ✅; curl gateway `reasoning_effort:xhigh` → 200 ✅. Juga di `opencode.json` (tak terpakai omp): varian `ultra` (`reasoningEffort: max`) di `klt/kimi-k3` & `klt/kimi-k3-ultra`, `xhigh` dipertahankan di `klt/kimi-k3`, model aktif → `9router/klt/kimi-k3-ultra`. ⚠️ 9router bisa menimpa `models.yml` (blok `9router:`) saat Apply di UI-nya → edit bisa hilang, ulangi bila perlu. |
 | 2026-09-26 | ✅ Deploy FIX "Failed to fetch" order di live. Akar: `.env.local` bake `localhost:5159` ke build produksi (Vite memuat `.env.local` semua mode, timpa `.env`). Fix Opsi A: `.env.development` (dev→localhost:5159) + `.env.local` tanpa override (build→api.ipanstore.id). Build baru `index-gv4hPJTP.js` (0× localhost, api.ipanstore.id di 4 chunk). Deploy frontend: backup `dist.bak-20260926`, SCP dist, `docker compose up --build -d`; live serve bundle baru, /order 200, API health 200. Tanpa commit (env gitignored). Rule 15 dijaga (video tidak ikut). |
 | 2026-09-26 | ✅ **DEPLOYED & LIVE** automasi order "Ipan Module SettinX 1.1" (commit `7e9573f` push `origin/main`; VPS `git pull` FF `a6c0345..7e9573f`; `server/.env` VPS di-update manual +2 env `MODULE_SETTINX_SUPABASE_*` + link Drive baru + `pm2 restart --update-env`; frontend build `index-Ml-HGKjc.js` → SCP dist → `docker compose up --build -d`; live serve bundle baru, /order & API 200; test produksi order `IPANMODULESETTINX111790373691537` → akun `ipanasik123-4` + license dibuat + email terkirim). |
