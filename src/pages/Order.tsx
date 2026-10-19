@@ -170,6 +170,11 @@ const Order = () => {
   const [qrExpired, setQrExpired] = useState(false);
   const [paid, setPaid] = useState(false);
   const [countdown, setCountdown] = useState("");
+  // Ref ke panel QR untuk auto-scroll (HP: QR muncul di bawah fold → user mengira
+  // "layar putih" lalu klik Bayar berkali-kali → kena rate limit).
+  const qrPanelRef = useRef<HTMLDivElement | null>(null);
+  // Paket+promo yang terkunci di QR aktif — berubah → QR lama dibatalkan.
+  const qrContextRef = useRef<{ packageId: string; promo: string | null } | null>(null);
 
   const selected = useMemo(
     () => packages.find((p) => p.id === selectedId) ?? packages[0],
@@ -227,8 +232,12 @@ const Order = () => {
   const handleCheckout = async () => {
     if (loading) return; // B11 — cegah double-submit checkout
     setError(null);
-    if (qr && !qrExpired) return;
     if (paid) return;
+    // QR aktif masih ada → jangan buat order baru; scroll ke QR yang sudah ada.
+    if (qr && !qrExpired) {
+      qrPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
     if (!name.trim() || !email.trim()) {
       setError("Mohon isi Nama dan Email terlebih dahulu.");
       return;
@@ -260,6 +269,8 @@ const Order = () => {
       });
       setPaid(false);
       setQrExpired(false);
+      // Kunci paket & promo yang dipakai QR ini — ganti pilihan = QR lama dibatalkan.
+      qrContextRef.current = { packageId: selected.id, promo: promoApplied?.code ?? null };
     } catch (e) {
       setError(e instanceof Error ? e.message : "Gagal memproses pembayaran.");
     } finally {
@@ -286,6 +297,26 @@ const Order = () => {
     const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
   }, [qr]);
+
+  // Auto-scroll ke panel QR begitu QR baru dibuat (penting di HP — QR di bawah fold).
+  useEffect(() => {
+    if (qr && !qrExpired && !paid) {
+      qrPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [qr, qrExpired, paid]);
+
+  // Jika user mengganti paket / promo setelah QR dibuat, batalkan QR lama agar
+  // nominal QR tidak pernah tidak cocok dengan pilihan (mencegah order yatim).
+  useEffect(() => {
+    if (!qr || paid) return;
+    const ctx = qrContextRef.current;
+    if (ctx && (ctx.packageId !== selected.id || ctx.promo !== (promoApplied?.code ?? null))) {
+      setQr(null);
+      setQrExpired(false);
+      setError(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected.id, promoApplied]);
 
   useEffect(() => {
     if (!qr || !qr.orderId || qrExpired) return;
@@ -525,14 +556,19 @@ const Order = () => {
 
                 <Button
                   onClick={handleCheckout}
-                  disabled={loading}
+                  disabled={loading || paid}
                   variant="default"
                   size="lg"
                   className="w-full"
                 >
                   {loading ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Memproses...
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Memproses... (jangan tutup halaman)
+                    </>
+                  ) : qr && !qrExpired ? (
+                    <>
+                      Lihat QRIS Kamu
+                      <QrCode className="ml-2 h-4 w-4" />
                     </>
                   ) : (
                     <>
@@ -541,6 +577,13 @@ const Order = () => {
                     </>
                   )}
                 </Button>
+
+                {qr && !qrExpired && !paid && (
+                  <p className="mt-2 text-[11px] text-amber-300/80 leading-relaxed">
+                    QRIS sudah dibuat — cukup scan QR di bawah. Ingin ganti paket/promo?
+                    Pilih ulang di atas, QR baru akan dibuatkan otomatis.
+                  </p>
+                )}
 
         <p className="mt-4 flex items-start gap-2 text-[11px] text-zinc-300 leading-relaxed">
           <ShieldCheck className="h-3.5 w-3.5 text-[#94A3B8] mt-0.5 shrink-0" />
@@ -564,7 +607,7 @@ const Order = () => {
                     </Link>
                   </div>
                 ) : qr ? (
-                  <div className="mt-5 rounded-xl border border-white/16 bg-[#131314]/80 p-5 text-center">
+                  <div ref={qrPanelRef} className="mt-5 rounded-xl border border-white/16 bg-[#131314]/80 p-5 text-center">
                     {qrExpired ? (
                       <>
                         <p className="flex items-center justify-center gap-2 text-sm font-semibold text-red-400">
@@ -604,6 +647,10 @@ const Order = () => {
                           <span className="font-mono font-semibold text-[#F4F4F5]">
                             {formatRupiah(qr.totalAmount ?? (promoApplied ? promoApplied.total : selected.price))}
                           </span>
+                        </p>
+                        <p className="mt-2 text-[11px] font-semibold text-amber-300 leading-relaxed">
+                          ⚠️ Bayar TEPAT sampai 3 digit terakhir (kode unik). Salah nominal =
+                          pembayaran tidak terdeteksi otomatis.
                         </p>
                         <p className="mt-2 text-[11px] text-zinc-300">
                           Kode pesanan: <span className="font-mono">{qr.orderId}</span>
