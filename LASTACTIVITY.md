@@ -1,5 +1,23 @@
 # LASTACTIVITY — IPAN STORE
 
+## 2026-10-19 (lanjutan) — Security: rewrite git history hapus kredensial bocor
+
+**Temuan audit:** `docs/deployment/DEPLOY_INSTRUCTIONS.md` & `docs/LASTACTIVITY.md` mengandung **KLIKQRIS_API_KEY asli, merchant ID asli, dan SMTP_PASS Gmail asli** — sudah ter-commit sejak `e9c09d6` & `cd90278` (publik di GitHub).
+
+**Tindakan:**
+1. Sanitasi working tree → commit `d28fd8b` (placeholder `<...>`).
+2. `git filter-repo --replace-text` menghapus 3 string rahasia dari **seluruh history** (116 commit) → history baru `c2f9f19`.
+3. Force push `origin main` (remote `github.com-bizwebdigital`).
+4. VPS: `git fetch` + `reset --hard origin/main`, `git stash clear` (stash lama mengandung rahasia), `reflog expire` + `gc --prune=now` → terverifikasi bersih.
+5. Lokal: branch backup dihapus, reflog+gc → bersih.
+6. Live site diverifikasi tetap 200 + API health OK (rewrite hanya menyentuh docs).
+
+**Keputusan user:** TIDAK rotasi kredensial (API key KlikQRIS & Gmail app password lama tetap dipakai). Risiko diterima: objek commit lama mungkin masih ada di cache GitHub sementara, dan siapa pun yang pernah clone sebelum 19 Okt masih memegang nilai asli. Jika ada transaksi/email aneh → rotasi segera.
+
+**Catatan:** Tailscale Node Sharing aktif — PC tetap bisa SSH ke VPS (`100.89.140.16`) walau sedang switch akun tailnet bizwebdigital ↔ muhammadrizvandysukma.
+
+---
+
 ## 2026-10-19 — Fix double-order QRIS (kasus Reyken) + deploy live
 
 **Akar masalah (diagnosa):** Customer "Reyken" 18 Okt membuat 10 order / 4 menit karena QR tidak terlihat di HP (di bawah fold, dikira "layar putih") → klik Bayar berulang → kena `orderLimiter` 429 "Batas pembuatan order tercapai". Semua order EXPIRED (tidak dibayar). Backend & API KlikQRIS terverifikasi sehat (test langsung 201).
