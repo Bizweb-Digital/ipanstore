@@ -1408,3 +1408,28 @@ Tujuh screenshot referensi MY PG tersimpan di folder lokal SETUP_MYPG_KLIKQRIS, 
 **Server live** (`api.ipanstore.id`) masih versi lama: status endpoint mengembalikan 404/UNKNOWN untuk order MY PG karena belum ada route `/qrisv2/...`. Perlu deploy agar konsisten.
 
 Tidak ada deploy, tidak ada pembayaran, tidak ada perubahan `.env` produksi selain yang sudah ada.
+
+## 2026-10-27 — Deploy MY PG v2 ke VPS: TERHALANG auth Tailscale SSH
+
+**Kode siap & ter-push**: commit `8d85d5b` sudah di `origin/main`. Build + typecheck + adapter test lulus. Frontend TIDAK berubah (asset live `index-TXmZ4HI9.js` identik dengan dist lokal), jadi deploy hanya perlu `git pull` + `pm2 restart` — tanpa SCP dist dan tanpa rebuild Docker.
+
+**Blocker**: semua upaya SSH ke VPS `sever-h81m-s2ph` (100.89.140.16) diputus Tailscale SSH dengan pesan `# Tailscale SSH requires an additional check` lalu link `login.tailscale.com/a/<id>` yang harus di-approve pada akun **bizwebdigital@gmail.com**. Yang dicoba dan hasilnya:
+- `ssh` OpenSSH Windows 9.5 dan OpenSSH bawaan Git → sama-sama kena check.
+- `tailscale ssh root@...` → check juga, lalu `Connection closed`.
+- User `ubuntu` / `bizwebdigital` → `tailnet policy does not permit you to SSH as user ...`.
+- SSH ke IP publik VPS `118.99.112.134:22` (dari netmap Tailscale) → `Connection timed out`.
+- Scan port alternatif (2022/2201/2222/22222/8020/8022/10022/5522/23/21/5900/9001/9090) → tidak ada yang terbuka.
+- Tailscale switch profil: VPS hanya ada di tailnet `bizwebdigital`; di tailnet `muhammadrizvandysukma` node yang di-share hanya Windows `xaxzhq` (100.94.48.10), dan VPS tidak muncul (`no matching peer`).
+- Node Windows share `100.94.48.10` tidak membuka 22/3389 dari sini (timeout), jadi tidak bisa dipakai sebagai jembatan.
+- Tailscale relay browser (Chrome) tidak aktif: `extension never connected`.
+- Port lain di VPS yang terbuka: 22, 80, 443, 5007 (nginx ipanstore), 5159 (backend), 8080 (Google Maps Scraper docs — bukan milik project), 8081 (Adminer). Tidak ada endpoint deploy/admin di backend (`/api/admin/create` saja).
+
+**Verifikasi live**: `https://api.ipanstore.id/api/health` → 200, tetapi `GET /api/klikqris-status/IPANSETPC1793122005593` masih `{"status":"UNKNOWN"}` — konfirmasi backend live belum memakai route `/qrisv2/...`.
+
+**Yang harus dijalankan (di VPS, sebagai root)**: 
+```
+cd /project/website/padel/IpanStore/ipanstore && git pull --ff-only && pm2 restart ipanstore-backend --update-env
+```
+Setelah itu status endpoint akan mengembalikan `PENDING` untuk order MY PG di atas.
+
+**Catatan**: profil Tailscale aktif sekarang `1685` (bizwebdigital) karena VPS hanya terlihat di sana. Tidak ada perubahan `.env`, portproxy, atau service lain di PC maupun VPS.
