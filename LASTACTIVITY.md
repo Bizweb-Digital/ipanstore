@@ -1393,7 +1393,7 @@ E2E browser di `http://localhost:8080/order` (Vite default, backend 5159, provid
 
 Belum dikerjakan (butuh akun/izin nyata): panggilan ke KlikQris MY PG produksi, rotasi `KLIKQRIS_API_KEY` di `server/.env`, verifikasi `KLIKQRIS_ID_MERCHANT`, konfigurasi callback global dashboard, settlement fee 0,7%, dan deploy. Tidak ada database produksi, provider nyata, pembayaran, atau deployment yang tersentuh.
 
-Tujuh screenshot referensi MY PG tersimpan di folder lokal SETUP_MYPG_KLIKQRIS, yang dikecualikan dari Git melalui .git/info/exclude. Checkout localhost diuji di Vite default port 8080 dengan backend lokal 5159 dan mock provider loopback. Mock menampilkan gambar SVG dekoratif berlabel DEMO NOT PAYABLE. Dua dummy checkout dibuat; satu checkout dites sampai browser menampilkan Pembayaran Berhasil melalui status PAID pada provider palsu dan webhook envelope MY PG, dengan double-confirm melalui mock status API. Tidak ada database produksi, panggilan provider nyata, pembayaran sungguhan, atau deployment. Respons/status/amount/signature dari mock adalah data palsu, bukan bukti settlement riil.
+**Kesalahan QR demo (penting)**: mock pertama kali mengembalikan `qris_url` ke `https://mock-provider.invalid/qris/demo` → browser menampilkan ikon gambar rusak dan user melaporkan "QR tidak muncul". Setelah diganti SVG lokal berlabel `DEMO — NOT PAYABLE`, user melaporkan "QR tidak sah" saat dipindai — benar, karena itu bukan QRIS. Dua kegagalan ini yang akhirnya memaksa pengujian memakai provider produksi nyata. Respons/status/amount/signature mock adalah data palsu, bukan bukti settlement riil.
 
 ## 2026-10-27 — Audit dokumentasi MY PG v2 + order nyata (PENDING)
 
@@ -1405,7 +1405,7 @@ Tujuh screenshot referensi MY PG tersimpan di folder lokal SETUP_MYPG_KLIKQRIS, 
 
 **Temuan panel admin**: query `orders` via anon key mengembalikan `[]` karena RLS hanya mengizinkan `service_role` (patch `supabase_patch_security_harden_v2.sql:125`) — tidak ada policy untuk admin login di repo. Order tetap bisa dibaca backend dengan service role, tapi panel admin tidak akan menampilkan order baru tanpa policy/RPC admin.
 
-**Server live** (`api.ipanstore.id`) masih versi lama: status endpoint mengembalikan 404/UNKNOWN untuk order MY PG karena belum ada route `/qrisv2/...`. Perlu deploy agar konsisten.
+**Server live** (`api.ipanstore.id`) saat audit itu masih versi lama: status endpoint mengembalikan 404/UNKNOWN untuk order MY PG karena belum ada route `/qrisv2/...`. (Sudah diperbaiki pada deploy di entri berikutnya.)
 
 Tidak ada deploy, tidak ada pembayaran, tidak ada perubahan `.env` produksi selain yang sudah ada.
 
@@ -1448,3 +1448,23 @@ Setelah itu status endpoint akan mengembalikan `PENDING` untuk order MY PG di at
 **Arti**: customer sekarang bisa checkout QRIS lewat MY PG di web live; QR yang tampil adalah QRIS nyata milik merchant, dan status order di-poll/double-confirm ke `/qrisv2/status`. Yang masih perlu pembayaran QRIS sungguhan (atau kredensial sandbox MY PG) adalah transisi PENDING → PAID beserta fulfillment/email.
 
 **Catatan**: `KLIKQRIS_CALLBACK_URL` tidak lagi dipakai backend; pastikan callback global di dashboard MY PG v2 mengarah ke `https://api.ipanstore.id/api/klikqris-webhook`. Panel admin masih belum menampilkan order baru karena RLS `orders` hanya mengizinkan `service_role` (belum ada policy admin) — perlu diputuskan terpisah.
+
+## 2026-10-27 — Localhost port 8080, sinkronisasi VPS, dan audit kepatuhan AGENTS.md
+
+**Diagnosa localhost 8080 (sempat hilang dari catatan, dicatat ulang):** `vite.config.ts` memang menetapkan port `8080`, tetapi port IPv4 tersebut dipegang Windows `iphlpsvc` portproxy: `0.0.0.0:8080 → 100.94.206.73:8080`, yang membalas Nginx `401 Authorization Required`. Itu bukan Nginx project. Solusi yang dipakai: jalankan Vite dengan `--host ::1` sehingga `http://localhost:8080` membuka project lewat IPv6 loopback tanpa menyentuh portproxy atau Nginx remote. Port `8081` sempat dipakai sebagai fallback sebelum ini.
+
+**Sinkronisasi VPS:** setelah deploy backend, VPS sempat tertinggal di `a610bb6` karena commit dokumentasi `53410cd` belum ikut. Dilakukan `git pull --ff-only` lagi di VPS → sekarang VPS = `origin/main` = `53410cd`.
+
+**Audit kepatuhan deploy vs AGENTS.md / `.opencode/command/deploy.md`:**
+- Build lokal sukses (`index-TXmZ4HI9.js`), commit + push `origin/main`, `node --check` index.js & lib/myPg.js → OK.
+- `git pull --ff-only` di VPS → OK.
+- Frontend (SCP dist + `docker compose up --build -d`) **sengaja dilewati**: commit tidak menyentuh `src/`/`public/`, asset live identik dengan `dist` lokal. Container `ipanstore` tetap `Up 8 days`, serve asset yang sama.
+- Backend `pm2 restart ipanstore-backend --update-env` → online, restarts=2.
+- Verifikasi: hash asset live = lokal, `ipanstore.id` 200, `/order` 200, `api.ipanstore.id/api/health` 200.
+- Rule 15: tidak ada `video/PanggilanJihad.tsx` / `video/IpanStorePromo.tsx` ter-stage atau ter-deploy.
+- Rule 16: `git diff --cached` hanya memuat placeholder (`your_klikqris_api_key_here`), tidak ada nilai rahasia.
+- `LASTACTIVITY.md` diperbarui dan di-push (`53410cd`).
+
+**File untracked lama di VPS** (bukan dari sesi ini, tidak disentuh): `.backup-untracked/`, `config/docker/nginx.conf`, `deploy.sh`, `dist.bak-*/`.
+
+**Profil Tailscale** saat deploy: `1685` (bizwebdigital) karena VPS hanya terlihat di tailnet itu; di tailnet `muhammadrizvandysukma` VPS tidak muncul dan yang di-share hanya Windows `xaxzhq` (100.94.48.10).
