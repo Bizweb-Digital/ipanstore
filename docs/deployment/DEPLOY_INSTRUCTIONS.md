@@ -132,16 +132,22 @@ SMTP_USER=muhammadrizvandysukma@gmail.com
 SMTP_PASS=<app_password_16_char_tanpa_spasi>
 MAIL_FROM="IPAN STORE <muhammadrizvandysukma@gmail.com>"
 
-# KlikQris API (Payment Gateway QRIS)
-KLIKQRIS_API_KEY=<your_klikqris_api_key>
-KLIKQRIS_ID_MERCHANT=<your_merchant_id>
+# KlikQris MY PG v2 (QRIS)
+KLIKQRIS_API_KEY=<rotated_my_pg_api_key>
+KLIKQRIS_ID_MERCHANT=<my_pg_merchant_id>
 KLIKQRIS_BASE_URL=https://klikqris.com/api
-KLIKQRIS_CALLBACK_URL=https://api.ipanstore.id/api/klikqris-webhook
 
 # Supabase Database
 SUPABASE_URL=<your_supabase_url>
 SUPABASE_SERVICE_ROLE_KEY=<your_service_role_key>
 ```
+
+MY PG v2 menggunakan `POST /qrisv2/create` dan
+`GET /qrisv2/status/{id_merchant}/{order_id}`. Atur callback global di dashboard
+menjadi `https://api.ipanstore.id/api/klikqris-webhook`; tidak ada callback per-request.
+Rotasi credential yang pernah tampil/terekspos sebelum digunakan kembali. Akun merchant
+IPAN STORE pada dashboard dikenakan biaya 0,7% dari saldo KlikQris untuk setiap
+transaksi sukses; pastikan saldo mencukupi.
 
 🔴 **Jika SMTP kosong/email salah → TIDAK AKAN KIRIM EMAIL PRODUK SETELAH BAYAR!**
 

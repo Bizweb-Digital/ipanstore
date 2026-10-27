@@ -11,9 +11,9 @@ Browser (front-end IPAN STORE)
       │  POST /api/klikqris-create-order   (tanpa API key)
       ▼
 SERVER ANDA  ── backend ini memegang KLIKQRIS_API_KEY
-      │  POST https://klikqris.com/api/qris/create  (header x-api-key + id_merchant)
+      │  POST https://klikqris.com/api/qrisv2/create  (header x-api-key + id_merchant)
       ▼
-   KLIKQRIS  → membalas data QRIS → dikirim balik ke browser (QR tampil di halaman order)
+   KLIKQRIS MY PG v2 → QRIS dinamis (qris_url) → dikirim balik ke browser
 
 Webhook: KLIKQRIS ──POST status (PAID/EXPIRED)──▶ SERVER /api/klikqris-webhook
          SERVER ──update Supabase + kirim email produk──▶ PEMBELI
@@ -82,11 +82,10 @@ DOKU_CLIENT_ID=<CLIENT_ID_DOKU>
 DOKU_SECRET_KEY=<SECRET_KEY_DOKU>
 DOKU_NOTIFICATION_URL=https://api.ipanstore.id/api/doku-webhook
 
-# KlikQris (QRIS dinamis — metode utama)
-KLIKQRIS_API_KEY=<API_KEY_KLIKQRIS>
-KLIKQRIS_ID_MERCHANT=<ID_MERCHANT_KLIKQRIS>
+# KlikQris MY PG v2 (QRIS dinamis)
+KLIKQRIS_API_KEY=<ROTATED_MY_PG_API_KEY>
+KLIKQRIS_ID_MERCHANT=<MY_PG_MERCHANT_ID>
 KLIKQRIS_BASE_URL=https://klikqris.com/api
-KLIKQRIS_CALLBACK_URL=https://api.ipanstore.id/api/klikqris-webhook
 
 # Supabase (simpan order + promo)
 SUPABASE_URL=<URL>
@@ -156,9 +155,12 @@ Front-end memanggil `POST /api/klikqris-create-order` **tanpa mengirim API key**
 3. Simpan. Backend akan memproses notifikasi `PAID`/`EXPIRED`, update status order
    di Supabase, dan mengirim email produk SettinX otomatis.
 
-> Backend juga mengirim `callback_url` per-transaksi saat create order
-> (`KLIKQRIS_CALLBACK_URL` di `.env`), jadi webhook tetap jalan walau belum
-> diset manual di dashboard.
+Pembayaran QRIS memakai KlikQris MY PG v2: `POST /qrisv2/create` dan
+`GET /qrisv2/status/{id_merchant}/{order_id}`. Callback tidak dikirim per transaksi;
+atur URL global `https://api.ipanstore.id/api/klikqris-webhook` di dashboard MY PG v2.
+Credential API yang pernah tampil/terekspos harus dirotasi sebelum digunakan kembali.
+Untuk akun merchant IPAN STORE yang ditampilkan dashboard, biaya adalah 0,7% dari
+saldo KlikQris per transaksi sukses; pastikan saldo mencukupi sebelum cutover.
 
 ---
 

@@ -1382,3 +1382,29 @@ migrasi SQL Supabase, cek commit sebelum deploy. Skill Remotion **diabaikan** se
 | 2026-09-09 | Polish UI kartu paket Layanan/Paket/Order + parseFeatures bullets. |
 | 2026-09-09 | Kolom category + backfill 8 layanan + dropdown admin + tab APP SETTINX render DB. |
 | 2026-09-09 | Patch supabase add_category & rls_audit dijalankan user. |
+
+## 2026-10-27 — MY PG local dummy order PAID (mock simulator, bukan provider nyata)
+
+Tujuh screenshot referensi MY PG tersimpan lokal di `SETUP_MYPG_KLIKQRIS/` (dikecualikan Git via `.git/info/exclude`), termasuk proof screenshot `proof_local_paid_success.webp`.
+
+Simulator MY PG lokal diperbaiki agar sesuai kontrak di screenshot dokumentasi: respons create memuat `status`, `data.order_id`, `data.amount`, `data.total_amount`, `data.status`, `data.direct_url`, `data.qris_url`, `data.expired_at` (format `YYYY-MM-DD HH:mm:ss`), `data.signature`; status endpoint mengembalikan `data.status`; webhook envelope `{status,message,data{order_id,amount_request,amount_paid,payment_date,status,merchant_id,via,signature}}`. QR kini dihasilkan encoder QR nyata (dipasang di luar repo) sehingga gambar 320x320 dapat dipindai sebagai payload demo non-payable, bukan placeholder rusak.
+
+E2E browser di `http://localhost:8080/order` (Vite default, backend 5159, provider loopback 54881, storage memory): order dibuat, QR termuat, countdown memakai `expired_at`, webhook signature salah → 401, webhook benar saat provider masih PENDING tidak melunasi, webhook benar setelah provider PAID → order PAID, pengulangan webhook idempotent, dan UI menampilkan “Pembayaran Berhasil!”. Hanya route `/qrisv2/create` + `/qrisv2/status/{merchant}/{order}` yang dipanggil (8 panggilan, 0 non-v2). Typecheck, unit test, dan adapter test lulus.
+
+Belum dikerjakan (butuh akun/izin nyata): panggilan ke KlikQris MY PG produksi, rotasi `KLIKQRIS_API_KEY` di `server/.env`, verifikasi `KLIKQRIS_ID_MERCHANT`, konfigurasi callback global dashboard, settlement fee 0,7%, dan deploy. Tidak ada database produksi, provider nyata, pembayaran, atau deployment yang tersentuh.
+
+Tujuh screenshot referensi MY PG tersimpan di folder lokal SETUP_MYPG_KLIKQRIS, yang dikecualikan dari Git melalui .git/info/exclude. Checkout localhost diuji di Vite default port 8080 dengan backend lokal 5159 dan mock provider loopback. Mock menampilkan gambar SVG dekoratif berlabel DEMO NOT PAYABLE. Dua dummy checkout dibuat; satu checkout dites sampai browser menampilkan Pembayaran Berhasil melalui status PAID pada provider palsu dan webhook envelope MY PG, dengan double-confirm melalui mock status API. Tidak ada database produksi, panggilan provider nyata, pembayaran sungguhan, atau deployment. Respons/status/amount/signature dari mock adalah data palsu, bukan bukti settlement riil.
+
+## 2026-10-27 — Audit dokumentasi MY PG v2 + order nyata (PENDING)
+
+**Dokumentasi resmi dibaca** (`klikqris.com/dokumentasi-api`): MY PG v2 memakai `POST /qrisv2/create` dan `GET /qrisv2/status/{id_merchant}/{order_id}`, header `x-api-key` + `id_merchant`, response create berisi `data.order_id/amount/total_amount/status/direct_url/qris_url/expired_at/signature`, status berisi `data.status/total_amount/expired_at/paid_at`, webhook envelope `{status,message,data{...}}`. Implementasi project sudah cocok dengan kontrak ini; `callback_url` memang tidak dipakai pada v2 (callback global di dashboard). Sandbox memakai base `https://klikqris.com/api/sandbox` dengan kredensial sandbox terpisah — API key produksi ditolak (401 `Invalid Sandbox API Key`).
+
+**Order nyata dibuat** dengan backend lokal + kredensial produksi `.env`: `IPANSETPC1793122005593` (Rp 50.583) dan `IPANE2EREAL1793121978121` (Rp 20.328), keduanya `PENDING` di Supabase dengan `klikqris_signature` dan `qris_expired_at` asli. `qris_url` mengarah ke `klikqris.com/storage/qris_mypg/...png`; QR base64 400x400 berhasil di-decode sebagai payload EMVCo QRIS sah (DANA/ID.CO.QRIS). Artinya QR yang tampil di localhost sekarang QRIS nyata, bukan demo.
+
+**Belum bisa PAID**: simulator sandbox publik hanya menerima signature sandbox (signature produksi ditolak "Signature tidak valid atau tidak ditemukan"), dan sandbox butuh API key sandbox yang belum ada. Jadi status PAID harus lewat pembayaran QRIS sungguhan, atau sandbox credential dari dashboard.
+
+**Temuan panel admin**: query `orders` via anon key mengembalikan `[]` karena RLS hanya mengizinkan `service_role` (patch `supabase_patch_security_harden_v2.sql:125`) — tidak ada policy untuk admin login di repo. Order tetap bisa dibaca backend dengan service role, tapi panel admin tidak akan menampilkan order baru tanpa policy/RPC admin.
+
+**Server live** (`api.ipanstore.id`) masih versi lama: status endpoint mengembalikan 404/UNKNOWN untuk order MY PG karena belum ada route `/qrisv2/...`. Perlu deploy agar konsisten.
+
+Tidak ada deploy, tidak ada pembayaran, tidak ada perubahan `.env` produksi selain yang sudah ada.
