@@ -1433,3 +1433,18 @@ cd /project/website/padel/IpanStore/ipanstore && git pull --ff-only && pm2 resta
 Setelah itu status endpoint akan mengembalikan `PENDING` untuk order MY PG di atas.
 
 **Catatan**: profil Tailscale aktif sekarang `1685` (bizwebdigital) karena VPS hanya terlihat di sana. Tidak ada perubahan `.env`, portproxy, atau service lain di PC maupun VPS.
+
+## 2026-10-27 — ✅ DEPLOY MY PG v2 KE VPS BERHASIL
+
+**Deploy**: `git pull --ff-only` di VPS → commit `a610bb6` (berisi `8d85d5b` migrasi MY PG v2). `node --check` index.js + lib/myPg.js OK, lalu `pm2 restart ipanstore-backend --update-env` → status `online`, PID 1414254. Frontend TIDAK di-rebuild karena tidak berubah (asset live `index-TXmZ4HI9.js` = dist lokal).
+
+**Verifikasi live**:
+- `GET https://api.ipanstore.id/api/health` → 200.
+- Order lama `IPANSETPC1793122005593` & `IPANE2EREAL1793121978121` → sebelumnya `UNKNOWN`, sekarang `EXPIRED` (route `/qrisv2/status/{merchant}/{order}` benar-benar dipanggil dan KlikQris menjawab).
+- Order baru live `IPANLIVEVERIFY1793123993309`: create 200 `success:true`, `total_amount` 20383, `expired_at` 2026-10-28 01:29:54, `signature` ada, `qris_url` → `klikqris.com/storage/qris_mypg/...png`, `qris_image` base64 4114 byte. Status langsung `PENDING`.
+- QR live di-decode ulang: valid, payload EMVCo `000201...ID.CO.QRIS.WWW...ID.DANA.WWW`, panjang 204.
+- `https://ipanstore.id` dan `/order` → 200.
+
+**Arti**: customer sekarang bisa checkout QRIS lewat MY PG di web live; QR yang tampil adalah QRIS nyata milik merchant, dan status order di-poll/double-confirm ke `/qrisv2/status`. Yang masih perlu pembayaran QRIS sungguhan (atau kredensial sandbox MY PG) adalah transisi PENDING → PAID beserta fulfillment/email.
+
+**Catatan**: `KLIKQRIS_CALLBACK_URL` tidak lagi dipakai backend; pastikan callback global di dashboard MY PG v2 mengarah ke `https://api.ipanstore.id/api/klikqris-webhook`. Panel admin masih belum menampilkan order baru karena RLS `orders` hanya mengizinkan `service_role` (belum ada policy admin) — perlu diputuskan terpisah.
