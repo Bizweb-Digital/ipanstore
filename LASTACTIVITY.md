@@ -1,26 +1,77 @@
 # LASTACTIVITY — IPAN STORE
 
-## STATUS TERKINI (2026-11-18) — ⛔ DEPLOY DITAHAN (menunggu AUDIT KEAMANAN penuh); kode DOKU + fix SMTP IPv4 SELESAI & teruji E2E dengan uang asli
+## STATUS TERKINI (2026-11-18) — ✅ **SUDAH DI-DEPLOY KE PRODUKSI** (commit `65d00e0`): audit keamanan + patch kritis + DOKU + fix SMTP IPv4 AKTIF di live
 
-> **⚠️ PERINTAH AKTIF DARI USER (2026-11-18): JANGAN DEPLOY KE PRODUKSI DULU.**
-> User ingin **audit patch keamanan seluruh website** terlebih dahulu. Jangan jalankan
-> `./deploy.sh`, `git push`, atau `pm2 restart` sampai audit selesai dan user memberi izin.
+> **✅ DEPLOY SELESAI (izin user "GAS").** Semua pekerjaan tertunda sebelumnya sudah live.
+> Live frontend asset: `index-CxvHTkIO.js` · backend PM2 restart OK · `https://ipanstore.id` & `/order` = 200.
 >
-> **📘 DOKUMENTASI LENGKAP BARU: `SETUPDOKU.md` (root project)** — berisi seluruh setup DOKU,
-> SMTP Gmail, deploy VPS, auto-create lisensi, data uji, jejak perubahan, dan **§11 checklist
-> audit keamanan**. Baca file itu dulu sebelum menyentuh apa pun.
-
-> **Ringkasan Cepat untuk Sesi Berikutnya:**
-> Migrasi KlikQRIS → **DOKU Checkout** SELESAI + **teruji end-to-end dengan pembayaran QRIS asli Rp 1.000**.
-> Order `IPANMODULESETTINX111794996849719` → `PAID` → lisensi SettinX `B4F4-5DE3-…` dibuat → email terkirim (setelah fix).
-> **BUG PRODUKSI BARU DITEMUKAN**: email lisensi GAGAL karena `ENETUNREACH` (VPS tanpa route IPv6, Node memilih
-> AAAA smtp.gmail.com). Sudah diperbaiki dengan `family: 4` di `server/index.js` + `server/lib/notify.js`,
-> **terbukti bekerja** dari VPS. **BELUM di-deploy — fix ini WAJIB ikut ter-deploy.**
-> Audit VPS: `DOKU_ALLOW_TEST_AMOUNT` **tidak ada** (= aman, tidak bisa bayar Rp 1.000 untuk produk Rp 50.000).
-> **LOGO di halaman checkout DOKU masih polosan** — itu setelan **Dashboard DOKU** (Setting > Checkout Page >
-> Interface Settings), TIDAK bisa dari kode/API. Menunggu user upload manual.
-
+> **🔐 AUDIT KEAMANAN SELESAI — 7 patch kritis/high diterapkan & teruji:**
+> 1. **`VITE_ADMIN_API_SECRET` DIHAPUS dari bundle** → diganti **JWT sesi Supabase**
+>    (`Authorization: Bearer`). Secret lama (yang dulu terbaca siapa pun dari DevTools) kini
+>    **tidak berfungsi** — terbukti 401. Bundle live diverifikasi: secret **0 hit**, `x-admin-secret` **0 hit**.
+> 2. Backend: `requireAdmin` (verifikasi `/auth/v1/user` + whitelist `admin_users`) + `requireSuperAdminRole`.
+> 3. `/api/doku-cancel-order` kini **wajib sesi admin** (sebelumnya TANPA autentikasi).
+> 4. `DOKU_ALLOW_TEST_AMOUNT` **fail-closed** — override nominal hanya bila `DOKU_BASE_URL` sandbox.
+>    Terbukti di live: kirim `amount:1000` → server tetap menagih **Rp 50.000**.
+> 5. Respons mentah DOKU (`token_id`/`request_id`) **tidak lagi** dikirim ke browser.
+> 6. `ipKeyGenerator`: `CF-Connecting-IP` hanya dipercaya dari hop lokal (anti bypass rate limit).
+> 7. `.gitignore` diperkuat: `.env*` (dengan pengecualian `.env.example`), `dist.bak-*`,
+>    `secrets/`, service-account JSON, `*.pem/*.key`, `.zcode/`, `screenshots/`, log runtime.
+>
+> **📘 DOKUMENTASI: `SETUPDOKU.md` (root)** — setup DOKU, SMTP Gmail, deploy VPS, lisensi,
+> data uji, jejak perubahan, **§11 checklist audit**. `docs/setup/SETUP-DOKU.md` = versi panduan awal.
+>
+> **Ringkasan sesi sebelumnya:** migrasi KlikQRIS → **DOKU Checkout** selesai & teruji dengan
+> pembayaran QRIS asli Rp 1.000; fix **SMTP IPv4** (`family: 4`, `ENETUNREACH`) kini **aktif di produksi**.
+> ⚠️ Logo checkout DOKU masih polosan — setelan Dashboard DOKU, bukan kode.
 ---
+
+## 2026-11-18 (lanjutan ke-3) — 🔐 AUDIT KEAMANAN PENUH + PATCH + DEPLOY PRODUKSI (`65d00e0`)
+
+### Temuan audit (read-only) & status perbaikan
+| # | Temuan | Severity | Status |
+|---|---|---|---|
+| K1 | `VITE_ADMIN_API_SECRET` == `ADMIN_API_SECRET`, ter-embed di `dist/` (2 chunk) | 🔴 KRITIS | ✅ **fixed** — secret dihapus, ganti JWT |
+| K2 | `DOKU_ALLOW_TEST_AMOUNT=true` di `.env` lokal | 🔴 KRITIS | ✅ **fixed** — `false` + guard sandbox-only |
+| K3 | `/api/doku-cancel-order` tanpa autentikasi | 🔴 KRITIS | ✅ **fixed** — `requireAdmin` |
+| K4 | RLS `admin_users` policy `admin_can_manage_own FOR ALL` (self-promote role) | 🔴 KRITIS | ⚠️ **perlu aksi manual di Supabase** (SQL ada di SETUPDOKU §11) |
+| T1 | `CF-Connecting-IP` dipercaya mentah → bypass rate limit | 🟠 TINGGI | ✅ **fixed** |
+| T2 | `raw: data` respons DOKU bocor ke browser | 🟠 TINGGI | ✅ **fixed** |
+| T3 | `webhook_payload` utuh disimpan di tabel `orders` | 🟡 SEDANG | ⏸️ belum diubah (butuh migrasi) |
+| T4 | Endpoint admin tanpa rate limit | 🟠 TINGGI | ⏸️ belum (dilindungi JWT + whitelist) |
+
+### Bukti verifikasi (bukan asumsi)
+```
+bundle live AdminRoutes-Ceo31TZT.js : secret lama 0 hit · x-admin-secret 0 hit · Bearer ADA
+9 kredensial backend di dist/       : DOKU/SMTP/service-role/MODULE_SR/Firebase/KlikQRIS = 0
+admin/create tanpa auth             : 401  (secret lama & anon key juga 401)
+cancel-order tanpa auth             : 401
+settinx/resend tanpa auth           : 401
+create-order live, amount=1000      : tetap Rp 50.000  ← override tidak bisa dipakai
+webhook tanpa/palsu signature       : 401
+tsc --noEmit / build / vitest       : 0 error / OK / 1 passed
+doku-status order asli              : 200 PAID (berfungsi)
+```
+
+### ⚠️ Insiden saat uji lokal (dokumentasi jujur)
+- Backend **lama** (PID 21396, start 17:28, sebelum patch) masih memegang port 5159 dan **masih
+  menerima secret lama** → dipakai menguji `admin/create` dan **mengirim 1 email kredensial admin
+  ke `x@y.com`** (email uji milik kita, bukan data user). Backend lama dimatikan, kode patch
+  dijalankan ulang, uji diulang → semua 401.
+- **Pelajaran**: selalu pastikan proses yang diuji benar-benar kode terbaru (cek PID & waktu start).
+
+### Deploy
+1. `git commit 65d00e0` (selektif; file terlarang `video/*` tidak ikut) → `git push origin main`.
+2. VPS: `git reset --hard origin/main` → `65d00e0`.
+3. `scp -r dist` → VPS (hash `index-CxvHTkIO.js` cocok) → `docker compose up --build -d`.
+4. `pm2 restart ipanstore-backend --update-env` → online.
+
+### ⏭️ Sisa pekerjaan
+1. **K4** — jalankan SQL perbaikan RLS `admin_users` (SETUPDOKU §11.15) — **WAJIB**, ini kritis.
+2. Logo checkout DOKU (manual di Dashboard DOKU).
+3. Data uji `PROBE*`/`E2E*` + lisensi `3204-0321…` (menunggu izin hapus).
+4. Order uji audit: `SECAUDIT1111111111`, `SECAUDITTEST2222` (lokal), `SECLIVE111111111111` (live) — belum dibayar, boleh dihapus.
+5. `ADMIN_API_SECRET` & `KLIKQRIS_*`/`CASHI_*` di `server/.env` VPS kini tidak terpakai — boleh dihapus.
 
 ## 2026-11-18 (lanjutan) — E2E Browser + Audit VPS + Bug SMTP IPv4
 

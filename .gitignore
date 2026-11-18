@@ -13,12 +13,12 @@ dist-ssr
 *.local
 
 # Environment variables (API keys) — JANGAN di-commit
-.env
-.env.local
-.env.*.local
-.env.development
-.env.production
-
+# Pola ".env*" menangkap SEMUA varian: .env, .env.local, .env.development,
+# .env.production, .env.staging, .env.test, .env.backup, server/.env, dll.
+# Pengecualian di bawah mengizinkan file CONTOH (isinya placeholder, bukan nilai asli).
+.env*
+!.env.example
+!**/.env.example
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -49,3 +49,47 @@ opencode.json
 # Backup .env (bisa memuat rahasia) — JANGAN di-commit
 server/.env.bak-*
 .env.bak-*
+
+# Backup & salinan .env di semua folder (bisa memuat rahasia)
+**/.env.bak*
+**/.env.*.bak*
+**/.env-*
+**/*.env.bak*
+
+# Kredensial / service account / private key
+**/secrets/
+**/*service-account*.json
+**/*serviceAccount*.json
+**/*-firebase-adminsdk-*.json
+*.pem
+*.p12
+*.pfx
+*.key
+id_rsa*
+id_ed25519*
+
+# Backup build/deploy (dist.bak-* menyimpan bundle LAMA — bisa memuat secret
+# yang sudah dihapus dari kode, jadi JANGAN pernah di-commit)
+dist.bak-*
+dist.bak/
+*.bak-*
+
+# Artefak tooling/agent lokal (berisi catatan sesi & konfigurasi pribadi)
+.zcode/
+.opencode/cache/
+opencode.json.*
+
+# Screenshot artefak lokal (bisa memuat data dashboard/konsumen)
+/screenshots/
+
+# Log runtime (bisa memuat email, invoice, potongan payload)
+**/server/*.log
+**/be.out.log
+**/be.err.log
+*.out.log
+*.err.log
+
+# Hasil build Docker/Compose lokal & file sementara
+**/.DS_Store
+*.tmp
+*.swp

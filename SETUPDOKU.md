@@ -501,4 +501,94 @@ Daftar ini dari hasil pengamatan selama sesi; **belum diaudit menyeluruh**.
 - Dokumentasi DOKU Checkout: <https://developers.doku.com/accept-payments/doku-checkout>
 - Checkout Settings (logo/expiry): <https://developers.doku.com/accept-payments/doku-checkout/configuration/checkout-settings>
 - Google App Password: <https://myaccount.google.com/apppasswords>
-- Supabase Admin API: <https://supabase.com/docs/reference/javascript/auth-admin-updateuserbyid>
+
+---
+
+## 13. HASIL AUDIT KEAMANAN (2026-11-18) — SUDAH DITERAPKAN & DEPLOY
+
+Audit penuh dilakukan (backend, frontend, bundle `dist/`, SQL migration, env, infra).
+Commit produksi: **`65d00e0`**. Versi live diverifikasi langsung dari `ipanstore.id`.
+
+### 13.1 Yang SUDAH diperbaiki di kode
+
+| # | Temuan | Perbaikan |
+|---|---|---|
+| 1 | `VITE_ADMIN_API_SECRET` (shared secret) == `ADMIN_API_SECRET` dan **ter-embed di bundle publik** → siapa pun bisa memanggil endpoint admin | Secret **dihapus** dari frontend & `.env`; diganti **JWT sesi Supabase** (`Authorization: Bearer`) yang diverifikasi ke `/auth/v1/user` + whitelist `admin_users` |
+| 2 | `/api/doku-cancel-order` **tanpa autentikasi** | Wajib `requireAdmin` |
+| 3 | `DOKU_ALLOW_TEST_AMOUNT=true` bisa membuat produk Rp 50.000 dibayar Rp 1.000 | **Fail-closed**: override hanya aktif bila `DOKU_BASE_URL` mengandung `sandbox` |
+| 4 | `raw: data` — respons mentah DOKU (`token_id`, `request_id`) dikirim ke browser | Dihapus dari semua respons |
+| 5 | `CF-Connecting-IP` dipercaya mentah → rate limit bisa di-bypass | Hanya dipercaya bila hop = loopback (cloudflared lokal) |
+| 6 | `.gitignore` kurang luas | `.env*` (+ `!.env.example`), `dist.bak-*`, `**/secrets/`, `*service-account*.json`, `*.pem/*.key`, `.zcode/`, `/screenshots/`, log runtime |
+
+### 13.2 ⚠️ WAJIB DIJALANKAN MANUAL — RLS `admin_users` (BELUM selesai)
+
+**Masalah:** `sql_patches/supabase_patch_security_critical.sql:46` membuat policy
+`admin_can_manage_own ON admin_users FOR ALL USING (email = auth.email())`.
+File `supabase_patch_security_harden_v2.sql` **tidak** menghapus policy dengan nama itu
+(ia hanya DROP nama lain). Akibatnya admin ber-role `viewer` bisa
+`UPDATE admin_users SET role='super_admin'` untuk dirinya sendiri → **eskalasi hak**.
+
+**Cara pakai:** Supabase Dashboard → SQL Editor → New query → paste → Run.
+
+```sql
+-- ============ PERBAIKAN RLS admin_users (idempotent) ============
+-- Tujuan: admin hanya boleh SELECT barisnya sendiri.
+-- INSERT/UPDATE/DELETE HANYA lewat service_role (backend), bukan dari browser.
+ALTER TABLE IF EXISTS public.admin_users ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "admin_can_manage_own"        ON public.admin_users;
+DROP POLICY IF EXISTS "admin_can_view_own"          ON public.admin_users;
+DROP POLICY IF EXISTS "admin_select_self"           ON public.admin_users;
+DROP POLICY IF EXISTS "admin_select_self_row"       ON public.admin_users;
+DROP POLICY IF EXISTS "service_role_manage"         ON public.admin_users;
+DROP POLICY IF EXISTS "service_role_manage_admin_users" ON public.admin_users;
+
+-- 1) Admin boleh membaca barisnya sendiri saja (dipakai cek role di UI).
+CREATE POLICY "admin_select_self_row" ON public.admin_users
+  FOR SELECT
+  USING (lower(email) = lower(auth.email()));
+
+-- 2) Hanya service_role (backend) yang boleh tulis.
+CREATE POLICY "service_role_manage_admin_users" ON public.admin_users
+  FOR ALL
+  USING (auth.role() = 'service_role')
+  WITH CHECK (auth.role() = 'service_role');
+
+-- Verifikasi: harus 2 baris policy (1 SELECT + 1 ALL service_role)
+SELECT policyname, cmd, roles
+FROM pg_policies
+WHERE schemaname = 'public' AND tablename = 'admin_users'
+ORDER BY policyname;
+```
+
+**Setelah dijalankan**, tombol ubah role / hapus admin di halaman Admins
+(`src/lib/admin/admins.ts` → `updateAdminRole`, `removeAdmin`) **akan ditolak** oleh RLS
+karena memakai anon key. Itu **memang disengaja** (aman). Bila fitur itu masih dibutuhkan,
+pindahkan operasinya ke endpoint backend dengan `requireAdmin + requireSuperAdminRole`
+(pola sama seperti `/api/admin/create`).
+
+### 13.3 Verifikasi yang sudah dilakukan di produksi
+
+```bash
+# Bundle live identik dengan build lokal, dan BEBAS kredensial:
+curl -s https://ipanstore.id/assets/AdminRoutes-Ceo31TZT.js | grep -c "5f6e3d…"   # 0
+curl -s https://ipanstore.id/assets/AdminRoutes-Ceo31TZT.js | grep -c "x-admin-secret"  # 0
+
+# Endpoint admin menolak semua akses tanpa sesi:
+POST /api/admin/create      → 401   (tanpa auth / secret lama / anon key)
+POST /api/settinx/resend    → 401
+POST /api/doku-cancel-order → 401
+
+# Alur bayar DOKU tetap normal + nominal tidak bisa diturunkan:
+POST /api/doku-create-order { amount: 1000 } → menagih 50000  ✅
+POST /api/doku-webhook (signature palsu)     → 401           ✅
+GET  /api/doku-status/<order asli>           → 200 PAID      ✅
+```
+
+### 13.4 Sisa (belum dikerjakan)
+
+1. **RLS `admin_users`** (§13.2) — **KRITIS, harus manual**.
+2. `webhook_payload` masih disimpan utuh di tabel `orders` — pertimbangkan simpan field penting saja.
+3. Endpoint admin belum punya rate limiter khusus (saat ini terlindungi JWT + whitelist).
+4. `npm audit` backend/frontend belum dijalankan.
+5. Upgrade Node 20 → 22 (menghilangkan kebutuhan polyfill WebSocket untuk supabase-js).
