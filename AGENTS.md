@@ -216,3 +216,88 @@
 - Jangan commit: `.env`, log, `dist`, `opencode.json` (sudah di `.gitignore`).
   **JANGAN PERNAH commit/push/deploy** `video/PanggilanJihad.tsx` dan
   `video/IpanStorePromo.tsx` (lihat rule 15).
+
+## Supabase MCP — PENTING, DUA PROJECT BERBEDA
+
+Repo ini memakai **dua project Supabase yang berbeda**. Salah sambung = salah database.
+
+| Project ref | Dipakai untuk | Tabel penting |
+|---|---|---|
+| **`zpjkroatjmegwnxzvwlw`** | **PROJECT UTAMA IPAN STORE** — data order, admin, promo, testimoni | `orders`, `admin_users`, `services`, `promos`, `testimonials` |
+| `ydoubotecwoamuyacqhw` | **MODULE SETTINX** — aplikasi/lisensi SettinX | `profiles`, `licenses`, `module_scripts`, `license_events`, `blocked_passwords` |
+
+### Jebakan yang sudah pernah terjadi
+
+- MCP Supabase yang terpasang (`opencode.json` → `https://mcp.supabase.com/mcp`)
+  **default-nya nyambung ke `ydoubotecwoamuyacqhw`** (project SettinX), BUKAN project utama.
+  Query `admin_users` / `orders` lewat MCP default akan mengembalikan **hasil kosong**
+  (`has_admin_users: 0`) — itu bukan berarti tabelnya tidak ada, tapi **salah project**.
+- **Selalu verifikasi project sebelum menulis**:
+  ```sql
+  SELECT current_database(),
+         (SELECT count(*) FROM information_schema.tables
+          WHERE table_schema='public' AND table_name='admin_users') AS has_admin_users,
+         (SELECT count(*) FROM information_schema.tables
+          WHERE table_schema='public' AND table_name='orders')       AS has_orders;
+  ```
+  `has_admin_users = 1` → project utama. `0` → project SettinX, JANGAN tulis apa pun.
+
+### Cara memanggil project utama lewat MCP
+
+Remote MCP Supabase menerima parameter `project_ref` di URL:
+
+```
+https://mcp.supabase.com/mcp?project_ref=zpjkroatjmegwnxzvwlw
+```
+
+Alur wajib: `initialize` → ambil header `mcp-session-id` → kirim
+`notifications/initialized` → baru `tools/call` (`execute_sql`, `apply_migration`).
+Token PAT Supabase ada di `opencode.json` (`mcp.supabase.headers.Authorization`).
+
+### Aturan aman bermain di database produksi
+
+1. **Baca dulu, tulis kemudian.** Selalu `SELECT` untuk melihat kondisi nyata sebelum `ALTER`/`DROP`.
+2. **Jangan percaya review kode sebagai sumber kebenaran.** Project ini punya riwayat
+   policy RLS yang **dibuat langsung lewat SQL Editor** dan tidak tercatat di file migrasi.
+   Bukti nyata: `admin_users` punya policy `admin_select`/`admin_insert`/`admin_update`/
+   `admin_delete` + `is_admin()` `SECURITY DEFINER` yang **tidak ada di repo**.
+   Selalu cek `pg_policies` + `pg_proc`, jangan hanya `grep` file SQL.
+3. **Selalu cek fungsi pembantu yang dipakai policy** (`is_admin`, `has_role`, dll).
+   `SECURITY DEFINER` bypass RLS, jadi isi fungsinya menentukan tingkat keamanan sebenarnya.
+4. Migrasi yang mengubah policy WAJIB idempotent (`DROP POLICY IF EXISTS` sebelum `CREATE`).
+5. Setelah perubahan: verifikasi ulang dengan `SELECT ... FROM pg_policies` dan uji
+   eksploitasi (mis. coba self-promote) memakai `SET ROLE` / `SET request.jwt.claims`.
+
+## Repo GitHub
+
+- Remote: `git@github.com-bizwebdigital:Bizweb-Digital/ipanstore.git` (alias SSH `github.com-bizwebdigital`).
+- **Repo bersifat PUBLIK** (`Bizweb-Digital/ipanstore`, `private: false`).
+  Artinya: **apa pun yang di-commit langsung publik**. Tidak ada ruang untuk "commit dulu, rapikan nanti".
+- Sebelum `git push`, biasakan cek staged diff:
+  ```bash
+  git diff --cached | grep -iE "SK-[A-Za-z0-9]{15}|AIzaSy|eyJhbGci|BEGIN .*PRIVATE KEY|SMTP_PASS=[^y<]"
+  ```
+  Kosong = aman.
+- Cek isi repo yang benar-benar live (bukan hanya lokal):
+  ```bash
+  curl -s "https://api.github.com/repos/Bizweb-Digital/ipanstore/git/trees/main?recursive=1"
+  ```
+- Jangan pernah commit: `.env*` (kecuali `.env.example`), `server/.env.bak-*`, `dist.bak-*`,
+  `screenshots/`, `.zcode/`, service-account JSON, `*.pem`/`*.key`, log runtime.
+  Semua sudah masuk `.gitignore` — jangan di-`-f` tanpa alasan kuat.
+- **Jangan pernah menyarankan user melakukan rotasi kredensial.** Permintaan tetap user:
+  yang penting **kondisi akhir tidak ada rahasia yang bisa diakses publik**. Fokus pada
+  pembersihan nyata (hapus dari kode/bundle/history), bukan menyerahkan beban ke user.
+
+## Kredensial: aturan akhir untuk frontend
+
+- **Tidak ada rahasia statis di bundle.** Semua `VITE_*` ter-inline ke JS publik saat build.
+  Yang boleh `VITE_*` hanya: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_BACKEND_URL`.
+- Endpoint admin backend diproteksi **JWT sesi Supabase** (`Authorization: Bearer`),
+  diverifikasi ke `/auth/v1/user` + whitelist `admin_users` (`requireAdmin`,
+  `requireSuperAdminRole`). **Jangan kembalikan pola shared secret** (`x-admin-secret`,
+  `VITE_ADMIN_API_SECRET`) — itu bug lama yang sudah ditutup.
+- Setiap deploy, verifikasi bundle live bebas kredensial:
+  ```bash
+  curl -s https://ipanstore.id/assets/<chunk>.js | grep -c "x-admin-secret"   # harus 0
+  ```
