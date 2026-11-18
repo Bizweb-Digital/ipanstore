@@ -45,3 +45,7 @@ opencode.json
 
 # Rendered video artifacts
 /video/out/
+
+# Backup .env (bisa memuat rahasia) — JANGAN di-commit
+server/.env.bak-*
+.env.bak-*

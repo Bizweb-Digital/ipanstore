@@ -13,12 +13,18 @@ const SMTP_USER = process.env.SMTP_USER || "";
 const SMTP_PASS = process.env.SMTP_PASS || "";
 const MAIL_FROM = process.env.MAIL_FROM || `IPAN STORE <${SMTP_USER}>`;
 
+// ⚠️ FIX (2026-11-18): VPS tidak punya route IPv6 → Node memilih AAAA milik
+// smtp.gmail.com dan gagal `ENETUNREACH`. `family: 4` memaksa IPv4.
 const paidEmailTransporter = SMTP_USER
   ? nodemailer.createTransport({
       host: SMTP_HOST,
       port: SMTP_PORT,
       secure: SMTP_PORT === 465,
       auth: { user: SMTP_USER, pass: SMTP_PASS },
+      family: 4,
+      connectionTimeout: 20000,
+      greetingTimeout: 20000,
+      socketTimeout: 30000,
     })
   : null;
 

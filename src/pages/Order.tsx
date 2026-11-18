@@ -19,7 +19,14 @@ import { WA_NUMBER } from "@/components/FloatingWhatsApp";
 import PageBackground from "@/components/effects/PageBackground";
 import Reveal from "@/components/effects/Reveal";
 import { AuroraText } from "@/components/ui/aurora-text";
-import { createKlikQrisPayment, checkKlikQrisStatus, isPaidStatus } from "@/lib/klikqris";
+import {
+  createDokuPayment,
+  checkDokuStatus,
+  saveCheckoutSession,
+  loadCheckoutSession,
+  clearCheckoutSession,
+  type DokuCheckoutSession,
+} from "@/lib/doku";
 import { useActiveServices } from "@/hooks/useActiveServices";
 import { ActiveService } from "@/lib/services";
 import { lookupPromoCode } from "@/lib/admin/promo";
@@ -159,22 +166,14 @@ const Order = () => {
   const [promoMsg, setPromoMsg] = useState<string | null>(null);
   const [checkingPromo, setCheckingPromo] = useState(false);
 
-  // ── QRIS KlikQris ───────────────────────────────────────────────────────────
-  const [qr, setQr] = useState<{
-    orderId: string;
-    qrisUrl?: string;
-    qrisImage?: string;
-    totalAmount?: number;
-    expiredAt?: string;
-  } | null>(null);
-  const [qrExpired, setQrExpired] = useState(false);
+  // ── Status pembayaran DOKU ─────────────────────────────────────────────────
+  // `pending` = sesi checkout yang sudah dibuat di DOKU (dipulihkan dari
+  // localStorage setelah pembeli kembali dari halaman DOKU).
+  const [pending, setPending] = useState<DokuCheckoutSession | null>(null);
   const [paid, setPaid] = useState(false);
+  const [expired, setExpired] = useState(false);
   const [countdown, setCountdown] = useState("");
-  // Ref ke panel QR untuk auto-scroll (HP: QR muncul di bawah fold → user mengira
-  // "layar putih" lalu klik Bayar berkali-kali → kena rate limit).
-  const qrPanelRef = useRef<HTMLDivElement | null>(null);
-  // Paket+promo yang terkunci di QR aktif — berubah → QR lama dibatalkan.
-  const qrContextRef = useRef<{ packageId: string; promo: string | null } | null>(null);
+  const timerRef = useRef<number | null>(null);
 
   const selected = useMemo(
     () => packages.find((p) => p.id === selectedId) ?? packages[0],
@@ -229,24 +228,23 @@ const Order = () => {
     void applyPromoByCode(promoInput);
   };
 
+  // ── Checkout DOKU (redirect ke halaman pembayaran DOKU) ────────────────────
   const handleCheckout = async () => {
-    if (loading) return; // B11 — cegah double-submit checkout
+    if (loading) return; // cegah double-submit
     setError(null);
     if (paid) return;
-    // QR aktif masih ada → jangan buat order baru; scroll ke QR yang sudah ada.
-    if (qr && !qrExpired) {
-      qrPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-      return;
-    }
     if (!name.trim() || !email.trim()) {
       setError("Mohon isi Nama dan Email terlebih dahulu.");
       return;
     }
     setLoading(true);
     try {
-      const res = await createKlikQrisPayment({
-        orderId: `IPAN-${selected.id.toUpperCase()}-${Date.now()}`,
-        amount: promoApplied ? promoApplied.total : selected.price,
+      const amount = promoApplied ? promoApplied.total : selected.price;
+      const draftOrderId = `IPAN-${selected.id.toUpperCase()}-${Date.now()}`;
+
+      const res = await createDokuPayment({
+        orderId: draftOrderId,
+        amount,
         customerName: name.trim(),
         customerEmail: email.trim(),
         customerPhone: wa.trim(),
@@ -254,88 +252,93 @@ const Order = () => {
         promoCode: promoApplied?.code,
       });
 
-      if (res.error || !res.qrisUrl) {
+      if (res.error || !res.checkoutUrl) {
         throw new Error(
-          res.error || "Backend tidak mengembalikan QRIS. Hubungi kami via WhatsApp."
+          res.error || "Server tidak mengembalikan halaman pembayaran DOKU."
         );
       }
 
-      setQr({
-        orderId: res.orderId || "",
-        qrisUrl: res.qrisUrl,
-        qrisImage: res.qrisImage,
-        totalAmount: res.totalAmount,
-        expiredAt: res.expiredAt,
+      const invoice = res.orderId || draftOrderId;
+
+      // Simpan sesi SEBELUM pindah halaman: DOKU mengembalikan pembeli ke
+      // /order tanpa parameter, jadi invoice harus dipulihkan dari localStorage.
+      saveCheckoutSession({
+        orderId: invoice,
+        packageId: selected.id,
+        packageName: selected.name,
+        amount,
+        customerName: name.trim(),
+        customerEmail: email.trim(),
+        customerPhone: wa.trim(),
+        promoCode: promoApplied?.code ?? null,
+        createdAt: Date.now(),
       });
-      setPaid(false);
-      setQrExpired(false);
-      // Kunci paket & promo yang dipakai QR ini — ganti pilihan = QR lama dibatalkan.
-      qrContextRef.current = { packageId: selected.id, promo: promoApplied?.code ?? null };
+
+      // Redirect ke halaman pembayaran DOKU (QRIS, VA, e-wallet, gerai, dll).
+      window.location.href = res.checkoutUrl;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Gagal memproses pembayaran.");
-    } finally {
       setLoading(false);
     }
   };
 
-  // ── Countdown QRIS (5 menit) + polling status ───────────────────────────────
+  // ── Pulihkan sesi setelah kembali dari halaman DOKU ────────────────────────
+  // DOKU redirect balik ke callback_url (= /order) tanpa parameter apa pun,
+  // jadi status pembayaran dicek dari invoice yang tersimpan di localStorage.
   useEffect(() => {
-    if (!qr) return;
-    const expiresAt = qr.expiredAt ? new Date(qr.expiredAt).getTime() : Date.now() + 5 * 60 * 1000;
+    const session = loadCheckoutSession();
+    if (!session) return;
+    setPending(session);
+    setLoading(false);
+    setPaid(false);
 
+    // Cek status berkala: webhook DOKU bisa telat, endpoint status akan
+    // memaksa sinkron ke DOKU bila order masih PENDING.
+    let stop = false;
+    const poll = async () => {
+      const r = await checkDokuStatus(session.orderId);
+      if (stop) return;
+      if (r?.paid) {
+        setPaid(true);
+        clearCheckoutSession();
+        return;
+      }
+      timerRef.current = setTimeout(poll, 8000);
+    };
+    void poll();
+
+    return () => {
+      stop = true;
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  // ── Countdown masa berlaku pembayaran (15 menit, default DOKU) ─────────────
+  useEffect(() => {
+    if (!pending || paid) return;
+    const expiresAt = pending.createdAt + 15 * 60 * 1000;
     const tick = () => {
       const remain = Math.max(0, expiresAt - Date.now());
       const mins = Math.floor(remain / 60000);
       const secs = Math.floor((remain % 60000) / 1000);
       setCountdown(`${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`);
-      if (remain <= 0) {
-        setQrExpired(true);
-        setCountdown("00:00");
-      }
+      if (remain <= 0) setExpired(true);
     };
     tick();
     const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
-  }, [qr]);
+  }, [pending, paid]);
 
-  // Auto-scroll ke panel QR begitu QR baru dibuat (penting di HP — QR di bawah fold).
-  useEffect(() => {
-    if (qr && !qrExpired && !paid) {
-      qrPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-  }, [qr, qrExpired, paid]);
-
-  // Jika user mengganti paket / promo setelah QR dibuat, batalkan QR lama agar
-  // nominal QR tidak pernah tidak cocok dengan pilihan (mencegah order yatim).
-  useEffect(() => {
-    if (!qr || paid) return;
-    const ctx = qrContextRef.current;
-    if (ctx && (ctx.packageId !== selected.id || ctx.promo !== (promoApplied?.code ?? null))) {
-      setQr(null);
-      setQrExpired(false);
-      setError(null);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected.id, promoApplied]);
-
-  useEffect(() => {
-    if (!qr || !qr.orderId || qrExpired) return;
-    let stop = false;
-    const poll = async () => {
-      const r = await checkKlikQrisStatus(qr.orderId);
-      if (stop) return;
-      if (r.paid) {
-        setPaid(true);
-        return;
-      }
-      setTimeout(poll, 8000);
-    };
-    const t = setTimeout(poll, 8000);
-    return () => {
-      stop = true;
-      clearTimeout(t);
-    };
-  }, [qr, qrExpired]);
+  // Batalkan sesi lama & kembalikan ke form (mis. mau ganti paket).
+  const resetCheckout = () => {
+    clearCheckoutSession();
+    setPending(null);
+    setPaid(false);
+    setExpired(false);
+    setCountdown("");
+    setError(null);
+    if (timerRef.current) clearTimeout(timerRef.current);
+  };
 
   return (
     <Layout>
@@ -555,8 +558,8 @@ const Order = () => {
                 )}
 
                 <Button
-                  onClick={handleCheckout}
-                  disabled={loading || paid}
+                  onClick={pending && !expired ? undefined : handleCheckout}
+                  disabled={loading || paid || Boolean(pending && !expired)}
                   variant="default"
                   size="lg"
                   className="w-full"
@@ -565,10 +568,13 @@ const Order = () => {
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Memproses... (jangan tutup halaman)
                     </>
-                  ) : qr && !qrExpired ? (
+                  ) : paid ? (
                     <>
-                      Lihat QRIS Kamu
-                      <QrCode className="ml-2 h-4 w-4" />
+                      <Check className="mr-2 h-4 w-4" /> Pembayaran Berhasil
+                    </>
+                  ) : pending && !expired ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menunggu Pembayaran
                     </>
                   ) : (
                     <>
@@ -578,10 +584,10 @@ const Order = () => {
                   )}
                 </Button>
 
-                {qr && !qrExpired && !paid && (
+                {pending && !expired && !paid && (
                   <p className="mt-2 text-[11px] text-amber-300/80 leading-relaxed">
-                    QRIS sudah dibuat — cukup scan QR di bawah. Ingin ganti paket/promo?
-                    Pilih ulang di atas, QR baru akan dibuatkan otomatis.
+                    Pembayaran sedang menunggu. Ingin ganti paket/promo? Klik
+                    &ldquo;Batalkan &amp; Pesan Ulang&rdquo; di panel di bawah dulu.
                   </p>
                 )}
 
@@ -590,7 +596,7 @@ const Order = () => {
           Pembayaran diproses aman melalui payment gateway. Data kamu terenkripsi.
         </p>
 
-                {/* Panel QRIS KlikQris */}
+                {/* Panel pembayaran DOKU */}
                 {paid ? (
                   <div className="mt-5 rounded-xl border border-green-500/40 bg-green-500/10 p-5 text-center">
                     <p className="flex items-center justify-center gap-2 text-sm font-semibold text-green-400">
@@ -606,61 +612,59 @@ const Order = () => {
                       Kembali ke daftar paket <ArrowRight className="h-3.5 w-3.5" />
                     </Link>
                   </div>
-                ) : qr ? (
-                  <div ref={qrPanelRef} className="mt-5 rounded-xl border border-white/16 bg-[#131314]/80 p-5 text-center">
-                    {qrExpired ? (
+                ) : pending ? (
+                  <div className="mt-5 rounded-xl border border-white/16 bg-[#131314]/80 p-5 text-center">
+                    {expired ? (
                       <>
                         <p className="flex items-center justify-center gap-2 text-sm font-semibold text-red-400">
-                          <QrCode className="h-5 w-5" /> QRIS Kedaluwarsa
+                          <QrCode className="h-5 w-5" /> Pembayaran Kedaluwarsa
                         </p>
                         <p className="mt-1 text-xs text-zinc-400">
-                          Waktu pembayaran habis. Klik tombol di bawah untuk membuat QR baru.
+                          Waktu pembayaran habis. Pesan ulang untuk mendapatkan halaman pembayaran baru.
                         </p>
-                        <Button onClick={handleCheckout} size="sm" className="mt-4">
-                          <QrCode className="mr-2 h-4 w-4" /> Buat QRIS Baru
+                        <Button onClick={resetCheckout} size="sm" className="mt-4">
+                          <QrCode className="mr-2 h-4 w-4" /> Pesan Ulang
                         </Button>
                       </>
                     ) : (
                       <>
                         <p className="flex items-center justify-center gap-2 text-sm font-semibold text-[#F4F4F5]">
-                          <QrCode className="h-5 w-5 text-emerald-400" /> Scan QRIS untuk Membayar
+                          <Wallet className="h-5 w-5 text-emerald-400" /> Menunggu Pembayaran DOKU
                         </p>
-                        <div className="mt-4 mx-auto w-56 h-56 bg-white rounded-xl p-2">
-                          {qr.qrisImage ? (
-                            <img
-                              src={qr.qrisImage}
-                              alt="QRIS KlikQris"
-                              className="w-full h-full object-contain"
-                            />
-                          ) : qr.qrisUrl ? (
-                            <a href={qr.qrisUrl} target="_blank" rel="noreferrer">
-                              <img
-                                src={qr.qrisUrl}
-                                alt="QRIS KlikQris"
-                                className="w-full h-full object-contain"
-                              />
-                            </a>
-                          ) : null}
-                        </div>
+                        <p className="mt-2 text-xs text-zinc-400 leading-relaxed">
+                          Pembayaran diproses di halaman aman DOKU (QRIS, Virtual Account,
+                          e-Wallet, gerai, kartu). Status di halaman ini ter-update otomatis
+                          begitu pembayaran terkonfirmasi.
+                        </p>
                         <p className="mt-4 text-xs text-zinc-400">
                           Total bayar:{" "}
                           <span className="font-mono font-semibold text-[#F4F4F5]">
-                            {formatRupiah(qr.totalAmount ?? (promoApplied ? promoApplied.total : selected.price))}
+                            {formatRupiah(pending.amount)}
                           </span>
                         </p>
-                        <p className="mt-2 text-[11px] font-semibold text-amber-300 leading-relaxed">
-                          ⚠️ Bayar TEPAT sampai 3 digit terakhir (kode unik). Salah nominal =
-                          pembayaran tidak terdeteksi otomatis.
-                        </p>
                         <p className="mt-2 text-[11px] text-zinc-300">
-                          Kode pesanan: <span className="font-mono">{qr.orderId}</span>
+                          Kode pesanan: <span className="font-mono">{pending.orderId}</span>
                         </p>
                         <p className="mt-2 inline-flex items-center gap-1.5 text-[12px] font-mono text-amber-300/90">
                           <Loader2 className="h-3.5 w-3.5 animate-spin" /> Sisa waktu: {countdown}
                         </p>
-                        <p className="mt-3 text-[11px] text-zinc-300 leading-relaxed">
-                          Buka aplikasi e-wallet / m-banking (GoPay, OVO, DANA, ShopeePay, dll), pilih
-                          QRIS, lalu scan QR di atas. Status ter-update otomatis.
+                        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                          <Button
+                            onClick={handleCheckout}
+                            size="sm"
+                            variant="secondary"
+                            disabled={loading}
+                          >
+                            <CreditCard className="mr-2 h-4 w-4" /> Lanjut ke Pembayaran
+                          </Button>
+                          <Button onClick={resetCheckout} size="sm" variant="ghost">
+                            Batalkan &amp; Pesan Ulang
+                          </Button>
+                        </div>
+                        <p className="mt-3 text-[11px] text-zinc-400 leading-relaxed">
+                          Sudah membayar tapi status belum berubah? Tunggu 10–60 detik,
+                          halaman ini mengecek status otomatis. Bila tetap belum berubah,
+                          hubungi kami via WhatsApp dengan kode pesanan di atas.
                         </p>
                       </>
                     )}

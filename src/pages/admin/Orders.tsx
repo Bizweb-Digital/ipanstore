@@ -52,6 +52,7 @@ import { Order, useOrders } from '@/hooks/useOrders';
 import { exportToCsv } from '@/lib/admin/csv';
 import { useAuditLogger } from '@/hooks/useAuditLog';
 import { BACKEND_URL } from '@/lib/doku';
+import { adminAuthHeaders } from '@/lib/admin/apiAuth';
 
 const STATUS_OPTIONS = [
   { value: 'ALL', label: 'Semua Status' },
@@ -203,20 +204,13 @@ export default function AdminOrders() {
       toast.error('VITE_BACKEND_URL belum dikonfigurasi — backend tidak bisa dipanggil.');
       return;
     }
-    // Backend mewajibkan header x-admin-secret. Ambil dari env — JANGAN hardcode.
-    const adminSecret = (import.meta.env.VITE_ADMIN_API_SECRET as string | undefined)?.trim();
-    if (!adminSecret) {
-      toast.error('VITE_ADMIN_API_SECRET belum diset di file .env. Tambahkan dulu lalu restart dev server.');
-      return;
-    }
+    // SECURITY: backend memverifikasi JWT sesi admin (Authorization: Bearer).
+    // Tidak ada shared secret di browser — jangan kembalikan pola VITE_*SECRET.
     setIsResending(true);
     try {
       const res = await fetch(`${BACKEND_URL}/api/settinx/resend`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-admin-secret': adminSecret,
-        },
+        headers: await adminAuthHeaders(),
         body: JSON.stringify({ orderId: order.invoice_number }),
       });
       const data = await res.json().catch(() => ({}));

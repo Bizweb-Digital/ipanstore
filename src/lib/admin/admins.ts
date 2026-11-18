@@ -15,6 +15,7 @@
  */
 
 import { supabase } from '@/lib/admin/supabase';
+import { adminAuthHeaders } from '@/lib/admin/apiAuth';
 
 export type AdminRole = 'super_admin' | 'viewer';
 
@@ -76,9 +77,12 @@ export async function addAdmin(email: string, role: AdminRole): Promise<void> {
  * Buat akun admin lengkap (Auth + whitelist) lewat endpoint backend, lalu
  * backend mengirim kredensial ke email tujuan via Gmail SMTP.
  *
+ * SECURITY: memakai JWT sesi Supabase (header `Authorization: Bearer`), BUKAN
+ * shared secret. Tidak ada rahasia yang ikut ter-bundle ke browser.
+ *
  * Membutuhkan:
- *   - VITE_BACKEND_URL  (base URL backend)
- *   - VITE_ADMIN_API_SECRET (harus sama dengan ADMIN_API_SECRET di server)
+ *   - VITE_BACKEND_URL  (base URL backend, bukan rahasia)
+ *   - admin sedang login & terdaftar di tabel `admin_users`
  */
 export async function createAdminAccount(
   email: string,
@@ -86,16 +90,11 @@ export async function createAdminAccount(
   role: AdminRole,
 ): Promise<{ success: boolean; emailSent: boolean; message: string }> {
   const backendUrl = (import.meta.env.VITE_BACKEND_URL as string) || '';
-  const secret = (import.meta.env.VITE_ADMIN_API_SECRET as string) || '';
   if (!backendUrl) throw new Error('VITE_BACKEND_URL belum dikonfigurasi.');
-  if (!secret) throw new Error('VITE_ADMIN_API_SECRET belum dikonfigurasi di frontend.');
 
   const res = await fetch(`${backendUrl}/api/admin/create`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-admin-secret': secret,
-    },
+    headers: await adminAuthHeaders(),
     body: JSON.stringify({ email: email.trim().toLowerCase(), password, role }),
   });
 

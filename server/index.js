@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Backend IPAN STORE — integrasi Payment Gateway DOKU (DOKU Checkout) & KlikQris (QRIS Dinamis)
+// Backend IPAN STORE — integrasi Payment Gateway DOKU (DOKU Checkout)
 //
 // Kenapa butuh file ini?
 //   DOKU Checkout butuh header Signature HMAC-SHA256 yang dibuat dari
@@ -7,15 +7,13 @@
 //   dikirim dari browser → semua call ke DOKU harus lewat server ini.
 //
 // Endpoint yang disediakan:
-//   POST /api/klikqris-create-order → membuat transaksi QRIS KlikQris (QR tampil di halaman order)
-//   POST /api/klikqris-webhook      → menerima notifikasi PAID/EXPIRED dari KlikQris
-//   GET  /api/klikqris-status/:orderId → polling status transaksi (fallback webhook)
-//   POST /api/doku-create-order → membuat transaksi DOKU Checkout (fallback kanal lain)
-//   POST /api/doku-webhook      → menerima notifikasi pembayaran dari DOKU
-//   GET  /api/health            → cek server hidup
+//   POST /api/doku-create-order     → buat transaksi DOKU Checkout (redirect ke halaman DOKU)
+//   POST /api/doku-webhook          → terima notifikasi pembayaran dari DOKU
+//   GET  /api/doku-status/:orderId  → polling status (fallback bila webhook telat)
+//   GET  /api/order-status/:orderId → status publik untuk halaman Lacak Order
+//   POST /api/promo/validate        → validasi kode promo
+//   GET  /api/health                → cek server hidup
 // ─────────────────────────────────────────────────────────────────────────────
-
-import { createMyPgTransaction, getMyPgTransactionStatus } from "./lib/myPg.js";
 import express from "express";
 import cors from "cors";
 import crypto from "crypto";
@@ -93,18 +91,6 @@ if (!DOKU_CLIENT_ID || !DOKU_SECRET_KEY) {
   console.warn("⚠️  DOKU_CLIENT_ID / DOKU_SECRET_KEY belum diisi di .env — endpoint doku-create-order akan gagal.");
 }
 
-// ── Kredensial KlikQris (Payment Gateway QRIS Dinamis) ───────────────────────
-// Dari dashboard KlikQris: https://klikqris.com/dokumentasi (Login) → Kredensial API.
-const KLIKQRIS_API_KEY = process.env.KLIKQRIS_API_KEY || "";
-// id_merchant juga dikirim sebagai header sesuai dokumentasi.
-const KLIKQRIS_ID_MERCHANT = process.env.KLIKQRIS_ID_MERCHANT || "";
-// Base URL API KlikQris (dokumentasi: https://klikqris.com/api)
-const KLIKQRIS_BASE_URL = process.env.KLIKQRIS_BASE_URL || "https://klikqris.com/api";
-
-if (!KLIKQRIS_API_KEY || !KLIKQRIS_ID_MERCHANT) {
-  console.warn("⚠️  KLIKQRIS_API_KEY / KLIKQRIS_ID_MERCHANT belum diisi di .env — endpoint klikqris-create-order akan gagal.");
-}
-
 // ── Polyfill WebSocket global (Node < 22) untuk @supabase/realtime-js ──────
 // Node 20 tidak punya global WebSocket; supabase-js v2 butuh ini saat createClient().
 import WebSocket from "ws";
@@ -126,23 +112,34 @@ if (!supabase) {
 }
 
 // ── Helper Signature DOKU (HMAC-SHA256) ──────────────────────────────────────
-// Component string:
-//   Client-Id:...\nRequest-Id:...\nRequest-Timestamp:...\nRequest-Target:...\nDigest:...
-// Digest = base64(sha256(jsonBody))
+// Spesifikasi resmi (developers.doku.com → Signature Component from Request Header):
+//
+//   Client-Id:{clientId}
+//   Request-Id:{requestId}
+//   Request-Timestamp:{requestTimestamp}
+//   Request-Target:{requestTarget}
+//   Digest:{digest}
+//
+// ⚠️ PENTING: baris `Digest` HANYA untuk metode POST.
+// Untuk GET (mis. Check Status API) baris Digest DIHILANGKAN sama sekali —
+// menyertakannya membuat DOKU menolak dengan `invalid_signature`.
+//
+// Digest    = base64(sha256(jsonBody))
 // Signature = "HMACSHA256=" + base64(hmac_sha256(secretKey, componentString))
 function generateDokuDigest(rawBody) {
   return crypto.createHash("sha256").update(rawBody, "utf-8").digest("base64");
 }
 
 function generateDokuSignature({ clientId, requestId, requestTimestamp, requestTarget, digest }) {
-  const component = [
+  const parts = [
     `Client-Id:${clientId}`,
     `Request-Id:${requestId}`,
     `Request-Timestamp:${requestTimestamp}`,
     `Request-Target:${requestTarget}`,
-    `Digest:${digest}`,
-  ].join("\n");
-  const hmac = crypto.createHmac("sha256", DOKU_SECRET_KEY).update(component).digest("base64");
+  ];
+  // Digest hanya untuk POST (ada body). Untuk GET baris ini dihilangkan.
+  if (digest) parts.push(`Digest:${digest}`);
+  const hmac = crypto.createHmac("sha256", DOKU_SECRET_KEY).update(parts.join("\n")).digest("base64");
   return `HMACSHA256=${hmac}`;
 }
 
@@ -367,26 +364,44 @@ const SMTP_PASS = process.env.SMTP_PASS || "";
 const MAIL_FROM = process.env.MAIL_FROM || `IPAN STORE <${SMTP_USER}>`;
 
 // Link Google Drive produk SettinX (dari .env, tidak di-hardcode)
-const SETTINX_DOWNLOAD_URL =
-  process.env.SETTINX_DOWNLOAD_URL ||
-  "https://drive.google.com/drive/folders/1oB2BIILhM-xrgseTw7yYSYwxurLayTvq?usp=sharing";
+// ⚠️ PENJELASAN DUA VARIABEL (jangan tertukar):
+//   SETTINX_DOWNLOAD_URL         → dipakai email PAKET NON-MODULE (App V1 / Set PC / Anti-Cheat).
+//   SETTINX_MODULE_1_1_DOWNLOAD_URL → dipakai email "Ipan Module SettinX 1.1" (produk module_1_1).
+// Sebelum 2026-11-18, var module_1_1 masih menunjuk FILE Google Drive LAMA
+// (`/file/d/1U3uz7-…`), sehingga pembeli Module 1.1 menerima tautan basi.
+// Sekarang keduanya memakai FOLDER Drive terbaru yang aktif.
+const SETTINX_DRIVE_FOLDER_URL =
+  "https://drive.google.com/drive/folders/1FhroO8GV6bdt9Y3fM-Nvr6cL5CwgGxmS?usp=sharing";
 
 // Link Google Drive produk "Ipan Module SettinX 1.1" (dari .env, tidak di-hardcode).
 const SETTINX_MODULE_DOWNLOAD_URL =
   process.env.SETTINX_MODULE_1_1_DOWNLOAD_URL ||
-  "https://drive.google.com/file/d/1U3uz7-hDXCtCXutME-zCBHXLvhr8h-Zf/view";
+  process.env.SETTINX_DOWNLOAD_URL ||
+  SETTINX_DRIVE_FOLDER_URL;
+
+// Link Drive umum (paket non-module).
+const SETTINX_DOWNLOAD_URL = process.env.SETTINX_DOWNLOAD_URL || SETTINX_DRIVE_FOLDER_URL;
 
 // Kontak bantuan & grup komunitas untuk email "Ipan Module SettinX 1.1".
 // Nomor WA admin: +62 889-7649-6870 → format wa.me tanpa spasi/strip.
 const MODULE_SUPPORT_WA_URL = "https://wa.me/6288976496870";
-const MODULE_COMMUNITY_GROUP_URL = "https://chat.whatsapp.com/DoKUsn9NlFOFJBX1VQcB8U";
+const MODULE_COMMUNITY_GROUP_URL = "https://chat.whatsapp.com/IoLKaH87TBXA6Nyf6XdwjZ";
 
+// ⚠️ FIX (2026-11-18): VPS ini TIDAK punya route IPv6, sedangkan smtp.gmail.com
+// mengumumkan record AAAA. Node memilih IPv6 lebih dulu → koneksi gagal dengan
+// `ENETUNREACH`, sehingga email lisensi tidak terkirim walau pembayaran sukses.
+// `family: 4` memaksa resolusi & koneksi lewat IPv4.
+// `connectionTimeout`/`greetingTimeout` mencegah request menggantung lama.
 const emailTransporter = SMTP_USER
   ? nodemailer.createTransport({
       host: SMTP_HOST,
       port: SMTP_PORT,
       secure: SMTP_PORT === 465,
       auth: { user: SMTP_USER, pass: SMTP_PASS },
+      family: 4,
+      connectionTimeout: 20000,
+      greetingTimeout: 20000,
+      socketTimeout: 30000,
     })
   : null;
 
@@ -421,10 +436,21 @@ function credentialsCardHtml(credentials) {
  */
 function moduleCredentialsCardHtml(credentials) {
   if (!credentials?.id || !credentials?.password || !credentials?.licenseKey) return "";
+  // ── Salin sekali klik ────────────────────────────────────────────────────
+  // ⚠️ KENYATAAN TEKNIS: Gmail, Outlook, dan hampir semua klien email MEMBLOKIR
+  // JavaScript (`<script>`, `onclick`) demi keamanan. Tombol
+  // `navigator.clipboard.writeText()` TIDAK akan berfungsi di email — kalau
+  // dipasang, tombolnya hanya jadi hiasan yang mengecewakan pembeli.
+  //
+  // Yang benar-benar bekerja di semua klien:
+  //   `user-select: all` → SATU klik pada teks langsung menyeleksi SELURUH nilai,
+  //   tinggal Ctrl+C (desktop) atau tekan lama → Copy (HP).
+  // Ditambah petunjuk kecil di bawah tiap nilai agar pembeli tahu.
   const field = (label, value) =>
     `<div style="margin:0 0 12px 0">
       <div style="font-size:11px;letter-spacing:0.6px;text-transform:uppercase;color:#8b8b93;margin:0 0 4px 0">${label}</div>
-      <div style="font-family:'Courier New',Consolas,monospace;font-size:16px;font-weight:700;color:#ffffff;line-height:1.5;word-break:break-all;background:#1c1c1f;border:1px solid #33333a;border-radius:8px;padding:10px 12px">${escapeHtml(value)}</div>
+      <div style="font-family:'Courier New',Consolas,monospace;font-size:16px;font-weight:700;color:#ffffff;line-height:1.5;word-break:break-all;background:#1c1c1f;border:1px solid #33333a;border-radius:8px;padding:10px 12px;-webkit-user-select:all;-moz-user-select:all;-ms-user-select:all;user-select:all">${escapeHtml(value)}</div>
+      <div style="font-size:10px;color:#71717a;margin-top:3px">Klik teks di atas untuk menyalin (HP: tekan lama &rarr; Copy)</div>
     </div>`;
   return `
     <div style="background:#131316;border:1px solid #3f3f46;border-radius:12px;padding:20px;margin:24px 0">
@@ -433,6 +459,11 @@ function moduleCredentialsCardHtml(credentials) {
       ${field("ID Akun", credentials.id)}
       ${field("Password", credentials.password)}
       ${field("License Key", credentials.licenseKey)}
+      <div style="margin:0 0 6px 0">
+        <div style="font-size:11px;letter-spacing:0.6px;text-transform:uppercase;color:#4ade80;margin:0 0 6px 0;font-weight:700">📋 Salin Semua Sekali Klik</div>
+        <div class="copy-all-inline" style="font-family:'Courier New',Consolas,monospace;font-size:13px;color:#e4e4e7;line-height:1.9;word-break:break-all;background:#0e0e10;border:1px dashed #3f3f46;border-radius:8px;padding:12px;-webkit-user-select:all;-moz-user-select:all;-ms-user-select:all;user-select:all"><div>ID Akun: ${escapeHtml(credentials.id)}</div><div>Password: ${escapeHtml(credentials.password)}</div><div>License Key: ${escapeHtml(credentials.licenseKey)}</div></div>
+        <div style="font-size:10px;color:#71717a;margin-top:4px">Klik kotak di atas → semua teks terpilih otomatis → Ctrl+C / tekan lama → Copy</div>
+      </div>
       <div style="font-size:13px;color:#a1a1aa;line-height:1.7;margin-top:6px;border-top:1px solid #2a2a30;padding-top:14px">
         <strong style="color:#e4e4e7;font-size:14px">📖 Cara Pakai</strong><br/>
         1. Download &amp; install aplikasi dari tombol di bawah.<br/>
@@ -744,23 +775,88 @@ async function sendAdminCredentialsEmail({ to, email, password, role }) {
   }
 }
 
-// ── Middleware: proteksi endpoint admin via shared secret ────────────────────
-// Header wajib: x-admin-secret (dibandingkan dengan process.env.ADMIN_API_SECRET
-// memakai crypto.timingSafeEqual agar tahan timing attack).
-function requireAdminSecret(req, res, next) {
-  const expected = process.env.ADMIN_API_SECRET || "";
-  const provided = String(req.headers["x-admin-secret"] || "");
-  if (!expected) {
-    console.error("❌ ADMIN_API_SECRET belum diset di .env — endpoint admin ditolak.");
-    return res.status(401).json({ error: "Unauthorized" });
+// ── Middleware: proteksi endpoint admin via JWT sesi Supabase ────────────────
+// Header wajib: `Authorization: Bearer <access_token>` dari sesi admin yang login.
+//
+// ⚠️ SEJARAH KEAMANAN — JANGAN DIULANGI:
+// Dulu endpoint ini diproteksi shared secret (x-admin-secret) yang nilainya juga
+// disimpan di frontend lewat VITE_ADMIN_API_SECRET. Semua variabel VITE_* ikut
+// ter-inline ke bundle JS publik saat build → nilai secret itu bisa dibaca siapa
+// pun dari DevTools ipanstore.id, sehingga siapa pun bisa membuat akun admin.
+// Sekarang TIDAK ADA lagi rahasia statis di browser: token berasal dari sesi
+// user (berumur pendek, per-user, bisa dicabut) dan diverifikasi ke Supabase.
+//
+// Payload JWT tidak dipercaya mentah — selalu divalidasi ke /auth/v1/user
+// (server-to-server) agar tanda tangan & masa berlaku token benar-benar dicek.
+const ADMIN_ROLES = new Set(["super_admin", "viewer"]);
+
+async function verifySupabaseUser(accessToken) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return null;
+  const r = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+    },
+  });
+  if (!r.ok) return null;
+  const user = await r.json().catch(() => null);
+  return user?.id && user?.email ? user : null;
+}
+
+/**
+ * Cek apakah email terdaftar di whitelist `admin_users`.
+ * Mengembalikan baris admin (termasuk role) atau null.
+ */
+async function findAdminByEmail(email) {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from("admin_users")
+    .select("id, email, role")
+    .eq("email", String(email).trim().toLowerCase())
+    .maybeSingle();
+  if (error) {
+    console.error("❌ findAdminByEmail error:", error.message);
+    return null;
   }
-  const a = Buffer.from(provided, "utf8");
-  const b = Buffer.from(expected, "utf8");
-  // timingSafeEqual throw jika panjang beda → samakan dulu dengan hash SHA-256.
-  const ha = crypto.createHash("sha256").update(a).digest();
-  const hb = crypto.createHash("sha256").update(b).digest();
-  if (!crypto.timingSafeEqual(ha, hb)) {
-    return res.status(401).json({ error: "Unauthorized" });
+  return data || null;
+}
+
+/**
+ * Middleware: hanya admin terautentikasi (sesi Supabase + whitelist) yang lolos.
+ * Set `req.admin = { id, email, role }` untuk dipakai handler.
+ */
+async function requireAdmin(req, res, next) {
+  try {
+    const auth = String(req.headers["authorization"] || "");
+    const token = auth.replace(/^Bearer\s+/i, "").trim();
+    if (!token) {
+      return res.status(401).json({ success: false, message: "Sesi admin tidak ditemukan. Silakan login ulang." });
+    }
+
+    const user = await verifySupabaseUser(token);
+    if (!user) {
+      return res.status(401).json({ success: false, message: "Sesi admin tidak valid atau sudah kedaluwarsa." });
+    }
+
+    const admin = await findAdminByEmail(user.email);
+    if (!admin) {
+      console.warn(`⚠️ Akses admin ditolak (tidak ada di admin_users): ${user.email}`);
+      return res.status(403).json({ success: false, message: "Akun ini tidak terdaftar sebagai admin." });
+    }
+
+    const role = ADMIN_ROLES.has(String(admin.role)) ? String(admin.role) : "super_admin";
+    req.admin = { id: admin.id, email: admin.email, role };
+    return next();
+  } catch (e) {
+    console.error("[requireAdmin] error:", e);
+    return res.status(401).json({ success: false, message: "Gagal memverifikasi sesi admin." });
+  }
+}
+
+/** Khusus operasi yang butuh super_admin (mis. membuat admin baru). */
+function requireSuperAdminRole(req, res, next) {
+  if (req.admin?.role !== "super_admin") {
+    return res.status(403).json({ success: false, message: "Aksi ini khusus super admin." });
   }
   return next();
 }
@@ -789,7 +885,6 @@ app.use(
 );
 
 // Webhook butuh RAW body untuk verifikasi signature → daftarkan SEBELUM express.json()
-app.use("/api/klikqris-webhook", express.raw({ type: "application/json" }));
 app.use("/api/doku-webhook", express.raw({ type: "*/*" }));
 
 // Body parser JSON untuk endpoint lain
@@ -798,14 +893,24 @@ app.use(express.json());
 // ── Rate Limiting Middleware ─────────────────────────────────────────────────
 // Proteksi abuse: enumeration promo, spam order, brute force.
 // Keyed by IP (req.ip). Standard RateLimit headers dikirim ke client.
-// SECURITY FIX #8 — pakai IP pengunjung asli. Cloudflare Tunnel menambahkan
-// CF-Connecting-IP; kalau header itu ada, kita pakai (anti sesama-pengunjung
-// share bucket). Fallback ke req.ip (sudah benar berkat trust proxy = 1).
+// SECURITY FIX #8 — pakai IP pengunjung asli (di belakang Cloudflare Tunnel).
+//
+// ⚠️ HARDENING: header `CF-Connecting-IP` HANYA boleh dipercaya bila request
+// benar-benar datang dari hop lokal (cloudflared di mesin yang sama). Kalau
+// backend suatu saat bisa dijangkau langsung (port VPS terbuka, port-forward,
+// SSRF), penyerang cukup mengirim header acak untuk mem-bypass SEMUA rate limit
+// (orderLimiter, promoLimiter, apiLimiter). Sekarang hop di luar loopback
+// dipaksa memakai `req.ip` — tidak bisa dipalsukan lewat header.
+const TRUSTED_PROXY_ADDRS = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1"]);
+
 function ipKeyGenerator(req) {
+  const hop = String(req.socket?.remoteAddress || "");
+  const fromTrustedProxy = TRUSTED_PROXY_ADDRS.has(hop);
   const cfIp = req.headers?.["cf-connecting-ip"];
-  return typeof cfIp === "string" && cfIp.trim()
-    ? cfIp.trim()
-    : req.ip || req.socket?.remoteAddress || "unknown";
+  if (fromTrustedProxy && typeof cfIp === "string" && cfIp.trim()) {
+    return cfIp.trim();
+  }
+  return req.ip || hop || "unknown";
 }
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 menit
@@ -841,135 +946,6 @@ app.get("/api/health", (_req, res) => {
   res.json({ ok: true, service: "ipanstore-backend", time: new Date().toISOString() });
 });
 
-// ── Create Order KlikQris ─────────────────────────────────────────────────────
-// Front-end memanggil ini; server meneruskan ke KlikQris dengan API key rahasia.
-app.post("/api/klikqris-create-order", orderLimiter, async (req, res) => {
-  try {
-    const { amount, order_id, customer_name, customer_email, customer_phone, item_name, promo_code } =
-      req.body || {};
-
-    if (!amount || !order_id) {
-      return res.status(400).json({ success: false, message: "amount dan order_id wajib diisi." });
-    }
-    if (!KLIKQRIS_API_KEY || !KLIKQRIS_ID_MERCHANT) {
-      return res.status(500).json({
-        success: false,
-        message: "Server belum dikonfigurasi (KLIKQRIS_API_KEY / KLIKQRIS_ID_MERCHANT kosong).",
-      });
-    }
-
-    // SECURITY FIX #4 — jangan percaya `amount` dari client (bisa di-tamper via DevTools/Burp).
-    // Harga authoritative diambil dari tabel `services` berdasarkan `item_name`.
-    let basePrice = Number(amount);
-    if (supabase && item_name) {
-      const clean = String(item_name).replace(/^IPAN STORE\s*-\s*/i, "").trim();
-      if (clean) {
-        let svcPrice = null;
-        let { data: svc } = await supabase
-          .from("services")
-          .select("price")
-          .ilike("name", clean)
-          .limit(1)
-          .maybeSingle();
-        if (svc?.price != null) {
-          svcPrice = Number(svc.price);
-        } else {
-          ({ data: svc } = await supabase
-            .from("services")
-            .select("price")
-            .ilike("name", `%${clean}%`)
-            .limit(1)
-            .maybeSingle());
-          if (svc?.price != null) svcPrice = Number(svc.price);
-        }
-        if (svcPrice == null) {
-          console.warn(`⚠️ Service tidak ditemukan untuk "${clean}" — pakai amount client sementara.`);
-        } else {
-          basePrice = svcPrice;
-        }
-      }
-    }
-    // Guard: jangan izinkan pembayaran di bawah 1.000 IDR (anti tamper 0/1 rupiah)
-    if (basePrice < 1000 || !Number.isFinite(basePrice)) {
-      return res.status(400).json({ success: false, message: "Nominal pembayaran tidak valid." });
-    }
-
-    let finalAmount = basePrice;
-    let appliedPromo = null;
-    let discountAmount = 0;
-    const promo_code_clean = String(promo_code || "").trim().toUpperCase();
-    if (promo_code_clean) {
-      const promo = await validateAndApplyPromo(promo_code_clean, basePrice);
-      if (!promo.ok) {
-        return res.status(400).json({ success: false, message: promo.message });
-      }
-      finalAmount = promo.amount;
-      appliedPromo = promo.promo_code;
-      discountAmount = Number(promo.discount_amount) || Math.max(basePrice - finalAmount, 0);
-    }
-
-    const invoiceNumber = String(order_id).replace(/[^a-zA-Z0-9]/g, "").slice(0, 64) || "IPANORDER";
-
-    const description = `${item_name || "Pembayaran IPAN STORE"}${appliedPromo ? ` (promo ${appliedPromo})` : ""}`.slice(0, 255);
-    const r = await createMyPgTransaction({
-      baseUrl: KLIKQRIS_BASE_URL,
-      apiKey: KLIKQRIS_API_KEY,
-      merchantId: KLIKQRIS_ID_MERCHANT,
-      orderId: invoiceNumber,
-      amount: Math.round(finalAmount),
-      description,
-    });
-    const data = await r.json().catch(() => ({}));
-    if (!r.ok || !data?.status) {
-      console.error("klikqris-create-order KlikQris error:", JSON.stringify(data));
-      return res.status(r.status || 502).json({
-        success: false,
-        message: data?.message || "Gagal membuat transaksi KlikQris.",
-        raw: data,
-      });
-    }
-
-    // total_amount = jumlah yang benar-benar harus dibayar (KlikQris menambah kode unik).
-    const totalAmount =
-      Number(data?.data?.total_amount || finalAmount) || finalAmount;
-
-    // Simpan order PENDING di database.
-    await saveOrder({
-      invoice_number: invoiceNumber,
-      customer_name: String(customer_name || "").trim(),
-      customer_email: String(customer_email || "").trim(),
-      customer_phone: String(customer_phone || "").trim() || null,
-      service_id: await resolveServiceId(item_name),
-      amount: totalAmount,
-      status: "PENDING",
-      doku_payment_channel: "QRIS",
-      promo_code: appliedPromo,
-      discount_amount: discountAmount,
-      klikqris_signature: data?.data?.signature || null,
-      qris_expired_at: data?.data?.expired_at || null,
-      webhook_payload: null,
-    });
-
-    return res.json({
-      success: true,
-      order_id: invoiceNumber,
-      qris_url: data?.data?.qris_url || null,
-      qris_image: data?.data?.qris_image || null,
-      total_amount: totalAmount,
-      amount: Number(data?.data?.amount) || finalAmount,
-      signature: data?.data?.signature || null,
-      expired_at: data?.data?.expired_at || null,
-      raw: data?.data || null,
-    });
-  } catch (e) {
-    console.error("klikqris-create-order error:", e);
-    return res.status(500).json({
-      success: false,
-      message: "Gagal menghubungi KlikQris.",
-    });
-  }
-});
-
 // ── Klasifikasi produk SettinX ───────────────────────────────────────────────
 // Mengembalikan 'module_1_1' (Ipan Module SettinX 1.1, link MediaFire),
 // 'app_v1' (IPAN APP SettinX V1, kredensial Firebase), atau null (bukan SettinX).
@@ -977,7 +953,8 @@ app.post("/api/klikqris-create-order", orderLimiter, async (req, res) => {
 async function classifySettinxProduct(order, svcSlugName = {}) {
   const haystack =
     `${order?.invoice_number || ""} ${order?.item_name || ""} ${order?.package_name || ""} ` +
-    `${order?.service_name || ""} ${svcSlugName.slug || ""} ${svcSlugName.name || ""}`;
+    `${order?.service_name || ""} ${order?.notes || ""} ` +
+    `${svcSlugName.slug || ""} ${svcSlugName.name || ""}`;
   const s = haystack.toLowerCase();
 
   // /module/i bisa nyangkut di invoice seperti "IPANIPANMODULE..." / slug "ipanmodule"
@@ -1008,307 +985,6 @@ async function resolveSettinxCredentials(customerEmail, customerName, invoiceNum
   }
   return null;
 }
-
-// ── DOUBLE CONFIRMATION (server-side) ────────────────────────────────────────
-// Verifikasi definitif melalui endpoint status MY PG v2 sebelum fulfillment.
-// Email/fulfillment hanya berjalan jika status API membalas SUCCESS/PAID.
-async function isKlikQrisPaid(orderId) {
-  try {
-    if (!KLIKQRIS_API_KEY || !KLIKQRIS_ID_MERCHANT) return false;
-    const r = await getMyPgTransactionStatus({
-      baseUrl: KLIKQRIS_BASE_URL,
-      apiKey: KLIKQRIS_API_KEY,
-      merchantId: KLIKQRIS_ID_MERCHANT,
-      orderId,
-    });
-    const data = await r.json().catch(() => ({}));
-    const apiStatus = String(data?.data?.status || data?.status || "").trim();
-    return apiStatus === "SUCCESS" || apiStatus === "PAID";
-  } catch (e) {
-    console.error("isKlikQrisPaid error:", e?.message || e);
-    return false;
-  }
-}
-
-// ── Helper: Proses fulfillment order jika baru saja LUNAS (PAID/SUCCESS) ───────
-// Dipanggil oleh webhook AND polling status untuk menangani payment confirmation.
-// Idempotent: skip jika order sudah PAID.
-async function processPaymentConfirmation(orderId, payload = null) {
-  const order = await getOrder(orderId);
-  
-  if (!order) {
-    console.warn(`⚠️  Order ${orderId} tidak ditemukan di DB — abaikan.`);
-    return { processed: false, reason: 'order_not_found' };
-  }
-
-  // Skip jika sudah lunas (anti double-send)
-  if (order.status === "PAID" || order.status === "SUCCESS") {
-    console.log(`⏭️  Order ${orderId} sudah ${order.status} — fulfillment diabaikan.`);
-    return { processed: false, reason: 'already_paid' };
-  }
-
-  // ⚠️ VERIFIKASI DEFINITIF: hanya berlaku bila status PAID/SUCCESS ATAU webhook
-  // ber-signature valid via konfirmasi ulang ke API KlikQris. Ini memastikan
-  // "website benar-benar memastikan pembayaran KlikQris sudah sukses terbayar".
-  const looksPaid = String(payload?.status || "").toUpperCase();
-  if (looksPaid !== "PAID" && looksPaid !== "SUCCESS") {
-    return { processed: false, reason: 'not_paid_yet' };
-  }
-
-  // JANGAN langsung percaya payload webhook. Konfirmasi ulang server-side ke API
-  // status KlikQris. Jika verifikasi gagal/jaringan error → skip kirim email
-  // (aman: lebih baik tidak kirim daripada kirim produk tanpa bayar).
-  const confirmedPaid = await isKlikQrisPaid(orderId);
-  if (!confirmedPaid) {
-    console.warn(`🚫 Pembayaran ${orderId} TIDAK TERKONFIRMASI di KlikQris (status payload=${looksPaid}) — email produk DITAHAN.`);
-    return { processed: false, reason: 'unconfirmed_payment' };
-  }
-
-  const status = payload?.status || 'PAID';
-
-  // Update order status + paid_at
-  await updateOrder(orderId, {
-    status: "PAID",
-    paid_at: new Date().toISOString(),
-    klikqris_signature: payload?.signature || order.klikqris_signature || null,
-  });
-
-  // Notifikasi pasca-lunas: hanya email konfirmasi (WhatsApp dinonaktifkan —
-  // notifikasi memang hanya via Gmail). Fire-and-forget, tidak memblokir webhook.
-  sendPaidEmail(order).catch((e) => console.error("Paid email error:", e?.message || e));
-
-  // Identifikasi tipe produk SettinX (module_1_1 vs app_v1 vs null)
-  let svcSlugName = { slug: "", name: "" };
-  if (order.service_id && supabase) {
-    const { data: svc } = await supabase
-      .from("services")
-      .select("slug, name")
-      .eq("id", order.service_id)
-      .single();
-    if (svc) svcSlugName = { slug: svc.slug || "", name: svc.name || "" };
-  }
-  const productType = await classifySettinxProduct(order, svcSlugName);
-
-  if (!productType) {
-    return { processed: true, reason: 'non_settinx_product', order };
-  }
-
-  // Kirim email otomatis ke pembeli. Butuh email valid.
-  if (!isValidEmail(order.customer_email)) {
-    console.warn(`⚠️  Produk SettinX SUCCESS tapi email kosong/tidak valid — skip kirim.`);
-    return { processed: true, reason: 'no_customer_email', order };
-  }
-
-  // ── Produk "Ipan Module SettinX 1.1": generate akun + license key Supabase ─
-  // Generate akun (ID/password) di Supabase Module SettinX + license key OTOMATIS,
-  // lalu sertakan kredensialnya dalam email. Jika Supabase Module belum
-  // dikonfigurasi / gagal, email tetap terkirim (tanpa kredensial) dan error dicatat.
-  if (productType === "module_1_1") {
-    console.log(`📦 IPAN Module SettinX 1.1 TERBAYAR — siapkan akun + license key untuk ${order.customer_email} (invoice ${orderId})...`);
-
-    let moduleCredentials = null;
-    let moduleLicenseErr = null;
-    try {
-      moduleCredentials = await assignModuleSettinxLicense({
-        customerEmail: order.customer_email,
-        customerName: order.customer_name,
-        invoiceNumber: orderId,
-      });
-    } catch (e) {
-      moduleLicenseErr = e.message;
-      console.error(`⚠️  Module SettinX license GAGAL untuk ${order.customer_email}:`, e.message);
-    }
-
-    const moduleResult = await sendModuleSettinxEmail({
-      to: order.customer_email,
-      customerName: order.customer_name,
-      invoiceNumber: orderId,
-      amount: payload?.total_amount || payload?.amount_paid || order.amount,
-      paidAt: new Date().toISOString(),
-      credentials: moduleCredentials,
-    });
-
-    if (moduleResult.ok) {
-      await updateOrder(orderId, {
-        email_sent: true,
-        email_sent_at: new Date().toISOString(),
-        settinx_type: "module_1_1",
-        settinx_license_uid: moduleCredentials?.uid || order.settinx_license_uid || null,
-        settinx_license_error: moduleLicenseErr || null,
-      });
-      console.log(`📧 Email Module SettinX TERKIRIM: ${order.customer_email} (invoice ${orderId})`);
-    } else {
-      console.error(`📧 Email Module SettinX GAGAL ke ${order.customer_email}: ${moduleResult.error}`);
-    }
-    return { processed: true, result: moduleResult, credentials: moduleCredentials, licenseErr: moduleLicenseErr, order };
-  }
-
-  // ── Produk "IPAN APP SettinX V1": generate kredensial Firebase ───────────
-  // Generate kredensial Firebase (username/password/license key) OTOMATIS.
-  // Aplikasi SettinX login memakai email+password+license(UID), jadi kita buat
-  // akun di sini lalu sertakan kredensialnya dalam email. Jika Firebase belum
-  // dikonfigurasi / gagal, email tetap terkirim (tanpa kredensial) dan log error.
-  let credentials = null;
-  let licenseUid = null;
-  let licenseErr = null;
-  try {
-    const lic = await resolveSettinxCredentials(order.customer_email, order.customer_name, orderId);
-    if (!lic) throw new Error("Tidak ada kredensial SettinX yang tersedia.");
-    credentials = lic;
-    licenseUid = lic.licenseKey;
-  } catch (e) {
-    licenseErr = e.message;
-    console.error(`⚠️  SettinX license GAGAL untuk ${order.customer_email}:`, e.message);
-  }
-
-  console.log(`📧 Mengirim email SettinX V1 ke ${order.customer_email} (invoice ${orderId})...`);
-  const result = await sendSettinXEmail({
-    to: order.customer_email,
-    customerName: order.customer_name,
-    invoiceNumber: orderId,
-    amount: payload?.total_amount || payload?.amount_paid || order.amount,
-    paidAt: new Date().toISOString(),
-    credentials,
-  });
-
-  if (result.ok) {
-    await updateOrder(orderId, {
-      email_sent: true,
-      email_sent_at: new Date().toISOString(),
-      settinx_type: "app_v1",
-      settinx_license_uid: licenseUid || order.settinx_license_uid || null,
-      settinx_license_error: licenseErr || null,
-    });
-    console.log(`📧 Email SettinX V1 TERKIRIM: ${order.customer_email} (invoice ${orderId})`);
-  } else {
-    console.error(`📧 Email SettinX V1 GAGAL ke ${order.customer_email}: ${result.error}`);
-  }
-
-  return { processed: true, result, credentials, licenseErr, order };
-}
-
-// ── Webhook KlikQris ─────────────────────────────────────────────────────────
-// KlikQris memanggil URL ini saat status transaksi berubah (PAID / EXPIRED).
-// Validasi signature: bandingkan dengan signature yang didapat saat create.
-// Selalu balas HTTP 200 supaya KlikQris tidak retry terus-menerus.
-app.post("/api/klikqris-webhook", async (req, res) => {
-  try {
-    const rawBody = req.body instanceof Buffer ? req.body.toString("utf8") : JSON.stringify(req.body);
-    const payload = (() => {
-      let raw = {};
-      try {
-        raw = JSON.parse(rawBody);
-      } catch {
-        raw = {};
-      }
-      // MY PG v2 envelope uses raw.status for transport and data.status for payment.
-      return (typeof raw?.data === "object" && raw.data !== null ? raw.data : raw) || raw;
-    })();
-
-    const orderId = String(payload?.order_id || "").trim();
-    const status = String(payload?.status || "").trim();
-
-    console.log(`✅ Webhook KlikQris MY PG v2 diterima: order_id=${orderId} status=${status}`);
-
-    if (!orderId) {
-      console.warn("⚠️  KlikQris webhook tanpa order_id — pemeriksaan manual.");
-      return res.json({ success: true });
-    }
-
-    // Tolak webhook untuk order yang TIDAK PERNAH dibuat di DB. Order sah selalu
-    // dibuat lebih dulu oleh /api/klikqris-create-order (yang memastikan amount
-    // & item sesuai katalog + sudah kena rate-limit). Webhook yang bias membuat
-    // order baru sendiri = celah "ciptakan order palsu" → TOLAK, jangan simpan.
-    const order = await getOrder(orderId);
-    const storedSig = order?.klikqris_signature;
-    const incomingSig = String(payload?.signature || "");
-
-    if (!order) {
-      console.warn(`🚫 KlikQris webhook utk order tak dikenal: ${orderId} — fake/order palsu, ditolak.`);
-      return res.status(404).json({ success: false, message: "Order tidak ditemukan" });
-    }
-
-    // DOUBLE SECURITY (sesuai dokumentasi KlikQris):
-    // Signature webhook WAJIB cocok dengan signature tersimpan saat create order.
-    // Jika webhook menyertakan signature yang TIDAK cocok dengan yang tersimpan → pasti
-    // fake/replay, TOLAK langsung (constant-time via crypto.timingSafeEqual).
-    // Jika webhook TANPA signature → biarkan lolos ke verifikasi server-side
-    // (isKlikQrisPaid) yang merupakan otoritas definitif; processPaymentConfirmation
-    // tetap menahan email bila API status KlikQris tidak membalas SUCCESS/PAID.
-    if (storedSig && incomingSig) {
-      const sigOk =
-        incomingSig.length === storedSig.length &&
-        crypto.timingSafeEqual(Buffer.from(incomingSig), Buffer.from(storedSig));
-      if (!sigOk) {
-        console.warn(`⚠️  Signature webhook TIDAK COCOK untuk ${orderId} — fake webhook, ditolak.`);
-        return res.status(401).json({ success: false, message: "Invalid signature" });
-      }
-    }
-
-    // Sudah lunas → abaikan (anti double-kirim produk/email).
-    if (order.status === "PAID" || order.status === "SUCCESS") {
-      console.log(`⏭️  KlikQris: order ${orderId} sudah ${order.status} — notifikasi diabaikan.`);
-      return res.json({ success: true });
-    }
-
-    if (status === "EXPIRED") {
-      await updateOrder(orderId, { status: "EXPIRED" });
-      console.log(`⏳ KlikQris: order ${orderId} kedaluwarsa.`);
-      return res.json({ success: true });
-    }
-
-    // Tanpa status transaksi valid, webhook tidak boleh memicu fulfillment.
-    if (status !== "PAID" && status !== "SUCCESS") {
-      return res.json({ success: true });
-    }
-
-    await processPaymentConfirmation(orderId, payload);
-    return res.json({ success: true });
-  } catch (e) {
-    console.error("klikqris-webhook error:", e);
-    return res.status(500).json({ success: false });
-  }
-});
-
-// ── Check Status KlikQris ─────────────────────────────────────────────────────
-// Manual polling dari frontend (fallback kalau webhook telat). Panggil API
-// KlikQris dan kembalikan status terbaru. Selain itu, jika status adalah SUCCESS/PAID,
-// proses fulfillment (update DB + kirim email SettinX) seperti yang dilakukan webhook.
-// Ini memastikan: meskipun webhook gagal/telat, pembelian tetap di-fulfill otomatis.
-app.get("/api/klikqris-status/:orderId", async (req, res) => {
-  try {
-    const orderId = String(req.params.orderId || "").trim();
-    // SECURITY FIX M1 — validasi format orderId (IPAN-XXXX-timestamp).
-    if (!isValidOrderId(orderId)) {
-      return res.status(400).json({ success: false, message: "Format orderId tidak valid." });
-    }
-
-    const r = await getMyPgTransactionStatus({
-      baseUrl: KLIKQRIS_BASE_URL,
-      apiKey: KLIKQRIS_API_KEY,
-      merchantId: KLIKQRIS_ID_MERCHANT,
-      orderId,
-    });
-    const data = await r.json().catch(() => ({}));
-    
-    // Proses fulfillment jika status adalah SUCCESS/PAID
-    // Idempotent: skip jika order sudah lunas
-    const apiStatus = String(data?.data?.status || data?.status || "").trim();
-    if (apiStatus === "SUCCESS" || apiStatus === "PAID") {
-      await processPaymentConfirmation(orderId, data.data || data);
-    }
-
-    // SECURITY FIX M1 — response minimal: JANGAN bocorkan amount/email/nama.
-    return res.status(r.status).json({
-      orderId,
-      status: apiStatus || "UNKNOWN",
-      paymentMethod: data?.data?.payment_method || data?.payment_method || "QRIS",
-    });
-  } catch (e) {
-    console.error("klikqris-status error:", e);
-    return res.status(500).json({ success: false, message: "Internal server error." });
-  }
-});
 
 // ── Cek Status Order Publik ─────────────────────────────────────────────────
 // Endpoint publik untuk halaman "Lacak Order" (/cek-order). Response MINIMAL
@@ -1498,6 +1174,144 @@ async function validateAndApplyPromo(code, amount) {
   return { ok: true, promo_code: promo.code, discount_amount: discount, amount: total };
 }
 
+// ── Fulfillment order DOKU (dipakai webhook & endpoint cek-status) ───────────
+// Satu tempat untuk: tandai PAID → buat lisensi SettinX → kirim email kredensial.
+// Dipakai oleh:
+//   1. POST /api/doku-webhook  (jalur utama saat DOKU mengirim notifikasi)
+//   2. GET  /api/doku-status   (fallback saat webhook telat / tidak sampai)
+// Dengan satu fungsi, kedua jalur tidak mungkin berperilaku berbeda.
+async function fulfillDokuOrder(order, payload, invoiceNumber) {
+  if (!order) {
+    console.warn(`⚠️  fulfillDokuOrder: order ${invoiceNumber} tidak ditemukan — dilewati.`);
+    return { ok: false, reason: "order_not_found" };
+  }
+
+  const invoice = order.invoice_number || invoiceNumber;
+  const amount = payload?.order?.amount || order.amount;
+  const tokenId = payload?.transaction?.token_id || payload?.transaction?.id || "";
+  // Kanal pembayaran (QRIS / VIRTUAL_ACCOUNT_BNI / EMONEY_DANA / …) untuk laporan admin.
+  const channel =
+    payload?.channel?.id ||
+    payload?.acquirer?.id ||
+    payload?.service?.id ||
+    payload?.payment?.payment_method ||
+    "";
+
+  // Anti double-fulfillment: bila sudah PAID/COMPLETED, jangan kirim lisensi/email lagi.
+  const current = String(order.status || "").toUpperCase();
+  if (current === "PAID" || current === "COMPLETED") {
+    console.log(`⏭️  fulfillDokuOrder: order ${invoice} sudah ${current} — fulfillment diabaikan.`);
+    return { ok: false, reason: "already_paid" };
+  }
+
+  // 1) Tandai lunas.
+  await updateOrder(invoice, {
+    status: "PAID",
+    paid_at: new Date().toISOString(),
+    webhook_payload: payload,
+    doku_transaction_id: tokenId || order.doku_transaction_id,
+    ...(channel ? { doku_payment_channel: String(channel).slice(0, 64) } : {}),
+  });
+
+  // 2) Fulfillment SettinX (App V1 / Module 1.1).
+  let svcSlugName = { slug: "", name: "" };
+  if (order.service_id && supabase) {
+    const { data: svc } = await supabase
+      .from("services")
+      .select("slug, name")
+      .eq("id", order.service_id)
+      .single();
+    if (svc) svcSlugName = { slug: svc.slug || "", name: svc.name || "" };
+  }
+  const productType = await classifySettinxProduct(order, svcSlugName);
+
+  if (productType === "module_1_1" && order.customer_email) {
+    console.log(`📧 Mengirim email Module SettinX ke ${order.customer_email} (invoice ${invoice})...`);
+    let moduleCredentials = null;
+    let moduleLicenseErr = null;
+    try {
+      moduleCredentials = await assignModuleSettinxLicense({
+        customerEmail: order.customer_email,
+        customerName: order.customer_name,
+        invoiceNumber: invoice,
+      });
+    } catch (e) {
+      moduleLicenseErr = e.message;
+      console.error(`⚠️  Module SettinX license GAGAL untuk ${order.customer_email}:`, e.message);
+    }
+
+    const moduleResult = await sendModuleSettinxEmail({
+      to: order.customer_email,
+      customerName: order.customer_name,
+      invoiceNumber: invoice,
+      amount,
+      paidAt: order.paid_at,
+      credentials: moduleCredentials,
+    });
+
+    if (moduleResult.ok) {
+      await updateOrder(invoice, {
+        email_sent: true,
+        email_sent_at: new Date().toISOString(),
+        settinx_type: "module_1_1",
+        settinx_license_uid: moduleCredentials?.uid || order.settinx_license_uid || null,
+        settinx_license_error: moduleLicenseErr || null,
+      });
+      console.log(`📧 Email Module SettinX TERKIRIM: ${order.customer_email} (invoice ${invoice})`);
+      return { ok: true, productType };
+    }
+    console.error(`📧 Email Module SettinX GAGAL ke ${order.customer_email}: ${moduleResult.error}`);
+    return { ok: false, productType, error: moduleResult.error };
+  }
+
+  if (productType === "app_v1" && order.customer_email) {
+    console.log(`📧 Mengirim email SettinX ke ${order.customer_email} (invoice ${invoice})...`);
+    let credentials = null;
+    let licenseUid = null;
+    let licenseErr = null;
+    try {
+      const lic = await resolveSettinxCredentials(
+        order.customer_email,
+        order.customer_name,
+        invoice
+      );
+      if (!lic) throw new Error("Tidak ada kredensial SettinX yang tersedia.");
+      credentials = lic;
+      licenseUid = lic.licenseKey;
+    } catch (e) {
+      licenseErr = e.message;
+      console.error(`⚠️  SettinX license GAGAL untuk ${order.customer_email}:`, e.message);
+    }
+
+    const result = await sendSettinXEmail({
+      to: order.customer_email,
+      customerName: order.customer_name,
+      invoiceNumber: invoice,
+      amount,
+      paidAt: order.paid_at,
+      credentials,
+    });
+
+    if (result.ok) {
+      await updateOrder(invoice, {
+        email_sent: true,
+        email_sent_at: new Date().toISOString(),
+        settinx_license_uid: licenseUid || order.settinx_license_uid || null,
+        settinx_license_error: licenseErr || null,
+      });
+      console.log(`📧 Email SettinX TERKIRIM: ${order.customer_email} (invoice ${invoice})`);
+      return { ok: true, productType };
+    }
+    console.error(`📧 Email SettinX GAGAL ke ${order.customer_email}: ${result.error}`);
+    return { ok: false, productType, error: result.error };
+  }
+
+  if (productType) {
+    console.warn(`⚠️  SettinX SUCCESS tapi email tidak dikirim: email=${order.customer_email || "KOSONG"}`);
+  }
+  return { ok: true, productType: productType || null };
+}
+
 // ── Create Order ─────────────────────────────────────────────────────────────
 // Front-end memanggil endpoint ini. Server menandatangani request dengan
 // SECRET_KEY lalu meneruskan ke DOKU. Mengembalikan response.payment.url.
@@ -1558,6 +1372,36 @@ app.post("/api/doku-create-order", orderLimiter, async (req, res) => {
           // Bila DB sudah terisi services, pertimbangkan untuk reject: return 400.
         }
       }
+    }
+
+    // ── OVERRIDE E2E (khusus non-produksi) ──────────────────────────────────
+    // Memungkinkan uji end-to-end dengan nominal kecil TANPA mengubah harga di
+    // tabel `services`.
+    //
+    // ⚠️ FAIL-CLOSED (patch keamanan): sebelumnya cukup flag
+    // DOKU_ALLOW_TEST_AMOUNT=true, sehingga kalau flag itu tidak sengaja ikut
+    // ter-set di VPS produksi, pembeli bisa membayar Rp 1.000 untuk produk
+    // Rp 50.000 (uang hilang langsung). Sekarang override HANYA mungkin bila
+    // DOKU_BASE_URL memang sandbox. Di produksi flag itu diabaikan sepenuhnya.
+    const isSandboxEnv = /sandbox/i.test(DOKU_BASE_URL);
+    const allowTestAmount =
+      process.env.DOKU_ALLOW_TEST_AMOUNT === "true" && isSandboxEnv;
+    if (process.env.DOKU_ALLOW_TEST_AMOUNT === "true" && !isSandboxEnv) {
+      console.warn(
+        "⛔ DOKU_ALLOW_TEST_AMOUNT=true DIABAIKAN: DOKU_BASE_URL bukan sandbox (mode produksi)."
+      );
+    }
+    const requestedAmount = Number(amount);
+    if (
+      allowTestAmount &&
+      Number.isFinite(requestedAmount) &&
+      requestedAmount >= 1000 &&
+      requestedAmount < basePrice
+    ) {
+      console.warn(
+        `🧪 E2E override aktif: harga DB ${basePrice} → ${requestedAmount} (DOKU_ALLOW_TEST_AMOUNT=true)`
+      );
+      basePrice = requestedAmount;
     }
     // Guard: jangan izinkan pembayaran di bawah 1.000 IDR (anti tamper 0/1 rupiah)
     if (basePrice < 1000 || !Number.isFinite(basePrice)) {
@@ -1647,7 +1491,8 @@ app.post("/api/doku-create-order", orderLimiter, async (req, res) => {
         (data.message && data.message[0]) ||
         `DOKU error (HTTP ${r.status})`;
       console.error("doku-create-order DOKU error:", JSON.stringify(data));
-      return res.status(r.status).json({ success: false, message: errMsg, raw: data });
+      // JANGAN kirim `raw` ke browser — berisi token_id/request_id DOKU.
+      return res.status(r.status).json({ success: false, message: errMsg });
     }
 
     const paymentUrl = data?.response?.payment?.url;
@@ -1656,7 +1501,6 @@ app.post("/api/doku-create-order", orderLimiter, async (req, res) => {
       return res.status(502).json({
         success: false,
         message: "Respons DOKU tidak berisi URL pembayaran.",
-        raw: data,
       });
     }
 
@@ -1672,6 +1516,14 @@ app.post("/api/doku-create-order", orderLimiter, async (req, res) => {
       created_at: new Date().toISOString(),
       promo_code: appliedPromo,
       discount_amount: discountAmount,
+      // Channel sebenarnya baru diketahui setelah pembeli memilih metode di
+      // halaman DOKU → di-update oleh fulfillDokuOrder. Nilai awal "DOKU"
+      // agar laporan admin tahu order ini lewat jalur DOKU.
+      doku_payment_channel: "DOKU",
+      // Tabel `orders` TIDAK punya kolom item_name/package_name. Nama produk
+      // disimpan di `notes` agar fulfillDokuOrder tetap bisa mengklasifikasi
+      // produk SettinX walau service_id gagal di-resolve.
+      notes: String(item_name || "").slice(0, 255) || null,
     };
 
     await resolveServiceId(item_name).then(async (serviceId) => {
@@ -1684,7 +1536,14 @@ app.post("/api/doku-create-order", orderLimiter, async (req, res) => {
     });
 
     console.log(`✅ DOKU order dibuat: ${invoiceNumber} | ${data?.response?.payment?.token_id || ""}`);
-    return res.json({ success: true, checkout_url: paymentUrl, raw: data });
+    return res.json({
+      success: true,
+      order_id: invoiceNumber,
+      checkout_url: paymentUrl,
+      amount: finalAmount,
+      // JANGAN kirim respons mentah DOKU (token_id, request_id) ke browser.
+      // Detail lengkap sudah dicatat di log server di atas.
+    });
   } catch (e) {
     console.error("doku-create-order error:", e);
     return res.status(500).json({
@@ -1693,6 +1552,101 @@ app.post("/api/doku-create-order", orderLimiter, async (req, res) => {
     });
   }
 });
+// ── Cek Status DOKU (polling fallback saat webhook telat) ────────────────────
+// Frontend memanggil endpoint ini setelah pembeli kembali dari halaman DOKU,
+// karena webhook bisa tertunda beberapa detik/menit. Endpoint ini:
+//   1. Baca order dari Supabase (sumber kebenaran status kita).
+//   2. Jika masih PENDING, tanya DOKU Check Status API (SNAP non-SNAP path).
+//   3. Bila DOKU bilang SUCCESS tapi webhook belum masuk → sinkronkan status.
+// GET /api/doku-status/:orderId
+app.get("/api/doku-status/:orderId", apiLimiter, async (req, res) => {
+  try {
+    const orderId = String(req.params.orderId || "").trim();
+    if (!isValidOrderId(orderId)) {
+      return res.status(400).json({ success: false, message: "Format orderId tidak valid." });
+    }
+
+    // 1) Status lokal dulu (cepat & tidak membebani DOKU).
+    const order = await getOrder(orderId);
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order tidak ditemukan." });
+    }
+
+    const localStatus = String(order.status || "PENDING").toUpperCase();
+    const alreadyFinal = localStatus === "PAID" || localStatus === "COMPLETED";
+    if (alreadyFinal) {
+      return res.json({
+        success: true,
+        orderId,
+        status: localStatus,
+        paid: true,
+        source: "local",
+      });
+    }
+
+    // 2) Tanya DOKU bila kredensial tersedia.
+    if (!DOKU_CLIENT_ID || !DOKU_SECRET_KEY) {
+      return res.json({ success: true, orderId, status: localStatus, paid: false, source: "local" });
+    }
+
+    const invoiceNumber = String(order.invoice_number || orderId);
+    // Request-Target harus persis path yang di-hit (tanpa query string).
+    // Invoice kita sudah alfanumerik, jadi tidak perlu encode.
+    const requestTarget = `/orders/v1/status/${invoiceNumber}`;
+    const requestId = crypto.randomUUID();
+    const requestTimestamp = dokuTimestamp();
+    // GET tidak punya body → baris Digest DIHILANGKAN dari komponen signature.
+    const signature = generateDokuSignature({
+      clientId: DOKU_CLIENT_ID,
+      requestId,
+      requestTimestamp,
+      requestTarget,
+    });
+
+    const r = await fetch(`${DOKU_BASE_URL}${requestTarget}`, {
+      method: "GET",
+      headers: {
+        "Client-Id": DOKU_CLIENT_ID,
+        "Request-Id": requestId,
+        "Request-Timestamp": requestTimestamp,
+        "Signature": signature,
+      },
+    });
+
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      console.warn("doku-status DOKU error:", JSON.stringify(data).slice(0, 300));
+      return res.json({ success: true, orderId, status: localStatus, paid: false, source: "local" });
+    }
+
+    const txStatus = String(data?.transaction?.status || data?.order?.status || "").toUpperCase();
+    const isPaidRemotely = txStatus === "SUCCESS";
+
+    // 3) Webhook belum masuk tapi DOKU sudah SUCCESS → sinkronkan.
+    if (isPaidRemotely && !alreadyFinal) {
+      console.log(`🔄 doku-status: order ${invoiceNumber} SUCCESS di DOKU tapi lokal ${localStatus} → sinkron ke PAID`);
+      try {
+        await fulfillDokuOrder(order, data, invoiceNumber);
+      } catch (e) {
+        console.error("doku-status: gagal sinkron status:", e?.message || e);
+      }
+      return res.json({ success: true, orderId, status: "PAID", paid: true, source: "doku-sync" });
+    }
+
+    return res.json({
+      success: true,
+      orderId,
+      status: localStatus,
+      paid: false,
+      dokuStatus: txStatus || null,
+      source: "doku",
+    });
+  } catch (e) {
+    console.error("doku-status error:", e);
+    return res.status(500).json({ success: false, message: "Gagal mengecek status pembayaran." });
+  }
+});
+
 
 // ── Webhook DOKU ─────────────────────────────────────────────────────────────
 // DOKU memanggil URL ini saat pembayaran berubah status (SUCCESS / FAILED / dll).
@@ -1772,120 +1726,23 @@ app.post("/api/doku-webhook", async (req, res) => {
     // ── Proses order saat pembayaran SUCCESS ─────────────────────────────
     if (status === "SUCCESS") {
       const order = await getOrder(invoice);
-      
+
       if (!order) {
-        // Order tidak ada di DB — buat minimal dari payload webhook.
+        // Order tidak ada di DB — catat minimal dari payload webhook.
+        // Tidak dibuat otomatis menjadi PAID agar tidak ada produk terkirim
+        // untuk invoice yang tidak pernah kita buat sendiri.
         console.warn(`⚠️  Webhook SUCCESS untuk invoice tak dikenal: ${invoice}`);
-        const orderPayload = {
+        await saveOrder({
           invoice_number: invoice || `UNKNOWN-${Date.now()}`,
           amount: Number(amount) || 0,
-          status: "PAID",
-          paid_at: new Date().toISOString(),
+          status: "PENDING",
           doku_transaction_id: payload?.transaction?.token_id || "",
           webhook_payload: payload,
-        };
-        await saveOrder(orderPayload);
-      } else {
-        // Tandai lunas
-        await updateOrder(order.invoice_number || order.id, {
-          status: "PAID",
-          paid_at: new Date().toISOString(),
-          webhook_payload: payload,
-          doku_transaction_id: payload?.transaction?.token_id || order.doku_transaction_id,
+          notes: "Invoice tidak dikenal — perlu verifikasi manual admin.",
         });
-
-        // Kirim email otomatis untuk produk SettinX (App V1 / Module 1.1).
-        // Klasifikasi memakai classifySettinxProduct agar Module SettinX juga
-        // mendapat akun + license key Supabase (bukan kredensial Firebase).
-        let svcSlugName = { slug: "", name: "" };
-        if (order.service_id && supabase) {
-          const { data: svc } = await supabase
-            .from("services")
-            .select("slug, name")
-            .eq("id", order.service_id)
-            .single();
-          if (svc) svcSlugName = { slug: svc.slug || "", name: svc.name || "" };
-        }
-        const productType = await classifySettinxProduct(order, svcSlugName);
-
-        if (productType === "module_1_1" && order.customer_email) {
-          console.log(`📧 Mengirim email Module SettinX ke ${order.customer_email} (invoice ${order.invoice_number})...`);
-          let moduleCredentials = null;
-          let moduleLicenseErr = null;
-          try {
-            moduleCredentials = await assignModuleSettinxLicense({
-              customerEmail: order.customer_email,
-              customerName: order.customer_name,
-              invoiceNumber: order.invoice_number,
-            });
-          } catch (e) {
-            moduleLicenseErr = e.message;
-            console.error(`⚠️  Module SettinX license GAGAL untuk ${order.customer_email}:`, e.message);
-          }
-
-          const moduleResult = await sendModuleSettinxEmail({
-            to: order.customer_email,
-            customerName: order.customer_name,
-            invoiceNumber: order.invoice_number,
-            amount: order.amount || amount,
-            paidAt: order.paid_at,
-            credentials: moduleCredentials,
-          });
-
-          if (moduleResult.ok) {
-            await updateOrder(order.invoice_number || order.id, {
-              email_sent: true,
-              email_sent_at: new Date().toISOString(),
-              settinx_type: "module_1_1",
-              settinx_license_uid: moduleCredentials?.uid || order.settinx_license_uid || null,
-              settinx_license_error: moduleLicenseErr || null,
-            });
-            console.log(`📧 Email Module SettinX TERKIRIM: ${order.customer_email} (invoice ${order.invoice_number})`);
-          } else {
-            console.error(`📧 Email Module SettinX GAGAL ke ${order.customer_email}: ${moduleResult.error}`);
-          }
-        } else if (productType === "app_v1" && order.customer_email) {
-          console.log(`📧 Mengirim email SettinX ke ${order.customer_email} (invoice ${order.invoice_number})...`);
-          let credentials = null;
-          let licenseUid = null;
-          let licenseErr = null;
-          try {
-            const lic = await resolveSettinxCredentials(
-              order.customer_email,
-              order.customer_name,
-              order.invoice_number
-            );
-            if (!lic) throw new Error("Tidak ada kredensial SettinX yang tersedia.");
-            credentials = lic;
-            licenseUid = lic.licenseKey;
-          } catch (e) {
-            licenseErr = e.message;
-            console.error(`⚠️  SettinX license GAGAL untuk ${order.customer_email}:`, e.message);
-          }
-
-          const result = await sendSettinXEmail({
-            to: order.customer_email,
-            customerName: order.customer_name,
-            invoiceNumber: order.invoice_number,
-            amount: order.amount || amount,
-            paidAt: order.paid_at,
-            credentials,
-          });
-
-          if (result.ok) {
-            await updateOrder(order.invoice_number || order.id, {
-              email_sent: true,
-              email_sent_at: new Date().toISOString(),
-              settinx_license_uid: licenseUid || order.settinx_license_uid || null,
-              settinx_license_error: licenseErr || null,
-            });
-            console.log(`📧 Email SettinX TERKIRIM: ${order.customer_email} (invoice ${order.invoice_number})`);
-          } else {
-            console.error(`📧 Email SettinX GAGAL ke ${order.customer_email}: ${result.error}`);
-          }
-        } else if (productType) {
-          console.warn(`⚠️  SettinX SUCCESS tapi email tidak dikirim: email=${order.customer_email || "KOSONG"}`);
-        }
+      } else {
+        // Satu pintu fulfillment (sama persis dengan GET /api/doku-status).
+        await fulfillDokuOrder(order, payload, invoice);
       }
     }
 
@@ -1906,7 +1763,11 @@ app.post("/api/doku-webhook", async (req, res) => {
 // ── Cancel Order DOKU (v3/cancellations) ────────────────────────────────────
 // Untuk membatalkan checkout yang belum dibayar. Berguna jika user batal order
 // atau stok berubah. Lihat: https://developers.doku.com/.../cancel-order-api.md
-app.post("/api/doku-cancel-order", async (req, res) => {
+//
+// ⚠️ PATCH KEAMANAN: endpoint ini sebelumnya TANPA autentikasi sama sekali —
+// siapa pun yang tahu invoice_number bisa membatalkan pesanan orang lain.
+// Sekarang wajib sesi admin (Bearer JWT + whitelist admin_users).
+app.post("/api/doku-cancel-order", requireAdmin, async (req, res) => {
   try {
     const { invoice_number, original_request_id, note } = req.body || {};
     if (!invoice_number || !original_request_id) {
@@ -1954,14 +1815,14 @@ app.post("/api/doku-cancel-order", async (req, res) => {
     const data = await r.json().catch(() => ({}));
     if (!r.ok) {
       console.error("doku-cancel-order error:", JSON.stringify(data));
-      return res.status(r.status).json({ success: false, message: data.message?.[0] || `HTTP ${r.status}`, raw: data });
+      return res.status(r.status).json({ success: false, message: data.message?.[0] || `HTTP ${r.status}` });
     }
     console.log(`✅ Order dibatalkan: ${invoice_number}`);
     
     // Update status di Supabase
     await updateOrder(invoice_number, { status: "REFUNDED", refunded_at: new Date().toISOString() });
     
-    return res.json({ success: true, raw: data });
+    return res.json({ success: true });
   } catch (e) {
     console.error("doku-cancel-order error:", e);
     return res.status(500).json({ success: false, message: e instanceof Error ? e.message : "Gagal." });
@@ -1972,7 +1833,7 @@ app.post("/api/doku-cancel-order", async (req, res) => {
 // Untuk order SettinX yang emailnya gagal terkirim / pembeli minta dikirim ulang.
 // Generate atau reuse license (by customer email), lalu kirim ulang email berisi
 // kredensial. Idempotent: jika kredensial sudah ada, tidak membuat akun ganda.
-app.post("/api/settinx/resend", requireAdminSecret, async (req, res) => {
+app.post("/api/settinx/resend", requireAdmin, async (req, res) => {
   try {
     const { orderId } = req.body || {};
     const invoice = String(orderId || "").replace(/[^a-zA-Z0-9]/g, "").slice(0, 64);
@@ -2110,8 +1971,9 @@ app.post("/api/settinx/resend", requireAdminSecret, async (req, res) => {
 
 // ── Start ────────────────────────────────────────────────────────────────────
 // ── Buat akun admin baru (Auth + whitelist + email kredensial) ───────────────
-// Dipanggil dari dashboard admin (halaman Admins). Butuh header x-admin-secret.
-app.post("/api/admin/create", requireAdminSecret, async (req, res) => {
+// Dipanggil dari dashboard admin (halaman Admins). Butuh sesi admin (Bearer JWT)
+// dan role super_admin — TIDAK lagi memakai shared secret.
+app.post("/api/admin/create", requireAdmin, requireSuperAdminRole, async (req, res) => {
   try {
     const { email, password, role } = req.body || {};
     const cleanEmail = String(email || "").trim().toLowerCase();
