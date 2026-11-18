@@ -522,43 +522,102 @@ Commit produksi: **`65d00e0`**. Versi live diverifikasi langsung dari `ipanstore
 
 ### 13.2 ⚠️ WAJIB DIJALANKAN MANUAL — RLS `admin_users` (BELUM selesai)
 
-**Masalah:** `sql_patches/supabase_patch_security_critical.sql:46` membuat policy
-`admin_can_manage_own ON admin_users FOR ALL USING (email = auth.email())`.
-File `supabase_patch_security_harden_v2.sql` **tidak** menghapus policy dengan nama itu
-(ia hanya DROP nama lain). Akibatnya admin ber-role `viewer` bisa
-`UPDATE admin_users SET role='super_admin'` untuk dirinya sendiri → **eskalasi hak**.
+**KOREKSI (2026-11-18, setelah cek DB langsung via Supabase MCP):**
+dugaan awal di dokumen ini (`admin_can_manage_own`) **SALAH**. Kondisi nyata di
+project `zpjkroatjmegwnxzvwlw` — dicatat langsung dari `pg_policies` + `pg_proc`:
 
+```
+[ALL   ] service_role_manage  USING (auth.role() = 'service_role')
+[DELETE] admin_delete         USING is_admin(auth.email())
+[INSERT] admin_insert         CHECK is_admin(auth.email())
+[SELECT] admin_select         USING is_admin(auth.email())
+[SELECT] admin_select_self    USING (email = auth.email())
+[UPDATE] admin_update         USING is_admin(auth.email())
+```
+
+Poin kritisnya ada di **fungsi `is_admin()`**, bukan nama policy-nya:
+
+```sql
+public.is_admin(check_email text) RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public'
+AS $$ SELECT EXISTS (SELECT 1 FROM admin_users WHERE email = check_email); $$
+```
+
+`SECURITY DEFINER` ⇒ **bypass RLS**, dan isinya **hanya cek "email terdaftar",
+TANPA cek role**. Akibatnya akun `viewer` pun lolos `is_admin()`, sehingga bisa
+`UPDATE admin_users SET role='super_admin'` untuk **dirinya sendiri** → eskalasi hak.
+
+> **Pelajaran penting:** policy RLS di project ini dibuat lewat **SQL Editor** dan
+> **tidak semuanya tercatat di file migrasi repo**. Review kode saja tidak cukup —
+> wajib cek `pg_policies` + `pg_proc` di DB yang sebenarnya.
+
+**Status akses otomatis:** MCP & Management API **tidak bisa** menjalankan DDL di
+project ini — token terikat role `supabase_read_only_user`
+(`cannot execute CREATE FUNCTION in a read-only transaction`).
+Jadi migrasi ini **harus** lewat `psql` (butuh DB password) atau SQL Editor.
+
+**Cara pakai:** Supabase Dashboard → SQL Editor → New query → paste → Run,
+atau dari VPS: `psql "host=aws-0-ap-northeast-1.pooler.supabase.com port=6543 dbname=postgres user=postgres.zpjkroatjmegwnxzvwlw sslmode=require" -f /root/fix_rls.sql`
 **Cara pakai:** Supabase Dashboard → SQL Editor → New query → paste → Run.
 
 ```sql
 -- ============ PERBAIKAN RLS admin_users (idempotent) ============
--- Tujuan: admin hanya boleh SELECT barisnya sendiri.
--- INSERT/UPDATE/DELETE HANYA lewat service_role (backend), bukan dari browser.
-ALTER TABLE IF EXISTS public.admin_users ENABLE ROW LEVEL SECURITY;
+BEGIN;
 
-DROP POLICY IF EXISTS "admin_can_manage_own"        ON public.admin_users;
-DROP POLICY IF EXISTS "admin_can_view_own"          ON public.admin_users;
-DROP POLICY IF EXISTS "admin_select_self"           ON public.admin_users;
-DROP POLICY IF EXISTS "admin_select_self_row"       ON public.admin_users;
-DROP POLICY IF EXISTS "service_role_manage"         ON public.admin_users;
-DROP POLICY IF EXISTS "service_role_manage_admin_users" ON public.admin_users;
+-- 1) is_admin: admin AKTIF (viewer & super_admin) — diberi cek role eksplisit
+CREATE OR REPLACE FUNCTION public.is_admin(check_email text)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path TO 'public' AS $f$
+  SELECT EXISTS (
+    SELECT 1 FROM admin_users
+    WHERE lower(email) = lower(check_email)
+      AND coalesce(role, 'super_admin') IN ('super_admin','viewer')
+  );
+$f$;
 
--- 1) Admin boleh membaca barisnya sendiri saja (dipakai cek role di UI).
-CREATE POLICY "admin_select_self_row" ON public.admin_users
-  FOR SELECT
-  USING (lower(email) = lower(auth.email()));
+-- 2) is_super_admin: HANYA super_admin
+CREATE OR REPLACE FUNCTION public.is_super_admin(check_email text)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path TO 'public' AS $f$
+  SELECT EXISTS (
+    SELECT 1 FROM admin_users
+    WHERE lower(email) = lower(check_email)
+      AND coalesce(role, 'super_admin') = 'super_admin'
+  );
+$f$;
 
--- 2) Hanya service_role (backend) yang boleh tulis.
-CREATE POLICY "service_role_manage_admin_users" ON public.admin_users
-  FOR ALL
-  USING (auth.role() = 'service_role')
-  WITH CHECK (auth.role() = 'service_role');
+-- 3) Tutup jalur eskalasi: tulis admin_users hanya untuk super_admin
+--    (admin_select / admin_select_self / service_role_manage DIBIARKAN apa adanya)
+DROP POLICY IF EXISTS "admin_insert" ON public.admin_users;
+DROP POLICY IF EXISTS "admin_update" ON public.admin_users;
+DROP POLICY IF EXISTS "admin_delete" ON public.admin_users;
+DROP POLICY IF EXISTS "super_admin_insert" ON public.admin_users;
+DROP POLICY IF EXISTS "super_admin_update" ON public.admin_users;
+DROP POLICY IF EXISTS "super_admin_delete" ON public.admin_users;
 
--- Verifikasi: harus 2 baris policy (1 SELECT + 1 ALL service_role)
-SELECT policyname, cmd, roles
-FROM pg_policies
-WHERE schemaname = 'public' AND tablename = 'admin_users'
-ORDER BY policyname;
+CREATE POLICY "super_admin_insert" ON public.admin_users
+  FOR INSERT TO public WITH CHECK (public.is_super_admin(auth.email()));
+CREATE POLICY "super_admin_update" ON public.admin_users
+  FOR UPDATE TO public USING (public.is_super_admin(auth.email()))
+  WITH CHECK (public.is_super_admin(auth.email()));
+CREATE POLICY "super_admin_delete" ON public.admin_users
+  FOR DELETE TO public USING (public.is_super_admin(auth.email()));
+
+COMMIT;
+
+-- Verifikasi: harus ada super_admin_insert / super_admin_update / super_admin_delete
+SELECT policyname, cmd FROM pg_policies
+WHERE schemaname='public' AND tablename='admin_users' ORDER BY cmd, policyname;
+```
+
+**Uji eksploitasi setelah migrasi** (harus `UPDATE 0`):
+
+```sql
+BEGIN;
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claims = '{"email":"<email-admin-viewer>","role":"authenticated"}';
+UPDATE admin_users SET role='super_admin' WHERE lower(email)=lower('<email-admin-viewer>');
+ROLLBACK;
 ```
 
 **Setelah dijalankan**, tombol ubah role / hapus admin di halaman Admins
