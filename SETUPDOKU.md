@@ -83,6 +83,96 @@ pm2 describe ipanstore-backend | grep -i TEST_AMOUNT
 (`page.route('**/api/doku-create-order')` → paksa `amount: 1000`), **tanpa** mengubah DB
 dan **tanpa** menyalakan `DOKU_ALLOW_TEST_AMOUNT` di server.
 
+### 1.5 Metode pembayaran — semua channel bisa, tanpa ubah kode
+
+**Kode TIDAK membatasi channel.** Payload ke DOKU hanya:
+
+```js
+payment: { payment_due_date: 60 }   // tidak ada payment_method_types
+```
+
+Artinya DOKU menampilkan **semua channel yang aktif di akun merchant**. Menambah/mengurangi
+channel dilakukan di **[DOKU Dashboard](https://dashboard.doku.com) → Checkout Settings →
+Payment Method** (centang/sembunyikan, drag untuk urutan), **bukan** di kode.
+
+Kalau nanti perlu memaksa channel tertentu lewat API, DOKU menyediakan `payment_method_types`,
+tapi **tidak diperlukan sekarang**.
+
+**Yang otomatis channel-agnostic:**
+
+| Bagian | Status |
+|---|---|
+| Buat checkout | ✅ |
+| Halaman pilih metode | ✅ semua yang aktif tampil |
+| Webhook `SUCCESS` → PAID | ✅ |
+| Simpan `doku_payment_channel` | ✅ baca `channel.id` / `acquirer.id` / `service.id` / `payment_method` |
+| Nominal anti-tamper | ✅ |
+| Fulfillment lisensi + email | ✅ |
+
+**Yang BEDA per channel — hanya biaya (MDR):**
+
+| Channel | MDR kira-kira | Catatan untuk produk Rp 50.000 |
+|---|---|---|
+| QRIS | ~0,7% | ± Rp 350 — paling murah |
+| Virtual Account | **flat Rp 3.000–4.000** | 6–8% dari harga — pertimbangkan matikan |
+| Kartu kredit | ~2,9% + | termahal |
+
+> **Keputusan bisnis, bukan teknis.** Matikan channel ber-MDR tinggi di Dashboard DOKU kalau
+> margin produk tipis. Tidak perlu mengubah kode sama sekali.
+
+### 1.6 Status transaksi yang ditangani (SUCCESS & non-SUCCESS)
+
+Sebelumnya webhook **hanya** memproses `SUCCESS` → order Virtual Account yang kedaluwarsa
+**nyangkut `PENDING` selamanya** di DB. Sudah diperbaiki (commit `640e18e`):
+
+| Status DOKU | Status lokal `orders.status` | Memicu fulfillment? |
+|---|---|---|
+| `SUCCESS` | `PAID` | ✅ ya (lisensi + email) |
+| `REFUNDED` | `REFUNDED` | ❌ |
+| `FAILED` / `EXPIRED` / `CANCELLED` / `CANCELED` / `DENIED` / `VOIDED` | `FAILED` | ❌ |
+
+**Dua jalur sinkronisasi** (keduanya memakai fungsi pemetaan yang sama):
+1. `POST /api/doku-webhook` — jalur utama saat DOKU mengirim notifikasi.
+2. `GET /api/doku-status/:orderId` — saat frontend polling, untuk channel yang tidak
+   mengirim webhook.
+
+**Proteksi penting:** order berstatus `PAID` atau `REFUNDED` **TIDAK PERNAH diturunkan**
+statusnya oleh webhook gagal yang datang terlambat (out-of-order). Ini mencegah kehilangan
+data pembayaran yang sah.
+
+Log yang akan muncul di backend:
+```
+🔄 doku-webhook: invoice X PENDING → FAILED (DOKU: EXPIRED)
+ℹ️  Webhook EXPIRED diabaikan: invoice Y sudah PAID — tidak diturunkan.
+```
+
+### 1.7 Public Key / SNAP — TIDAK DIBUTUHKAN
+
+Sering membingungkan karena Dashboard DOKU punya menu **Public Key**, **Client ID**, **SNAP**.
+
+| Kredensial | Dipakai integrasi ini? | Keterangan |
+|---|---|---|
+| `Client ID` (`BRN-...`) | ✅ ya | header `Client-Id` |
+| `Secret Key` (`SK-...`) | ✅ ya | `Signature` HMAC-SHA256 |
+| **Public Key** | ❌ **tidak** | hanya untuk SNAP |
+| SNAP / RSA / JWT | ❌ **tidak** | untuk VA/BI-FAST, bukan Checkout redirect |
+
+**DOKU Checkout** adalah produk *redirect* — cukup `Client ID` + `Secret Key`.
+Public Key baru diperlukan kalau nanti memakai **DOKU SNAP** (Virtual Account, transfer bank
+langsung via BI-FAST).
+
+### 1.8 Cek transaksi di Dashboard DOKU
+
+**Lokasi uang masuk ≠ lokasi transaksi:**
+
+| Yang dicari | Menu |
+|---|---|
+| Transaksi (nominal dibayar pembeli) | **Transactions** / Transaction Report — filter tanggal, cari invoice |
+| Uang bersih masuk rekening | **Settlement** / Disbursement — lihat `gross_amount`, `mdr_fee`, `net_amount` |
+
+Uang **tidak** masuk sebesar nominal transaksi — MDR dipotong, dan pencairan mengikuti jadwal
+settlement (QRIS umumnya **H+1/H+2 hari kerja**).
+
 ---
 
 ## 2. Arsitektur DOKU di Kode
@@ -95,6 +185,33 @@ dan **tanpa** menyalakan `DOKU_ALLOW_TEST_AMOUNT` di server.
 | `GET` | `/api/doku-status/:orderId` | Cek status order (polling frontend). |
 | `POST` | `/api/doku-webhook` | Terima notifikasi pembayaran dari DOKU. |
 | `POST` | `/api/doku-cancel-order` | Batalkan order. |
+
+**Kontrak payload `POST /api/doku-create-order`** (terverifikasi saat QC produksi):
+
+```json
+{
+  "amount": 50000,
+  "order_id": "INVOICE123",
+  "item_name": "STANDART",
+  "customer_name": "Nama Pembeli",
+  "customer_email": "email@contoh.com",
+  "customer_phone": "081234567890"
+}
+```
+
+Field **`amount` dan `order_id` WAJIB** (tanpa itu → `400 "amount dan order_id wajib diisi."`).
+
+Respons sukses:
+```json
+{ "success": true, "order_id": "INVOICE123", "amount": 50000,
+  "checkout_url": "https://checkout.doku.com/checkout-link-v2/..." }
+```
+
+> ⚠️ **`item_name` harus cocok nama layanan di tabel `services`** — harga authoritative
+> diambil dari DB, bukan dari `amount` client (`SECURITY FIX #4`).
+> **Hindari karakter `&`, `#`, `?`** di `item_name`: DOKU menolak dengan
+> `"Invalid character, allowed only a-z A-Z 0-9 . - / + , = _ : ' @ % ( )"`.
+> Contoh nyata gagal: `"Custom FF & Emulator"`.
 
 ### 2.2 Signature DOKU (HMAC-SHA256)
 

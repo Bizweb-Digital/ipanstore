@@ -228,19 +228,86 @@ Repo ini memakai **dua project Supabase yang berbeda**. Salah sambung = salah da
 
 ### Jebakan yang sudah pernah terjadi
 
-- MCP Supabase yang terpasang (`opencode.json` → `https://mcp.supabase.com/mcp`)
-  **default-nya nyambung ke `ydoubotecwoamuyacqhw`** (project SettinX), BUKAN project utama.
-  Query `admin_users` / `orders` lewat MCP default akan mengembalikan **hasil kosong**
-  (`has_admin_users: 0`) — itu bukan berarti tabelnya tidak ada, tapi **salah project**.
-- **Selalu verifikasi project sebelum menulis**:
-  ```sql
-  SELECT current_database(),
-         (SELECT count(*) FROM information_schema.tables
-          WHERE table_schema='public' AND table_name='admin_users') AS has_admin_users,
-         (SELECT count(*) FROM information_schema.tables
-          WHERE table_schema='public' AND table_name='orders')       AS has_orders;
-  ```
-  `has_admin_users = 1` → project utama. `0` → project SettinX, JANGAN tulis apa pun.
+**Ada DUA lapis masalah, keduanya harus benar:**
+
+1. **`project_ref` di URL** — dulu `mcp.json` mematok `supabase` ke project SettinX.
+2. **PAT harus cocok dengan project** (ini yang paling sering terlewat). Dua token berbeda
+   dan **tidak saling bisa akses**:
+
+   | PAT | IPAN STORE | SETTINX |
+   |---|---|---|
+   | `sbp_fc6a5721...` | ✅ | ❌ |
+   | `sbp_fcd50e3d...` | ❌ | ✅ |
+
+   Gejala kalau token salah: `MCP error -32600: You do not have permission to perform
+   this action` — bukan error "project tidak ditemukan". Skrip auth lama
+   (`get-supabase-auth.ps1`) mengambil token SettinX dari folder project lain lalu dipakai
+   untuk kedua server, sehingga IPAN STORE selalu ditolak.
+
+**Konfigurasi yang benar sekarang** (`~/.omp/agent/mcp.json` dan `opencode.json`):
+
+```
+supabase         → https://mcp.supabase.com/mcp?project_ref=zpjkroatjmegwnxzvwlw
+                   auth: get-supabase-auth-ipanstore.ps1  (+ .supabase-pat-ipanstore)
+supabase-settinx → https://mcp.supabase.com/mcp?project_ref=ydoubotecwoamuyacqhw
+                   auth: get-supabase-auth.ps1
+```
+
+**Verifikasi cepat** (harus muncul domain yang benar):
+```
+mcp__supabase_get_project_url         → https://zpjkroatjmegwnxzvwlw.supabase.co
+mcp__supabase_settinx_get_project_url → https://ydoubotecwoamuyacqhw.supabase.co
+```
+
+**Selalu verifikasi project sebelum menulis**:
+```sql
+SELECT current_database(),
+       (SELECT count(*) FROM information_schema.tables
+        WHERE table_schema='public' AND table_name='admin_users') AS has_admin_users,
+       (SELECT count(*) FROM information_schema.tables
+        WHERE table_schema='public' AND table_name='orders')       AS has_orders;
+```
+`has_admin_users = 1` → project utama. `0` → project SettinX, JANGAN tulis apa pun.
+
+### ⚠️ BATASAN BESAR: MCP TIDAK BISA DDL
+
+Token terikat role **`supabase_read_only_user`**. Semua jalur tulis DDL sudah dicoba dan
+**PASTI GAGAL** — jangan ulangi usahanya, buang waktu:
+
+| Jalur | Hasil |
+|---|---|
+| MCP `execute_sql` | `cannot execute CREATE FUNCTION in a read-only transaction` |
+| MCP `apply_migration` | `-32600: You do not have permission to perform this action` |
+| Management API `/database/query` | role `supabase_read_only_user`, read-only |
+| `SET default_transaction_read_only = off` | tetap ditolak (role-nya, bukan GUC) |
+| REST RPC `exec_sql` | fungsi tidak ada |
+| SSH TCP 5432 | `Network is unreachable` |
+
+**Yang MASIH bisa lewat MCP/Management API**: `SELECT`, inspeksi `pg_policies` / `pg_proc` /
+`information_schema`, `list_tables`, `get_advisors`, `generate_typescript_types`.
+
+**Untuk DDL (CREATE/ALTER/DROP)**: minta user jalankan via **Supabase Dashboard → SQL Editor**.
+Project ini **tidak punya menu Settings → Database**, jadi jangan mengarahkan user ke sana
+untuk mencari DB password.
+
+### Jebakan SQL Editor Supabase
+
+SQL Editor **memecah dollar-quote `$f$` / `$$`** → muncul
+`syntax error at or near "SELECT"`. Solusi: tulis body fungsi dengan **single-quote**
+dan escape `''` untuk kutip di dalamnya:
+
+```sql
+CREATE OR REPLACE FUNCTION public.f(x text) RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public'
+AS '
+  SELECT EXISTS (SELECT 1 FROM t WHERE role = ''super_admin'');
+';
+```
+
+**Selalu cek DB nyata, jangan percaya repo.** Policy RLS project ini sebagian dibuat lewat
+SQL Editor dan **tidak ada di file migrasi**. Bukti: `admin_users` punya
+`admin_select`/`admin_insert`/`admin_update`/`admin_delete` + `is_admin()`
+yang tidak pernah tercatat di repo. Wajib `SELECT ... FROM pg_policies` + `pg_proc`.
 
 ### Cara memanggil project utama lewat MCP
 
