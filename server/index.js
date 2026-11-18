@@ -230,6 +230,34 @@ const ORDER_DEFAULTS = {
   email_sent_at: null,
 };
 
+// Status DOKU yang mengakhiri transaksi TANPA pembayaran.
+// Dikirim lewat webhook untuk channel yang punya masa berlaku (terutama
+// Virtual Account dan kartu kredit yang ditolak/gagal).
+const NON_SUCCESS_TERMINAL_STATUSES = new Set([
+  "FAILED",
+  "EXPIRED",
+  "CANCELLED",
+  "CANCELED",
+  "DENIED",
+  "VOIDED",
+  "REFUNDED",
+]);
+
+/**
+ * Petakan status transaksi DOKU ke status lokal tabel `orders`.
+ * - SUCCESS               -> PAID
+ * - REFUNDED              -> REFUNDED
+ * - FAILED/EXPIRED/...    -> FAILED  (satu status gagal, cukup untuk UI & admin)
+ * @param {string} dokuStatus
+ * @returns {string}
+ */
+function mapDokuStatusToLocal(dokuStatus) {
+  const s = String(dokuStatus || "").toUpperCase();
+  if (s === "SUCCESS") return "PAID";
+  if (s === "REFUNDED") return "REFUNDED";
+  return "FAILED";
+}
+
 /**
  * Simpan order baru ke Supabase (atau fallback).
  * @param {object} order
@@ -1632,6 +1660,32 @@ app.get("/api/doku-status/:orderId", apiLimiter, async (req, res) => {
       }
       return res.json({ success: true, orderId, status: "PAID", paid: true, source: "doku-sync" });
     }
+    // 4) DOKU bilang gagal/kedaluwarsa tapi lokal masih PENDING → sinkronkan.
+    //    Channel tanpa webhook (mis. VA yang tidak mengirim notifikasi) tetap
+    //    tertangkap saat frontend polling.
+    if (NON_SUCCESS_TERMINAL_STATUSES.has(txStatus) && localStatus === "PENDING") {
+      const nextStatus = mapDokuStatusToLocal(txStatus);
+      if (nextStatus !== "PAID") {
+        try {
+          await saveOrder({
+            ...order,
+            status: nextStatus,
+            notes: `[doku:${txStatus}] disinkronkan dari polling ${new Date().toISOString()}`,
+          });
+          console.log(`🔄 doku-status: order ${invoiceNumber} ${localStatus} → ${nextStatus} (DOKU: ${txStatus})`);
+        } catch (e) {
+          console.error("doku-status: gagal sinkron status gagal:", e?.message || e);
+        }
+        return res.json({
+          success: true,
+          orderId,
+          status: nextStatus,
+          paid: false,
+          dokuStatus: txStatus,
+          source: "doku-sync",
+        });
+      }
+    }
 
     return res.json({
       success: true,
@@ -1722,6 +1776,37 @@ app.post("/api/doku-webhook", async (req, res) => {
     console.log(
       `✅ Webhook DOKU diterima: invoice=${invoice} status=${status} amount=${amount}`
     );
+
+    // ── Status final NON-SUCCESS (VA kedaluwarsa, kartu gagal, dsb.) ─────
+    // Tanpa ini, order VA yang expired tetap PENDING selamanya di DB.
+    // Dulu kode hanya memproses SUCCESS sehingga status lokal basi.
+    const terminalFailure = NON_SUCCESS_TERMINAL_STATUSES.has(String(status || "").toUpperCase());
+    if (terminalFailure) {
+      const order = await getOrder(invoice);
+      if (!order) {
+        console.warn(`⚠️  Webhook ${status} untuk invoice tak dikenal: ${invoice}`);
+      } else {
+        const currentStatus = String(order.status || "PENDING").toUpperCase();
+        // Jangan pernah menurunkan status order yang sudah lunas, dan jangan
+        // timpa status final lain (mis. REFUNDED).
+        if (currentStatus === "PAID" || currentStatus === "REFUNDED") {
+          console.log(
+            `ℹ️  Webhook ${status} diabaikan: invoice ${invoice} sudah ${currentStatus} — tidak diturunkan.`
+          );
+        } else if (currentStatus === mapDokuStatusToLocal(status)) {
+          // Sudah di status yang sama — idempotent, tidak perlu tulis ulang.
+        } else {
+          const nextStatus = mapDokuStatusToLocal(status);
+          await saveOrder({
+            ...order,
+            status: nextStatus,
+            webhook_payload: payload,
+            notes: `[doku:${status}] diperbarui otomatis ${new Date().toISOString()}`,
+          });
+          console.log(`🔄 doku-webhook: invoice ${invoice} ${currentStatus} → ${nextStatus} (DOKU: ${status})`);
+        }
+      }
+    }
 
     // ── Proses order saat pembayaran SUCCESS ─────────────────────────────
     if (status === "SUCCESS") {
