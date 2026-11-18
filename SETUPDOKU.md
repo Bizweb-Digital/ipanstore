@@ -620,6 +620,27 @@ UPDATE admin_users SET role='super_admin' WHERE lower(email)=lower('<email-admin
 ROLLBACK;
 ```
 
+**STATUS: ✅ SELESAI & TERVERIFIKASI (2026-11-18).**
+Migrasi sudah dijalankan lewat Supabase SQL Editor (commit `0b2e05e`).
+Hasil cek langsung dari database project `zpjkroatjmegwnxzvwlw`:
+```
+policies: super_admin_delete | DELETE   ← super_admin-only
+          super_admin_insert | INSERT   ← super_admin-only
+          super_admin_update | UPDATE   ← super_admin-only
+          admin_select       | SELECT   (baca, tetap)
+          admin_select_self  | SELECT   (baca, tetap)
+          service_role_manage| ALL      (backend only, tetap)
+
+functions: is_admin('admin@ipanstore.id')       = true
+           is_super_admin('admin@ipanstore.id') = true
+           is_admin('nobody@x.com')             = false
+           is_super_admin('nobody@x.com')       = false
+```
+**Jebakan yang sempat terjadi:** SQL Editor Supabase memecah *dollar-quote* `$f$`
+sehingga muncul `syntax error at or near "SELECT"`. Solusi final: body fungsi
+memakai **single-quote** `'...'` dengan escape `''`. File final ada di
+`database/migrations/sql_patches/supabase_patch_admin_users_rls_escalation_fix.sql`.
+
 **Setelah dijalankan**, tombol ubah role / hapus admin di halaman Admins
 (`src/lib/admin/admins.ts` → `updateAdminRole`, `removeAdmin`) **akan ditolak** oleh RLS
 karena memakai anon key. Itu **memang disengaja** (aman). Bila fitur itu masih dibutuhkan,
